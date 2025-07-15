@@ -12,14 +12,28 @@ import {
   Settings,
   BarChart,
   LogOut,
-  Menu,
+  Images,
+  Palette,
   ChevronDown,
   ChevronRight,
 } from "lucide-react"
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
@@ -32,13 +46,7 @@ interface SidebarLink {
 
 export function AdminSidebar() {
   const pathname = usePathname()
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
-
-  // Close mobile sidebar when path changes
-  useEffect(() => {
-    setIsMobileOpen(false)
-  }, [pathname])
 
   // Determine if a submenu should be open based on current path
   useEffect(() => {
@@ -78,6 +86,16 @@ export function AdminSidebar() {
       icon: Users,
     },
     {
+      title: "Media",
+      href: "/admin/media",
+      icon: Images,
+    },
+    {
+      title: "Hero",
+      href: "/admin/hero",
+      icon: Palette,
+    },
+    {
       title: "Analytics",
       href: "/admin/analytics",
       icon: BarChart,
@@ -101,107 +119,83 @@ export function AdminSidebar() {
     return submenu?.some((item) => pathname === item.href)
   }
 
-  const SidebarContent = () => (
-    <div className="flex h-full flex-col">
-      <div className="flex h-14 items-center border-b px-4">
-        <Link href="/admin" className="flex items-center gap-2 font-semibold">
-          <Package className="h-6 w-6" />
-          <span>Admin Panel</span>
-        </Link>
-        <div className="ml-auto flex items-center gap-2">
-          <ThemeToggle />
-        </div>
-      </div>
-      <ScrollArea className="flex-1 py-2">
-        <nav className="grid gap-1 px-2">
-          {links.map((link) =>
-            link.submenu ? (
-              <Collapsible
-                key={link.title}
-                open={openSubmenu === link.title}
-                onOpenChange={() => toggleSubmenu(link.title)}
-                className="w-full"
-              >
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant={isSubmenuActive(link.submenu) ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-2"
-                  >
-                    <link.icon className="h-4 w-4" />
-                    {link.title}
-                    <ChevronDown
-                      className={`ml-auto h-4 w-4 transition-transform ${openSubmenu === link.title ? "rotate-180" : ""}`}
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pl-6 pt-1">
-                  {link.submenu.map((item) => (
-                    <Button
-                      key={item.href}
-                      variant={isLinkActive(item.href) ? "secondary" : "ghost"}
-                      className="w-full justify-start gap-2 mb-1"
-                      asChild
-                    >
-                      <Link href={item.href}>
-                        <ChevronRight className="h-4 w-4" />
-                        {item.title}
-                      </Link>
-                    </Button>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
-            ) : (
-              <Button
-                key={link.title}
-                variant={isLinkActive(link.href) ? "secondary" : "ghost"}
-                className="w-full justify-start gap-2"
-                asChild
-              >
-                <Link href={link.href}>
-                  <link.icon className="h-4 w-4" />
-                  {link.title}
-                </Link>
-              </Button>
-            ),
-          )}
-        </nav>
-      </ScrollArea>
-      <div className="mt-auto border-t p-4">
-        <Button variant="outline" className="w-full justify-start gap-2" asChild>
-          <Link href="/">
-            <LogOut className="h-4 w-4" />
-            Back to Store
-          </Link>
-        </Button>
-      </div>
-    </div>
-  )
-
   return (
-    <>
-      <aside className="hidden w-64 border-r bg-background lg:block">
-        <SidebarContent />
-      </aside>
-      <div className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 lg:hidden">
-        <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="lg:hidden">
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle Menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0">
-            <SidebarContent />
-          </SheetContent>
-        </Sheet>
-        <div className="flex items-center gap-2">
+    <Sidebar>
+      <SidebarHeader className="border-b">
+        <div className="flex items-center gap-2 px-4 py-2">
           <Package className="h-6 w-6" />
           <span className="font-semibold">Admin Panel</span>
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
+            <SidebarTrigger />
+          </div>
         </div>
-        <div className="ml-auto">
-          <ThemeToggle />
-        </div>
-      </div>
-    </>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {links.map((link) =>
+                link.submenu ? (
+                  <Collapsible
+                    key={link.title}
+                    open={openSubmenu === link.title}
+                    onOpenChange={() => toggleSubmenu(link.title)}
+                  >
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton isActive={isSubmenuActive(link.submenu)} className="w-full">
+                          <link.icon className="h-4 w-4" />
+                          <span>{link.title}</span>
+                          <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {link.submenu.map((item) => (
+                            <SidebarMenuSubItem key={item.href}>
+                              <SidebarMenuSubButton asChild isActive={isLinkActive(item.href)}>
+                                <Link href={item.href}>
+                                  <ChevronRight className="h-4 w-4" />
+                                  <span>{item.title}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                ) : (
+                  <SidebarMenuItem key={link.title}>
+                    <SidebarMenuButton asChild isActive={isLinkActive(link.href)}>
+                      <Link href={link.href}>
+                        <link.icon className="h-4 w-4" />
+                        <span>{link.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ),
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="border-t">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Link href="/">
+                <LogOut className="h-4 w-4" />
+                <span>Back to Store</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   )
 }

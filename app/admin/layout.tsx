@@ -1,10 +1,11 @@
 import type { ReactNode } from "react"
 import { redirect } from "next/navigation"
 import { auth } from "@clerk/nextjs/server"
-import AdminSidebar from "@/components/admin/sidebar"
+import { AdminSidebar } from "@/components/admin-sidebar"
 import prisma from "@/lib/prisma"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 
 export default async function AdminLayout({
   children,
@@ -60,13 +61,15 @@ export default async function AdminLayout({
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <div className="flex min-h-screen bg-background">
-        <AdminSidebar />
-        <div className="flex-1 overflow-auto">
-          <div className="container p-6 mx-auto">{children}</div>
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full">
+          <AdminSidebar />
+          <SidebarInset className="flex-1">
+            <div className="container p-6 mx-auto">{children}</div>
+          </SidebarInset>
         </div>
-      </div>
-      <Toaster />
+        <Toaster />
+      </SidebarProvider>
     </ThemeProvider>
   )
 }

@@ -1,352 +1,390 @@
 "use client"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { Badge } from "@/components/ui/badge"
+import { MediaManager } from "@/components/media/media-manager"
 import { toast } from "sonner"
-import { Loader2, Save, Trash2 } from "lucide-react"
-import { AppwriteUpload } from "@/components/appwrite/appwrite-upload"
-import { AppwriteImage } from "@/components/appwrite/appwrite-image"
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { AppwriteMediaBrowser } from "@/components/appwrite/appwrite-media-browser"
+import { ImageIcon, Plus, X } from "lucide-react"
 
-// Hero validation schema
-const heroSchema = z.object({
-    id: z.string().optional(),
-    title: z.string().min(2, "Title must be at least 2 characters"),
-    description: z.string().optional(),
-    buttonText: z.string().optional(),
-    buttonLink: z.string().optional(),
-    image: z.string().url("Invalid image URL").optional(),
-    color: z.string().optional(),
-    isActive: z.boolean().default(true),
-})
+interface HeroSlide {
+  id: string
+  title: string
+  subtitle: string
+  description: string
+  imageUrl: string
+  buttonText: string
+  buttonUrl: string
+  isActive: boolean
+  order: number
+}
 
-type HeroFormValues = z.infer<typeof heroSchema>
+export default function HeroPage() {
+  const [slides, setSlides] = useState<HeroSlide[]>([])
+  const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false)
+  const [editingSlide, setEditingSlide] = useState<HeroSlide | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-export default function AdminHeroPage() {
-    const [heroContent, setHeroContent] = useState<HeroFormValues[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [isSaving, setIsSaving] = useState(false)
-    const [selectedHero, setSelectedHero] = useState<HeroFormValues | null>(null)
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  useEffect(() => {
+    loadHeroSlides()
+  }, [])
 
-    const form = useForm<HeroFormValues>({
-        resolver: zodResolver(heroSchema),
-        defaultValues: {
-            title: "",
-            description: "",
-            buttonText: "",
-            buttonLink: "",
-            image: "",
-            color: "",
-            isActive: true,
+  const loadHeroSlides = async () => {
+    try {
+      setIsLoading(true)
+      // Load hero slides from API
+      const response = await fetch("/api/admin/hero")
+      if (response.ok) {
+        const data = await response.json()
+        setSlides(data.slides || [])
+      }
+    } catch (error) {
+      toast.error("Failed to load hero slides")
+      console.error("Error loading hero slides:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const saveHeroSlides = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch("/api/admin/hero", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-    })
+        body: JSON.stringify({ slides }),
+      })
 
-    useEffect(() => {
-        const fetchHeroContent = async () => {
-            try {
-                setIsLoading(true)
-                const response = await fetch("/api/admin/hero")
-                if (response.ok) {
-                    const data = await response.json()
-                    setHeroContent(data.data || [])
-                } else {
-                    console.error("Failed to fetch hero content")
-                }
-            } catch (error) {
-                console.error("Error fetching hero content:", error)
-                toast.error("Failed to fetch hero content")
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        fetchHeroContent()
-    }, [])
-
-    const handleImageUpload = (urls: string[]) => {
-        if (urls.length > 0) {
-            form.setValue("image", urls[0])
-        }
+      if (response.ok) {
+        toast.success("Hero slides saved successfully")
+      } else {
+        throw new Error("Failed to save")
+      }
+    } catch (error) {
+      toast.error("Failed to save hero slides")
+      console.error("Error saving hero slides:", error)
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    const handleMediaSelection = (urls: string[]) => {
-        if (urls.length > 0) {
-            form.setValue("image", urls[0])
-        }
+  const addNewSlide = () => {
+    const newSlide: HeroSlide = {
+      id: Math.random().toString(36).substr(2, 9),
+      title: "",
+      subtitle: "",
+      description: "",
+      imageUrl: "",
+      buttonText: "Learn More",
+      buttonUrl: "#",
+      isActive: true,
+      order: slides.length,
     }
+    setSlides([...slides, newSlide])
+    setEditingSlide(newSlide)
+  }
 
-    const onSubmit = async (data: HeroFormValues) => {
-        setIsSaving(true)
-        try {
-            const response = await fetch("/api/admin/hero", {
-                method: selectedHero ? "PATCH" : "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(selectedHero ? { ...data, id: selectedHero.id } : data),
-            })
+  const updateSlide = (slideId: string, updates: Partial<HeroSlide>) => {
+    setSlides(slides.map((slide) => (slide.id === slideId ? { ...slide, ...updates } : slide)))
+  }
 
-            if (response.ok) {
-                toast.success(`Hero content ${selectedHero ? "updated" : "created"} successfully`)
-                setHeroContent((prev) =>
-                    selectedHero
-                        ? prev.map((item) => (item.id === selectedHero.id ? { ...item, ...data } : item))
-                        : [...prev, { ...data, id: Math.random().toString() }],
-                )
-                form.reset()
-                setSelectedHero(null)
-            } else {
-                toast.error("Failed to save hero content")
-            }
-        } catch (error) {
-            console.error("Error saving hero content:", error)
-            toast.error("Error saving hero content")
-        } finally {
-            setIsSaving(false)
-        }
+  const removeSlide = (slideId: string) => {
+    setSlides(slides.filter((slide) => slide.id !== slideId))
+    if (editingSlide?.id === slideId) {
+      setEditingSlide(null)
     }
+  }
 
-    const handleDelete = async () => {
-        setIsSaving(true)
-        try {
-            const response = await fetch(`/api/admin/hero?id=${selectedHero?.id}`, {
-                method: "DELETE",
-            })
-
-            if (response.ok) {
-                toast.success("Hero content deleted successfully")
-                setHeroContent((prev) => prev.filter((item) => item.id !== selectedHero?.id))
-                form.reset()
-                setSelectedHero(null)
-            } else {
-                toast.error("Failed to delete hero content")
-            }
-        } catch (error) {
-            console.error("Error deleting hero content:", error)
-            toast.error("Error deleting hero content")
-        } finally {
-            setIsSaving(false)
-            setIsDeleteDialogOpen(false)
-        }
+  const handleMediaSelect = (files: any[]) => {
+    if (files.length > 0 && editingSlide) {
+      updateSlide(editingSlide.id, { imageUrl: files[0].url })
     }
+  }
 
-    return (
-        <div className="container py-10">
-            <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Manage Hero Section</h1>
-                <Button
-                    onClick={() => {
-                        form.reset()
-                        setSelectedHero(null)
-                    }}
-                >
-                    Add Hero
-                </Button>
-            </div>
+  const moveSlide = (slideId: string, direction: "up" | "down") => {
+    const slideIndex = slides.findIndex((s) => s.id === slideId)
+    if (slideIndex === -1) return
 
-            <div className="grid gap-6 md:grid-cols-2">
-                {/* Hero List */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Hero Entries</CardTitle>
-                        <CardDescription>View and manage your hero entries.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {isLoading ? (
-                            <div className="flex items-center justify-center min-h-[200px]">
-                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                            </div>
-                        ) : heroContent.length === 0 ? (
-                            <div className="text-center py-8">No hero entries found.</div>
-                        ) : (
-                            <div className="space-y-2">
-                                {heroContent.map((hero) => (
-                                    <Button
-                                        key={hero.id}
-                                        variant="ghost"
-                                        className="w-full justify-start"
-                                        onClick={() => setSelectedHero(hero)}
-                                    >
-                                        {hero.title}
-                                    </Button>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+    const newSlides = [...slides]
+    const targetIndex = direction === "up" ? slideIndex - 1 : slideIndex + 1
 
-                {/* Hero Form */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{selectedHero ? "Edit Hero" : "Add Hero"}</CardTitle>
-                        <CardDescription>
-                            {selectedHero ? "Edit the details of the selected hero." : "Create a new hero entry."}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                <FormField
-                                    control={form.control}
-                                    name="title"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Title</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Enter title" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Description</FormLabel>
-                                            <FormControl>
-                                                <Textarea placeholder="Enter description" className="min-h-[80px]" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="buttonText"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Button Text</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Enter button text" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="buttonLink"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Button Link</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Enter button link" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="image"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Image</FormLabel>
-                                            <FormControl>
-                                                <div className="space-y-2">
-                                                    <AppwriteUpload
-                                                        onUploadSuccess={(urls) => handleImageUpload(urls)}
-                                                        buttonText="Upload Image"
-                                                        multiple={false}
-                                                    />
-                                                    <AppwriteMediaBrowser
-                                                        onSelect={(urls) => handleImageUpload(urls)}
-                                                        buttonText="Select from Media Library"
-                                                        multiple={false}
-                                                    />
-                                                    {field.value && (
-                                                        <div className="mt-2">
-                                                            <AppwriteImage
-                                                                src={field.value}
-                                                                alt="Hero image"
-                                                                width={200}
-                                                                height={200}
-                                                                className="rounded-md"
-                                                            />
-                                                        </div>
-                                                    )}
-                                                    <Input type="hidden" {...field} />
-                                                </div>
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <div className="flex justify-end gap-2">
-                                    {selectedHero && (
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            onClick={() => setIsDeleteDialogOpen(true)}
-                                            disabled={isSaving}
-                                        >
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete
-                                        </Button>
-                                    )}
-                                    <Button type="submit" disabled={isSaving}>
-                                        {isSaving ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Saving...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Save className="mr-2 h-4 w-4" />
-                                                Save
-                                            </>
-                                        )}
-                                    </Button>
-                                </div>
-                            </form>
-                        </Form>
-                    </CardContent>
-                </Card>
-            </div>
+    if (targetIndex >= 0 && targetIndex < slides.length) {
+      ;[newSlides[slideIndex], newSlides[targetIndex]] = [newSlides[targetIndex], newSlides[slideIndex]]
 
-            {/* Delete Confirmation Dialog */}
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Hero</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to delete this hero entry? This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} disabled={isSaving}>
-                            {isSaving ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Deleting...
-                                </>
-                            ) : (
-                                "Delete"
-                            )}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+      // Update order values
+      newSlides.forEach((slide, index) => {
+        slide.order = index
+      })
+
+      setSlides(newSlides)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Hero Section</h1>
+          <p className="text-muted-foreground">Manage your homepage hero carousel slides</p>
         </div>
-    )
+        <div className="flex gap-2">
+          <Button onClick={addNewSlide} disabled={isLoading}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Slide
+          </Button>
+          <Button onClick={saveHeroSlides} disabled={isLoading}>
+            {isLoading ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Slides List */}
+        <div className="lg:col-span-1 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Hero Slides ({slides.length})</CardTitle>
+              <CardDescription>Click on a slide to edit its content</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {slides.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No slides created yet</p>
+                  <p className="text-sm">Click "Add Slide" to get started</p>
+                </div>
+              ) : (
+                slides.map((slide, index) => (
+                  <div
+                    key={slide.id}
+                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                      editingSlide?.id === slide.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                    }`}
+                    onClick={() => setEditingSlide(slide)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium">#{index + 1}</span>
+                          {slide.isActive ? (
+                            <Badge variant="default" className="text-xs">
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              Inactive
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="font-medium truncate">{slide.title || "Untitled Slide"}</p>
+                        <p className="text-sm text-muted-foreground truncate">{slide.subtitle || "No subtitle"}</p>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            moveSlide(slide.id, "up")
+                          }}
+                          disabled={index === 0}
+                          className="h-6 w-6 p-0"
+                        >
+                          ↑
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            moveSlide(slide.id, "down")
+                          }}
+                          disabled={index === slides.length - 1}
+                          className="h-6 w-6 p-0"
+                        >
+                          ↓
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeSlide(slide.id)
+                          }}
+                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    {slide.imageUrl && (
+                      <div className="mt-2">
+                        <img
+                          src={slide.imageUrl || "/placeholder.svg"}
+                          alt={slide.title}
+                          className="w-full h-20 object-cover rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Slide Editor */}
+        <div className="lg:col-span-2">
+          {editingSlide ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Edit Slide</CardTitle>
+                <CardDescription>Configure the content and appearance of your hero slide</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Basic Settings */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="active">Active</Label>
+                    <p className="text-sm text-muted-foreground">Show this slide in the carousel</p>
+                  </div>
+                  <Switch
+                    id="active"
+                    checked={editingSlide.isActive}
+                    onCheckedChange={(checked) => updateSlide(editingSlide.id, { isActive: checked })}
+                  />
+                </div>
+
+                {/* Content Fields */}
+                <div className="grid gap-4">
+                  <div>
+                    <Label htmlFor="title">Title</Label>
+                    <Input
+                      id="title"
+                      value={editingSlide.title}
+                      onChange={(e) => updateSlide(editingSlide.id, { title: e.target.value })}
+                      placeholder="Enter slide title"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="subtitle">Subtitle</Label>
+                    <Input
+                      id="subtitle"
+                      value={editingSlide.subtitle}
+                      onChange={(e) => updateSlide(editingSlide.id, { subtitle: e.target.value })}
+                      placeholder="Enter slide subtitle"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={editingSlide.description}
+                      onChange={(e) => updateSlide(editingSlide.id, { description: e.target.value })}
+                      placeholder="Enter slide description"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="buttonText">Button Text</Label>
+                      <Input
+                        id="buttonText"
+                        value={editingSlide.buttonText}
+                        onChange={(e) => updateSlide(editingSlide.id, { buttonText: e.target.value })}
+                        placeholder="Button text"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="buttonUrl">Button URL</Label>
+                      <Input
+                        id="buttonUrl"
+                        value={editingSlide.buttonUrl}
+                        onChange={(e) => updateSlide(editingSlide.id, { buttonUrl: e.target.value })}
+                        placeholder="Button URL"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Image Section */}
+                <div>
+                  <Label>Background Image</Label>
+                  <div className="mt-2">
+                    {editingSlide.imageUrl ? (
+                      <div className="relative">
+                        <img
+                          src={editingSlide.imageUrl || "/placeholder.svg"}
+                          alt="Hero slide background"
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                          <Button variant="secondary" onClick={() => setIsMediaManagerOpen(true)}>
+                            Change Image
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                        onClick={() => setIsMediaManagerOpen(true)}
+                      >
+                        <ImageIcon className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                        <p className="text-muted-foreground">Click to select an image</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div>
+                  <Label>Preview</Label>
+                  <div className="mt-2 p-4 border rounded-lg bg-muted/20">
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">{editingSlide.title || "Slide Title"}</h3>
+                      <p className="text-muted-foreground">{editingSlide.subtitle || "Slide Subtitle"}</p>
+                      <p className="text-sm">{editingSlide.description || "Slide description will appear here..."}</p>
+                      <Button size="sm" variant="outline">
+                        {editingSlide.buttonText || "Button Text"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="flex items-center justify-center h-96">
+                <div className="text-center text-muted-foreground">
+                  <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">No slide selected</p>
+                  <p>Select a slide from the list to edit its content</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Media Manager */}
+      <MediaManager
+        isOpen={isMediaManagerOpen}
+        onClose={() => setIsMediaManagerOpen(false)}
+        onSelect={handleMediaSelect}
+        selectionMode="single"
+        title="Select Hero Image"
+      />
+    </div>
+  )
 }
