@@ -1,39 +1,43 @@
-import { Redis } from "@upstash/redis"
-
+import Valkey from "ioredis";
+/**
+ * This module initializes a Redis client using Valkey and provides helper functions
+ * for caching, rate limiting, and other Redis operations.
+ */
 // Initialize Redis client with environment variables
-export const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || "",
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
-})
+export const redis = new Valkey(process.env.VALKEY_URL || "");
 
 // Cache helper functions
 export async function getCache<T>(key: string): Promise<T | null> {
   try {
-    const data = await redis.get<T>(key)
-    return data
+    const data = await redis.get(key);
+    return data as T | null;
   } catch (error) {
-    console.error("Redis get error:", error)
-    return null
+    console.error("Redis get error:", error);
+    return null;
   }
 }
 
-export async function setCache<T>(key: string, data: T, expireInSeconds?: number): Promise<void> {
+export async function setCache<T>(
+  key: string,
+  data: T,
+  expireInSeconds?: number
+): Promise<void> {
   try {
     if (expireInSeconds) {
-      await redis.set(key, data, { ex: expireInSeconds })
+      await redis.setex(key, expireInSeconds, JSON.stringify(data));
     } else {
-      await redis.set(key, data)
+      await redis.set(key, JSON.stringify(data));
     }
   } catch (error) {
-    console.error("Redis set error:", error)
+    console.error("Redis set error:", error);
   }
 }
 
 export async function deleteCache(key: string): Promise<void> {
   try {
-    await redis.del(key)
+    await redis.del(key);
   } catch (error) {
-    console.error("Redis delete error:", error)
+    console.error("Redis delete error:", error);
   }
 }
 
@@ -41,30 +45,31 @@ export async function deleteCache(key: string): Promise<void> {
 export async function rateLimit(
   ip: string,
   limit = 10,
-  windowInSeconds = 60,
+  windowInSeconds = 60
 ): Promise<{ success: boolean; remaining: number }> {
-  const key = `rate-limit:${ip}`
+  const key = `rate-limit:${ip}`;
 
   try {
     // Get current count
-    const count = (await redis.get<number>(key)) || 0
+    const countRaw = await redis.get(key);
+    const count = typeof countRaw === "string" ? parseInt(countRaw, 10) : (countRaw || 0);
 
     if (count >= limit) {
-      return { success: false, remaining: 0 }
+      return { success: false, remaining: 0 };
     }
 
     // Increment count
-    const newCount = await redis.incr(key)
+    const newCount = await redis.incr(key);
 
     // Set expiry if this is the first request in the window
     if (newCount === 1) {
-      await redis.expire(key, windowInSeconds)
+      await redis.expire(key, windowInSeconds);
     }
 
-    return { success: true, remaining: limit - newCount }
+    return { success: true, remaining: limit - newCount };
   } catch (error) {
-    console.error("Rate limit error:", error)
+    console.error("Rate limit error:", error);
     // Allow the request if Redis fails
-    return { success: true, remaining: 1 }
+    return { success: true, remaining: 1 };
   }
 }

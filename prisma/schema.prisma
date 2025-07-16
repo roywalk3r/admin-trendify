@@ -60,6 +60,7 @@ model Product {
   orderItems    OrderItem[]
   variants      ProductVariant[]
   category      Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  tags          Tags[]          
   reviews       Review[]
   wishlistItems WishlistItem[]
 
@@ -332,6 +333,14 @@ enum UserRole {
   customer
 
   @@map("user_role")
+}
+
+model Tags {
+  id        String   @id @default(cuid())
+  name      String   @unique @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("tags")
 }
 
 enum OrderStatus {
