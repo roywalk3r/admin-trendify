@@ -5,7 +5,10 @@ export interface Product {
   price: number
   stock: number
   categoryId: string
+  category?: Category
   images: string[]
+  featured?: boolean
+  status?: string
   createdAt?: string
   updatedAt?: string
 }

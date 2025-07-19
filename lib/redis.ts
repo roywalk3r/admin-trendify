@@ -10,7 +10,14 @@ export const redis = new Valkey(process.env.VALKEY_URL || "");
 export async function getCache<T>(key: string): Promise<T | null> {
   try {
     const data = await redis.get(key);
-    return data as T | null;
+    if (!data) return null;
+
+    try {
+      return JSON.parse(data) as T;
+    } catch (parseError) {
+      console.error("Redis data parse error:", parseError);
+      return data as T | null;
+    }
   } catch (error) {
     console.error("Redis get error:", error);
     return null;

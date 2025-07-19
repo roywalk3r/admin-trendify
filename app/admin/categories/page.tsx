@@ -1,13 +1,20 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { toast } from "sonner"
-import { Loader2, Plus, Search, Edit, Trash2, Tag } from "lucide-react"
-import { useApi, useApiMutation } from "@/lib/hooks/use-api"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { Loader2, Plus, Search, Edit, Trash2, Tag } from "lucide-react";
+import { useApi, useApiMutation } from "@/lib/hooks/use-api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -15,13 +22,22 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { z } from "zod"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { AppwriteUpload } from "@/components/appwrite/appwrite-upload"
-import { AppwriteImage } from "@/components/appwrite/appwrite-image"
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AppwriteUpload } from "@/components/appwrite/appwrite-upload";
+import { AppwriteImage } from "@/components/appwrite/appwrite-image";
+import { AppwriteMediaBrowser } from "@/components/appwrite/appwrite-media-browser";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +47,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
 // Category validation schema
 const categorySchema = z.object({
@@ -40,68 +56,117 @@ const categorySchema = z.object({
   slug: z
     .string()
     .min(2, "Slug must be at least 2 characters")
-    .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens"),
-  image: z.string().url("Invalid image URL").optional(),
-})
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Slug can only contain lowercase letters, numbers, and hyphens"
+    ),
+  image: z.string().url("Invalid image URL").optional().or(z.literal("")),
+  description: z.string().optional(),
+});
 
-type CategoryFormValues = z.infer<typeof categorySchema>
+type CategoryFormValues = z.infer<typeof categorySchema>;
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  image?: string;
+  description?: string;
+  parentId?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    products: number;
+    children: number;
+  };
+  products: any[];
+  children: any[];
+}
+
+interface CategoriesResponse {
+  data: Category[];
+  meta: {
+    currentPage: number;
+    totalPages: number;
+    totalCount: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
 
 export default function AdminCategoriesPage() {
-  const [isCreating, setIsCreating] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
-  const [categoryToDelete, setCategoryToDelete] = useState<any>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(
+    null
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<any>([]);
 
   // Fetch categories
-  const { data, isLoading, refetch } = useApi<any>("/api/categories")
+  const {
+    data: categoriesResponse,
+    isLoading,
+    refetch,
+  } = useApi<CategoriesResponse>("/api/categories");
+
+  useEffect(() => {
+    if (categoriesResponse) {
+      setCategories(categoriesResponse.data);
+      console.log("Categories response:", categoriesResponse);
+      setCategories(categoriesResponse);
+    }
+  }, [categoriesResponse]);
 
   // Create category mutation
-  const { mutate: createCategory, isLoading: isCreatingCategory } = useApiMutation("/api/categories", "POST", {
-    onSuccess: () => {
-      toast.success("Category created successfully")
-      refetch()
-      setIsCreating(false)
-      createForm.reset()
-    },
-    onError: (error) => {
-      toast.error(`Error creating category: ${error}`)
-    },
-  })
+  const { mutate: createCategory, isLoading: isCreatingCategory } =
+    useApiMutation("/api/categories", "POST", {
+      onSuccess: () => {
+        toast.success("Category created successfully");
+        refetch();
+        setIsCreating(false);
+        createForm.reset();
+      },
+      onError: (error) => {
+        toast.error(`Error creating category: ${error}`);
+      },
+    });
 
   // Update category mutation
-  const { mutate: updateCategory, isLoading: isUpdatingCategory } = useApiMutation("/api/categories", "PATCH", {
-    onSuccess: () => {
-      toast.success("Category updated successfully")
-      refetch()
-      setIsEditing(false)
-      editForm.reset()
-    },
-    onError: (error) => {
-      toast.error(`Error updating category: ${error}`)
-    },
-  })
+  const { mutate: updateCategory, isLoading: isUpdatingCategory } =
+    useApiMutation("/api/categories", "PATCH", {
+      onSuccess: () => {
+        toast.success("Category updated successfully");
+        refetch();
+        setIsEditing(false);
+        editForm.reset();
+      },
+      onError: (error) => {
+        toast.error(`Error updating category: ${error}`);
+      },
+    });
 
   // Delete category mutation
-  const { mutate: deleteCategory, isLoading: isDeletingCategory } = useApiMutation(
-    `/api/categories?id=${categoryToDelete?.id}`,
-    "DELETE",
-    {
+  const { mutate: deleteCategory, isLoading: isDeletingCategory } =
+    useApiMutation(`/api/categories?id=${categoryToDelete?.id}`, "DELETE", {
       onSuccess: () => {
-        toast.success("Category deleted successfully")
-        refetch()
-        setCategoryToDelete(null)
-        setDeleteError(null)
+        toast.success("Category deleted successfully");
+        refetch();
+        setCategoryToDelete(null);
+        setDeleteError(null);
       },
       onError: (error) => {
         if (error.includes("associated products")) {
-          setDeleteError("This category has associated products. Please reassign or delete these products first.")
+          setDeleteError(
+            "This category has associated products. Please reassign or delete these products first."
+          );
         } else {
-          toast.error(`Error deleting category: ${error}`)
+          toast.error(`Error deleting category: ${error}`);
         }
       },
-    },
-  )
+    });
 
   // Create form
   const createForm = useForm<CategoryFormValues>({
@@ -110,8 +175,9 @@ export default function AdminCategoriesPage() {
       name: "",
       slug: "",
       image: "",
+      description: "",
     },
-  })
+  });
 
   // Edit form
   const editForm = useForm<CategoryFormValues>({
@@ -121,56 +187,79 @@ export default function AdminCategoriesPage() {
       name: "",
       slug: "",
       image: "",
+      description: "",
     },
-  })
+  });
 
   // Handle create form submission
   const onCreateSubmit = (data: CategoryFormValues) => {
-    createCategory(data)
-  }
+    const submitData = {
+      ...data,
+      image: data.image || undefined,
+      description: data.description || undefined,
+    };
+    createCategory(submitData);
+  };
 
   // Handle edit form submission
   const onEditSubmit = (data: CategoryFormValues) => {
-    updateCategory(data)
-  }
+    const submitData = {
+      ...data,
+      image: data.image || undefined,
+      description: data.description || undefined,
+    };
+    updateCategory(submitData);
+  };
 
   // Handle image upload
   const handleImageUpload = (urls: string[], form: any) => {
     if (urls.length > 0) {
-      form.setValue("image", urls[0])
+      form.setValue("image", urls[0]);
     }
-  }
+  };
+
+  // Handle media browser selection
+  const handleMediaSelect = (urls: string[], form: any) => {
+    if (urls.length > 0) {
+      form.setValue("image", urls[0]);
+    }
+  };
 
   // Handle edit category
-  const handleEditCategory = (category: any) => {
+  const handleEditCategory = (category: Category) => {
     editForm.reset({
       id: category.id,
       name: category.name,
       slug: category.slug,
-      image: category.image,
-    })
-    setIsEditing(true)
-  }
+      image: category.image || "",
+      description: category.description || "",
+    });
+    setIsEditing(true);
+  };
 
   // Handle delete category
   const handleDeleteCategory = () => {
     if (categoryToDelete?.id) {
-      deleteCategory(categoryToDelete.id)
+      deleteCategory(categoryToDelete.id);
     }
-  }
+  };
 
   // Generate slug from name
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
       .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-")
-  }
+      .replace(/\s+/g, "-");
+  };
 
   // Filter categories based on search query
-  const filteredCategories = data
-    ? data?.filter((category: any) => category.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : []
+  const filteredCategories = categories.filter((category: Category) =>
+    category.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  console.log("Current categories:", categories);
+  console.log("Filtered categories:", filteredCategories);
+  console.log("Is loading:", isLoading);
 
   return (
     <div className="space-y-6">
@@ -204,10 +293,16 @@ export default function AdminCategoriesPage() {
           <Tag className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h2 className="text-xl font-semibold">No categories found</h2>
           <p className="text-muted-foreground mt-2">
-            {searchQuery ? "Try a different search term" : "Add your first category to get started"}
+            {searchQuery
+              ? "Try a different search term"
+              : "Add your first category to get started"}
           </p>
           {searchQuery && (
-            <Button variant="outline" className="mt-4" onClick={() => setSearchQuery("")}>
+            <Button
+              variant="outline"
+              className="mt-4 bg-transparent"
+              onClick={() => setSearchQuery("")}
+            >
               Clear Search
             </Button>
           )}
@@ -225,31 +320,56 @@ export default function AdminCategoriesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCategories.map((category: any) => (
+              {filteredCategories.map((category: Category) => (
                 <TableRow key={category.id}>
                   <TableCell>
-                    <div className="w-12 h-12 rounded-md overflow-hidden">
-                      <AppwriteImage
-                        src={category.image || "/placeholder.svg"}
-                        alt={category.name}
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100">
+                      {category.image ? (
+                        <AppwriteImage
+                          src={category.image}
+                          alt={category.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Tag className="h-6 w-6 text-gray-400" />
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">{category.name}</div>
+                    {category.description && (
+                      <div className="text-sm text-muted-foreground">
+                        {category.description}
+                      </div>
+                    )}
                   </TableCell>
-                  <TableCell>{category.slug}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">{category._count?.products || 0} products</Badge>
+                    <code className="text-sm bg-gray-600 px-2 py-1 rounded">
+                      {category.slug}
+                    </code>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {category._count?.products || 0} products
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEditCategory(category)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditCategory(category)}
+                      >
                         <Edit className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => setCategoryToDelete(category)}>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setCategoryToDelete(category)}
+                      >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Delete</span>
                       </Button>
@@ -264,13 +384,18 @@ export default function AdminCategoriesPage() {
 
       {/* Create Category Dialog */}
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Create Category</DialogTitle>
-            <DialogDescription>Add a new product category to your store.</DialogDescription>
+            <DialogDescription>
+              Add a new product category to your store.
+            </DialogDescription>
           </DialogHeader>
           <Form {...createForm}>
-            <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
+            <form
+              onSubmit={createForm.handleSubmit(onCreateSubmit)}
+              className="space-y-4"
+            >
               <FormField
                 control={createForm.control}
                 name="name"
@@ -282,10 +407,13 @@ export default function AdminCategoriesPage() {
                         {...field}
                         placeholder="Category name"
                         onChange={(e) => {
-                          field.onChange(e)
+                          field.onChange(e);
                           // Auto-generate slug when name changes
                           if (!createForm.getValues("slug")) {
-                            createForm.setValue("slug", generateSlug(e.target.value))
+                            createForm.setValue(
+                              "slug",
+                              generateSlug(e.target.value)
+                            );
                           }
                         }}
                       />
@@ -303,7 +431,26 @@ export default function AdminCategoriesPage() {
                     <FormControl>
                       <Input {...field} placeholder="category-slug" />
                     </FormControl>
-                    <FormDescription>Used in URLs. Only lowercase letters, numbers, and hyphens.</FormDescription>
+                    <FormDescription>
+                      Used in URLs. Only lowercase letters, numbers, and
+                      hyphens.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Category description (optional)"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -316,11 +463,22 @@ export default function AdminCategoriesPage() {
                     <FormLabel>Image</FormLabel>
                     <FormControl>
                       <div className="space-y-2">
-                        <AppwriteUpload
-                          onUploadSuccess={(urls) => handleImageUpload(urls, createForm)}
-                          buttonText="Upload Image"
-                          multiple={false}
-                        />
+                        <div className="flex gap-2">
+                          <AppwriteUpload
+                            onUploadSuccess={(urls) =>
+                              handleImageUpload(urls, createForm)
+                            }
+                            buttonText="Upload Image"
+                            multiple={false}
+                          />
+                          <AppwriteMediaBrowser
+                            onSelect={(urls) =>
+                              handleMediaSelect(urls, createForm)
+                            }
+                            maxSelections={1}
+                            buttonText="Browse Media"
+                          />
+                        </div>
                         {field.value && (
                           <div className="mt-2">
                             <AppwriteImage
@@ -340,7 +498,11 @@ export default function AdminCategoriesPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsCreating(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsCreating(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isCreatingCategory}>
@@ -361,13 +523,16 @@ export default function AdminCategoriesPage() {
 
       {/* Edit Category Dialog */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
             <DialogDescription>Update the category details.</DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+            <form
+              onSubmit={editForm.handleSubmit(onEditSubmit)}
+              className="space-y-4"
+            >
               <FormField
                 control={editForm.control}
                 name="name"
@@ -390,7 +555,26 @@ export default function AdminCategoriesPage() {
                     <FormControl>
                       <Input {...field} placeholder="category-slug" />
                     </FormControl>
-                    <FormDescription>Used in URLs. Only lowercase letters, numbers, and hyphens.</FormDescription>
+                    <FormDescription>
+                      Used in URLs. Only lowercase letters, numbers, and
+                      hyphens.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Category description (optional)"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -403,11 +587,22 @@ export default function AdminCategoriesPage() {
                     <FormLabel>Image</FormLabel>
                     <FormControl>
                       <div className="space-y-2">
-                        <AppwriteUpload
-                          onUploadSuccess={(urls) => handleImageUpload(urls, editForm)}
-                          buttonText="Upload Image"
-                          multiple={false}
-                        />
+                        <div className="flex gap-2">
+                          <AppwriteUpload
+                            onUploadSuccess={(urls) =>
+                              handleImageUpload(urls, editForm)
+                            }
+                            buttonText="Upload Image"
+                            multiple={false}
+                          />
+                          <AppwriteMediaBrowser
+                            onSelect={(urls) =>
+                              handleMediaSelect(urls, editForm)
+                            }
+                            maxSelections={1}
+                            buttonText="Browse Media"
+                          />
+                        </div>
                         {field.value && (
                           <div className="mt-2">
                             <AppwriteImage
@@ -428,7 +623,11 @@ export default function AdminCategoriesPage() {
               />
               <input type="hidden" {...editForm.register("id")} />
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditing(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isUpdatingCategory}>
@@ -448,22 +647,28 @@ export default function AdminCategoriesPage() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!categoryToDelete} onOpenChange={(open) => !open && setCategoryToDelete(null)}>
+      <AlertDialog
+        open={!!categoryToDelete}
+        onOpenChange={(open) => !open && setCategoryToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Category</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{categoryToDelete?.name}"? This action cannot be undone.
+              Are you sure you want to delete "{categoryToDelete?.name}"? This
+              action cannot be undone.
               {deleteError && (
-                <div className="mt-2 p-2 bg-destructive/10 text-destructive rounded-md text-sm">{deleteError}</div>
+                <div className="mt-2 p-2 bg-destructive/10 text-destructive rounded-md text-sm">
+                  {deleteError}
+                </div>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel
               onClick={() => {
-                setCategoryToDelete(null)
-                setDeleteError(null)
+                setCategoryToDelete(null);
+                setDeleteError(null);
               }}
             >
               Cancel
@@ -486,5 +691,5 @@ export default function AdminCategoriesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

@@ -1,59 +1,97 @@
-import type { NextRequest } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import { createApiResponse, handleApiError } from "@/lib/api-utils"
-import { adminAuthMiddleware } from "@/lib/admin-auth"
+import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 
-// Product validation schema
-const productSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(3, "Product name must be at least 3 characters"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
-  price: z.number().positive("Price must be positive"),
-  stock: z.number().int().nonnegative("Stock cannot be negative"),
-  categoryId: z.string().min(1, "Category is required"),
-  images: z.array(z.string().url("Invalid image URL")).min(1, "At least one image is required"),
+const querySchema = z.object({
+  search: z.string().optional().default(""),
+  category: z.string().optional().default("all"),
+  status: z.enum(["all", "active", "inactive"]).optional().default("all"),
+  featured: z.enum(["all", "true", "false"]).optional().default("all"),
+  sortBy: z.enum(["name", "price", "stock", "createdAt", "category"]).optional().default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+  page: z.string().transform(Number).optional().default(1),
+  limit: z.string().transform(Number).optional().default(20),
 })
 
-export async function GET(req: NextRequest) {
-  // Check admin authorization
-  const authResponse = await adminAuthMiddleware(req)
-  if (authResponse.status !== 200) {
-    return authResponse
-  }
+const productSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string().min(1, "Description is required"),
+  price: z.number().positive("Price must be positive"),
+  stock: z.number().int().min(0, "Stock must be non-negative"),
+  categoryId: z.string().min(1, "Category is required"),
+  images: z.array(z.string()).optional().default([]),
+  isActive: z.boolean().optional().default(true),
+  isFeatured: z.boolean().optional().default(false),
+  status: z.enum(["active", "inactive", "draft"]).optional().default("active"),
+})
 
+export async function GET(request: NextRequest) {
   try {
-    // Get query parameters
-    const url = new URL(req.url)
-    const search = url.searchParams.get("search")
-    const category = url.searchParams.get("category")
-    const limit = Number.parseInt(url.searchParams.get("limit") || "50")
-    const page = Number.parseInt(url.searchParams.get("page") || "1")
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-    // Build filter conditions
-    const where: any = {}
+    const { searchParams } = new URL(request.url)
+    const params = querySchema.parse({
+      search: searchParams.get("search") || "",
+      category: searchParams.get("category") || "all",
+      status: searchParams.get("status") || "all",
+      featured: searchParams.get("featured") || "all",
+      sortBy: searchParams.get("sortBy") || "createdAt",
+      sortOrder: searchParams.get("sortOrder") || "desc",
+      page: searchParams.get("page") || "1",
+      limit: searchParams.get("limit") || "20",
+    })
 
-    if (search) {
+    console.log("Fetching products with params:", params)
+
+    // Build where clause
+    const where: any = {
+      isDeleted: false, // Only show non-deleted products
+    }
+
+    if (params.search) {
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
+        { name: { contains: params.search, mode: "insensitive" } },
+        { description: { contains: params.search, mode: "insensitive" } },
       ]
     }
 
-    if (category) {
-      where.category_id = category
+    if (params.category !== "all") {
+      where.categoryId = params.category
     }
 
-    // Calculate pagination
-    const skip = (page - 1) * limit
+    if (params.status !== "all") {
+      where.isActive = params.status === "active"
+    }
 
-    console.log("Fetching products with where:", where)
+    if (params.featured !== "all") {
+      where.isFeatured = params.featured === "true"
+    }
+
+    // Build orderBy clause
+    const orderBy: any = {}
+    if (params.sortBy === "category") {
+      orderBy.category = { name: params.sortOrder }
+    } else {
+      orderBy[params.sortBy] = params.sortOrder
+    }
+
+    // Get total count
+    const totalCount = await prisma.product.count({ where })
 
     // Get products with pagination
     const products = await prisma.product.findMany({
       where,
       include: {
-        category: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         _count: {
           select: {
             reviews: true,
@@ -61,128 +99,225 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
+      orderBy,
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
     })
 
-    console.log(`Found ${products.length} products`)
+    const totalPages = Math.ceil(totalCount / params.limit)
 
-    return createApiResponse({
-      data: products,
-      status: 200,
-    })
+    const response = {
+      products: products.map((product) => ({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price.toString(),
+        stock: product.stock,
+        categoryId: product.categoryId,
+        category: product.category,
+        images: product.images,
+        isActive: product.isActive,
+        isFeatured: product.isFeatured,
+        status: product.status,
+        createdAt: product.createdAt,
+        updatedAt: product.updatedAt,
+        reviewCount: product._count.reviews,
+        orderCount: product._count.orderItems,
+      })),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        totalCount,
+        totalPages,
+        hasNextPage: params.page < totalPages,
+        hasPrevPage: params.page > 1,
+      },
+      filters: params,
+    }
+
+    console.log("API Response:", { products: response.products.length, totalCount })
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error("Error fetching products:", error)
-    return handleApiError(error)
+    return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 })
   }
 }
 
-export async function POST(req: NextRequest) {
-  // Check admin authorization
-  const authResponse = await adminAuthMiddleware(req)
-  if (authResponse.status !== 200) {
-    return authResponse
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    // Parse and validate request body
-    const body = await req.json()
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const body = await request.json()
     const validatedData = productSchema.parse(body)
 
-    // Create product
+    // Generate slug from name
+    const baseSlug = validatedData.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "")
+
+    // Ensure slug is unique
+    let slug = baseSlug
+    let counter = 1
+    while (await prisma.product.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${counter}`
+      counter++
+    }
+
     const product = await prisma.product.create({
       data: {
-        name: validatedData.name,
-        description: validatedData.description,
+        ...validatedData,
+        slug,
         price: validatedData.price,
-        stock: validatedData.stock,
-        category: { connect: { id: validatedData.categoryId } },
-        images: validatedData.images,
-        slug: validatedData.name.toLowerCase().replace(/ /g, "-"), // Generate slug
       },
-      include: { category: true },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     })
 
-    return createApiResponse({
-      data: product,
-      status: 201,
-    })
+    return NextResponse.json(product, { status: 201 })
   } catch (error) {
-    return handleApiError(error)
+    console.error("Error creating product:", error)
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Validation error", details: error.errors }, { status: 400 })
+    }
+    return NextResponse.json({ error: "Failed to create product" }, { status: 500 })
   }
 }
 
-export async function PATCH(req: NextRequest) {
-  // Check admin authorization
-  const authResponse = await adminAuthMiddleware(req)
-  if (authResponse.status !== 200) {
-    return authResponse
-  }
-
+export async function PATCH(request: NextRequest) {
   try {
-    // Parse and validate request body
-    const body = await req.json()
-    const { id, ...data } = productSchema.parse(body)
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
 
-    if (!id) {
-      return createApiResponse({
-        error: "Product ID is required",
-        status: 400,
+    const body = await request.json()
+
+    // Handle bulk operations
+    if (body.action && body.productIds) {
+      const { action, productIds } = body
+
+      if (!Array.isArray(productIds) || productIds.length === 0) {
+        return NextResponse.json({ error: "Product IDs are required" }, { status: 400 })
+      }
+
+      let updateData: any = {}
+
+      switch (action) {
+        case "activate":
+          updateData = { isActive: true, status: "active" }
+          break
+        case "deactivate":
+          updateData = { isActive: false, status: "inactive" }
+          break
+        case "feature":
+          updateData = { isFeatured: true }
+          break
+        case "unfeature":
+          updateData = { isFeatured: false }
+          break
+        case "delete":
+          const deleteResult = await prisma.product.updateMany({
+            where: {
+              id: {
+                in: productIds,
+              },
+            },
+            data: {
+              isDeleted: true,
+              deletedAt: new Date(),
+            },
+          })
+          return NextResponse.json({
+            message: `${deleteResult.count} products deleted successfully`,
+            deletedCount: deleteResult.count,
+          })
+        default:
+          return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+      }
+
+      const updateResult = await prisma.product.updateMany({
+        where: {
+          id: {
+            in: productIds,
+          },
+        },
+        data: updateData,
+      })
+
+      return NextResponse.json({
+        message: `${updateResult.count} products updated successfully`,
+        updatedCount: updateResult.count,
       })
     }
 
-    // Update product
+    // Handle single product update
+    const { id, ...data } = productSchema.extend({ id: z.string() }).parse(body)
+
+    const existingProduct = await prisma.product.findUnique({
+      where: { id },
+    })
+
+    if (!existingProduct) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 })
+    }
+
+    // Update slug if name changed
+    let slug = existingProduct.slug
+    if (data.name !== existingProduct.name) {
+      const baseSlug = data.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")
+
+      slug = baseSlug
+      let counter = 1
+      while (
+          await prisma.product.findFirst({
+            where: {
+              slug,
+              id: { not: id },
+            },
+          })
+          ) {
+        slug = `${baseSlug}-${counter}`
+        counter++
+      }
+    }
+
     const product = await prisma.product.update({
       where: { id },
       data: {
-        name: data.name,
-        description: data.description,
+        ...data,
+        slug,
         price: data.price,
-        stock: data.stock,
-        category: { connect: { id: data.categoryId } },
-        images: data.images,
       },
-      include: { category: true },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     })
 
-    return createApiResponse({
-      data: product,
-      status: 200,
-    })
+    return NextResponse.json(product)
   } catch (error) {
-    return handleApiError(error)
+    console.error("Error updating product(s):", error)
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Validation error", details: error.errors }, { status: 400 })
+    }
+    return NextResponse.json({ error: "Failed to update product(s)" }, { status: 500 })
   }
 }
-
-// export async function DELETE(req: NextRequest) {
-//   // Check admin authorization
-//   const authResponse = await adminAuthMiddleware(req)
-//   if (authResponse.status !== 200) {
-//     return authResponse
-//   }
-
-//   try {
-//     const url = new URL(req.url)
-//     const id = url.searchParams.get("id")
-
-//     if (!id) {
-//       return createApiResponse({
-//         error: "Product ID is required",
-//         status: 400,
-//       })
-//     }
-
-//     // Delete product
-//     await prisma.product.delete({
-//       where: { id },
-//     })
-
-//     return createApiResponse({
-//       data: { message: "Product deleted successfully" },
-//       status: 200,
-//     })
-//   } catch (error) {
-//     return handleApiError(error)
-//   }
-// }

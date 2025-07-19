@@ -8,5 +8,12 @@
       <jdbc-url>jdbc:redis://valkey-1eb96805-projectmail811-9e43.b.aivencloud.com:17637</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="tese@aerk-comm-projectmail811-9e43.h.aivencloud.com" uuid="645f1a34-485c-4855-84f9-d7dc170ec6b8">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://aerk-comm-projectmail811-9e43.h.aivencloud.com:17636/tese</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>

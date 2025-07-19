@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+    allowedDevOrigins: ['*.localhost','fliq.ip-ddns.com', '*.pagekite.me'],
 };
 
 export default nextConfig;
