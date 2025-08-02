@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
+import Image from 'next/image';
 import { Button } from "@/components/ui/button"
 
 const slides = [
@@ -109,9 +110,11 @@ export function HeroCarousel() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: 0.3 }}
                     >
-                      <img
+                      <Image
                         src={slide.image || "/placeholder.svg"}
                         alt={slide.title}
+                        width={1200}
+                        height={600}
                         className="w-full h-full object-cover"
                       />
                     </motion.div>

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, Plus, Edit, Trash2 } from 'lucide-react'
 import { useApi, useApiMutation } from "@/lib/hooks/use-api"
+import Image from 'next/image';
 
 export default function HeroContentPage() {
     const { toast } = useToast()
@@ -114,7 +115,7 @@ export default function HeroContentPage() {
                                 <CardDescription>{item.description}</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <img src={item.image || "/placeholder.svg"} alt={item.title} className="w-full h-48 object-cover rounded-md" />
+                                <Image src={item.image || "/placeholder.svg"} alt={item.title} width={400} height={200} className="w-full h-48 object-cover rounded-md" />
                             </CardContent>
                             <CardFooter className="flex justify-between">
                                 <Button variant="outline" size="sm" onClick={() => handleEdit(item)}>
@@ -172,7 +173,7 @@ function CreateHeroContentModal({ open, onClose, onSubmit, isLoading }:any) {
     const [buttonLink, setButtonLink] = useState("")
     const [color, setColor] = useState("")
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         await onSubmit({ title, description, image, buttonText, buttonLink, color })
         onClose()

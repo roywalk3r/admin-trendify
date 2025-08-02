@@ -3,7 +3,7 @@
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import type { CartItem } from "@/components/store/cart-provider"
+import type { CartItem } from "@/lib/store/cart-store"
 
 interface CheckoutReviewProps {
   shippingInfo: any
@@ -76,16 +76,11 @@ export function CheckoutReview({
                   <div className="text-sm text-muted-foreground mt-1">
                     Qty: {item.quantity} × ${item.price.toFixed(2)}
                   </div>
-                  {item.attributes && Object.
-              
-              .    <div className="text-sm text-muted-foreground mt-1">
-                      {Object.entries(item.attributes).map(([key, value]) => (
-                        <span key={key} className="mr-2">
-                          {key}: {value}
-                        </span>
-                      ))}
+                  {item.color && Object.entries(item.color).map(([key, value]) => (
+                    <div className="text-sm text-muted-foreground mt-1" key={key}>
+                      {key}: {value}
                     </div>
-                  )}
+                  ))}
                 </div>
                 <div className="text-sm font-medium">${(item.price * item.quantity).toFixed(2)}</div>
               </div>
@@ -136,4 +131,3 @@ export function CheckoutReview({
     </div>
   )
 }
-

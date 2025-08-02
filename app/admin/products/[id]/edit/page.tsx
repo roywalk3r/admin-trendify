@@ -57,7 +57,7 @@ export default function EditProductPage() {
       <div className="container py-10">
         <div className="text-center">
           <h2 className="text-xl font-semibold">Product not found</h2>
-          <p className="text-muted-foreground">The product you're trying to edit doesn't exist or has been removed.</p>
+          <p className="text-muted-foreground">{`Product's name can't be empty.`}</p>
         </div>
       </div>
     )

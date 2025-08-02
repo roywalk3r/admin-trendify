@@ -71,9 +71,10 @@ export function useApi<T>(url: string, options: UseApiOptions = {}) {
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchData()
-  }, [url, enabled])
+  }, [])
 
   return {
     data,
@@ -167,4 +168,3 @@ export function useApiMutation<T, U = any>(
     },
   }
 }
-

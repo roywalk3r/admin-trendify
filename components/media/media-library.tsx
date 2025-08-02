@@ -50,6 +50,7 @@ import {
 import { toast } from "sonner";
 import { getMediaFiles, deleteMediaFile } from "@/lib/appwrite/utils";
 import { AppwriteImage } from "../appwrite-image";
+import Image from "next/image";
 
 interface MediaFile {
   id: string;
@@ -356,9 +357,11 @@ export function MediaLibrary({
               <CardContent className="p-2 relative">
                 <div className="aspect-square mb-2 bg-muted rounded overflow-hidden">
                   {file.type.startsWith("image/") ? (
-                    <img
+                    <Image
                       src={file.preview || file.url}
                       alt={file.name}
+                      width={100}
+                      height={100}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -446,9 +449,11 @@ export function MediaLibrary({
 
                   <div className="flex-shrink-0">
                     {file.type.startsWith("image/") ? (
-                      <img
+                      <Image
                         src={file.preview || file.url}
                         alt={file.name}
+                        width={48}
+                        height={48}
                         className="h-12 w-12 object-cover rounded"
                       />
                     ) : (
@@ -569,8 +574,7 @@ export function MediaLibrary({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete File</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deleteConfirm?.name}"? This
-              action cannot be undone.
+              {`You can't delete ${deleteConfirm?.type.startsWith("image/") ? 'images' : deleteConfirm?.type.startsWith("video/") ? 'videos' : 'files'} that are in use.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -23,14 +23,15 @@ export type Cart = z.infer<typeof CartSchema>
 // Cart functions
 export async function getCart(userId: string): Promise<Cart> {
   try {
-    const cart = await redis.get<Cart>(`cart:${userId}`)
+    const cartData = await redis.get(`cart:${userId}`)
 
-    if (!cart) {
+    if (!cartData) {
       return { items: [], updatedAt: Date.now() }
     }
 
-    // Validate cart data
-    return CartSchema.parse(cart)
+    // Parse and validate cart data
+    const parsedData = JSON.parse(cartData)
+    return CartSchema.parse(parsedData)
   } catch (error) {
     console.error("Error getting cart:", error)
     return { items: [], updatedAt: Date.now() }
@@ -42,8 +43,10 @@ export async function updateCart(userId: string, cart: Cart): Promise<void> {
     // Validate cart before saving
     const validatedCart = CartSchema.parse(cart)
 
-    // Set cart with 30-day expiration
-    await redis.set(`cart:${userId}`, validatedCart, { ex: 60 * 60 * 24 * 30 })
+    // Stringify cart data
+    const cartString = JSON.stringify(validatedCart)
+    // Set with 30-day expiration using setex
+    await redis.setex(`cart:${userId}`, 60 * 60 * 24 * 30, cartString)
   } catch (error) {
     console.error("Error updating cart:", error)
   }

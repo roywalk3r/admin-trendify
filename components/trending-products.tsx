@@ -5,6 +5,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
+import Image from 'next/image';
 import { ShoppingCart, TrendingUp } from "lucide-react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -121,9 +122,11 @@ export function TrendingProducts({ limit = 4 }: TrendingProductsProps) {
                   <Link href={`/products/${product.id}`} className="group block">
                     <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-lg border">
                       <div className="aspect-square overflow-hidden relative">
-                        <img
-                            src={product.images[0] || "/placeholder.svg?height=300&width=300"}
+                        <Image
+                            src={product.images[0] || "/placeholder.svg"}
                             alt={product.name}
+                            width={300}
+                            height={300}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         />
                         <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground" variant="default">

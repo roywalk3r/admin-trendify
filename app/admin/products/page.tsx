@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface Product {
   id: string;
@@ -200,17 +201,10 @@ export default function ProductsPage() {
     fetchCategories();
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchProducts();
-  }, [
-    search,
-    categoryFilter,
-    statusFilter,
-    featuredFilter,
-    sortBy,
-    sortOrder,
-    currentPage,
-  ]);
+  });
 
   const handleDelete = async (productId: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -510,13 +504,15 @@ export default function ProductsPage() {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center">
                           {product.images.length > 0 ? (
-                            <img
+                            <Image
                               src={
                                 product.images[0] ||
                                 "/placeholder.svg?height=40&width=40"
                               }
                               alt={product.name}
                               className="w-full h-full object-cover rounded-md"
+                              width={40}
+                              height={40}
                             />
                           ) : (
                             <Package className="h-4 w-4 text-muted-foreground" />

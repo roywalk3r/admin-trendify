@@ -16,7 +16,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { useClerk } from "@clerk/nextjs"
+import {SignOutButton, useClerk} from "@clerk/nextjs"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function AdminSidebar() {
@@ -114,14 +114,7 @@ export default function AdminSidebar() {
             <p className="text-xs text-muted-foreground">admin@example.com</p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          className="w-full justify-start"
-          onClick={() => signOut(() => (window.location.href = "/"))}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
-        </Button>
+       <SignOutButton/>
       </div>
     </div>
   )

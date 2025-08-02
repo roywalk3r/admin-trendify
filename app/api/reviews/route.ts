@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   const parsed = reviewSchema.safeParse(body)
 
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors }, { status: 400 })
+    return NextResponse.json({ error: parsed.error.issues }, { status: 400 })
   }
 
   const { productId, rating, comment } = parsed.data

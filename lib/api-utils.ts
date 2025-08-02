@@ -31,7 +31,7 @@ export function handleApiError(error: unknown): NextResponse {
 
   // Handle Zod validation errors
   if (error instanceof ZodError) {
-    const formattedErrors = error.errors.map((err) => `${err.path.join(".")}: ${err.message}`)
+    const formattedErrors = error.issues.map((err) => `${err.path.join(".")}: ${err.message}`)
 
     return createApiResponse({
       error: formattedErrors,

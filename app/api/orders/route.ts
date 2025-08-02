@@ -1,19 +1,34 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { adminAuthMiddleware } from "@/lib/admin-auth"
+import { Decimal } from "@prisma/client/runtime/library"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest) {
   try {
     // Check admin authentication
     const authResponse = await adminAuthMiddleware(request)
     if (authResponse.status !== 200) {
       return authResponse
     }
-    const orderId = params.id
+
+    const {searchParams} = new URL(request.url)
+    const page = Number.parseInt(searchParams.get("page") || "1")
+    const limit = Number.parseInt(searchParams.get("limit") || "10")
+    const status = searchParams.get("status")
+    const paymentStatus = searchParams.get("paymentStatus")
+    const userId = searchParams.get("userId")
+
+    const skip = (page - 1) * limit
+
+    // Build where clause
+    const where: any = {}
+    if (status) where.status = status
+    if (paymentStatus) where.paymentStatus = paymentStatus
+    if (userId) where.userId = userId
 
     // Fetch the order with related data
     const order = await prisma.order.findUnique({
-      where: { id: orderId },
+      where,
       include: {
         user: {
           select: {
@@ -40,66 +55,152 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     })
 
     if (!order) {
-      return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 })
+      return NextResponse.json({success: false, message: "Order not found"}, {status: 404})
     }
 
-    return NextResponse.json({ success: true, order })
+    return NextResponse.json({success: true, order})
   } catch (error) {
     console.error("Error fetching order:", error)
-    return NextResponse.json({ success: false, message: "Failed to fetch order" }, { status: 500 })
+    return NextResponse.json({success: false, message: "Failed to fetch order"}, {status: 500})
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+
+export async function POST(request: NextRequest) {
   try {
-    // Check admin authentication
-    const authResponse = await adminAuthMiddleware(request)
-    if (authResponse.status !== 200) {
-      return authResponse
-    }
-    const orderId = params.id
-    const { status, paymentStatus } = await request.json()
+    const {userId, items, shippingAddress, paymentMethod, total, subtotal, tax, shipping} = await request.json()
 
-    // Validate input
-    if (!status && !paymentStatus) {
-      return NextResponse.json({ success: false, message: "No update data provided" }, { status: 400 })
+    // Validate required fields
+    if (!userId || !items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({success: false, message: "Missing required fields"}, {status: 400})
     }
 
-    // Check if order exists
-    const existingOrder = await prisma.order.findUnique({
-      where: { id: orderId },
-    })
+    // Validate items and calculate total
+    let calculatedSubtotal = 0
+    const validatedItems: { productId: any; quantity: any; price: Decimal }[] = []
 
-    if (!existingOrder) {
-      return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 })
-    }
+    for (const item of items) {
+      const product = await prisma.product.findUnique({
+        where: { id: item.productId },
+        select: { id: true, price: true, stock: true },
+      })
 
-    // Prepare update data
-    const updateData: any = {}
-    if (status) updateData.status = status
-    if (paymentStatus) updateData.paymentStatus = paymentStatus
+      if (!product) {
+        return NextResponse.json({ success: false, message: `Product ${item.productId} not found` }, { status: 400 })
+      }
 
-    // Update order
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: updateData,
-    })
+      if (product.stock < item.quantity) {
+        return NextResponse.json(
+            { success: false, message: `Insufficient stock for product ${item.productId}` },
+            { status: 400 },
+        )
+      }
 
-    // If payment status is updated, also update the payment record
-    if (paymentStatus) {
-      await prisma.payment.updateMany({
-        where: { orderId },
-        data: { paymentStatus },
+      const itemTotal =item.totalAmount
+      calculatedSubtotal += itemTotal
+
+      validatedItems.push({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: product.price,
       })
     }
 
+    // Create order in transaction
+    const order = await prisma.$transaction(async (tx) => {
+      // Create order
+      const newOrder = await tx.order.create({
+        data: {
+          userId,
+          status: "pending",
+          paymentStatus: "unpaid",
+          totalAmount: total || calculatedSubtotal + (tax || 0) + (shipping || 0),
+          subtotal: subtotal || calculatedSubtotal,
+          tax: tax || 0,
+          shipping: shipping || 0,
+        },
+      })
+
+      // Create order items
+      await tx.orderItem.createMany({
+        data: validatedItems.map((item) => ({
+          orderId: newOrder.id,
+          ...item,
+        })),
+      })
+
+      // Create shipping address if provided
+      if (shippingAddress) {
+        await tx.shippingAddress.create({
+          data: {
+            orderId: newOrder.id,
+            ...shippingAddress,
+          },
+        })
+      }
+
+      // Create payment record
+      if (paymentMethod) {
+        await tx.payment.create({
+          data: {
+            orderId: newOrder.id,
+            paymentMethod,
+            amount: newOrder.totalAmount,
+            paymentStatus: "paid",
+          },
+        })
+      }
+
+      // Update product stock
+      for (const item of validatedItems) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
+          },
+        })
+      }
+
+      return newOrder
+    })
+
+    // Fetch complete order data
+    const completeOrder = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        orderItems: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                images: true,
+              },
+            },
+          },
+        },
+        payment: true,
+        shippingAddress: true,
+      },
+    })
+
     return NextResponse.json({
       success: true,
-      message: "Order updated successfully",
-      order: updatedOrder,
+      message: "Order created successfully",
+      order: completeOrder,
     })
   } catch (error) {
-    console.error("Error updating order:", error)
-    return NextResponse.json({ success: false, message: "Failed to update order" }, { status: 500 })
+    console.error("Error creating order:", error)
+    return NextResponse.json({ success: false, message: "Failed to create order" }, { status: 500 })
   }
 }

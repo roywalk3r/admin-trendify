@@ -10,8 +10,8 @@ const querySchema = z.object({
   featured: z.enum(["all", "true", "false"]).optional().default("all"),
   sortBy: z.enum(["name", "price", "stock", "createdAt", "category"]).optional().default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
-  page: z.string().transform(Number).optional().default(1),
-  limit: z.string().transform(Number).optional().default(20),
+  page: z.string().transform(Number).optional(),
+  limit: z.string().transform(Number).optional(),
 })
 
 const productSchema = z.object({
@@ -100,11 +100,11 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy,
-      skip: (params.page - 1) * params.limit,
-      take: params.limit,
+      skip: params.page !== undefined && params.limit !== undefined ? (params.page - 1) * params.limit : 0,
+      take: params.limit !== undefined ? params.limit : 10,
     })
 
-    const totalPages = Math.ceil(totalCount / params.limit)
+    const totalPages = Math.ceil(totalCount / (params.limit !== undefined ? params.limit : 10))
 
     const response = {
       products: products.map((product) => ({
@@ -129,8 +129,8 @@ export async function GET(request: NextRequest) {
         limit: params.limit,
         totalCount,
         totalPages,
-        hasNextPage: params.page < totalPages,
-        hasPrevPage: params.page > 1,
+        hasNextPage: params.page !== undefined && params.page < totalPages,
+        hasPrevPage: params.page !== undefined && params.page > 1,
       },
       filters: params,
     }
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error creating product:", error)
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation error", details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: "Validation error", details: error.issues }, { status: 400 })
     }
     return NextResponse.json({ error: "Failed to create product" }, { status: 500 })
   }
@@ -316,7 +316,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error("Error updating product(s):", error)
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation error", details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: "Validation error", details: error.issues }, { status: 400 })
     }
     return NextResponse.json({ error: "Failed to update product(s)" }, { status: 500 })
   }

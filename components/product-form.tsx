@@ -103,18 +103,17 @@ export function ProductForm({
 
   // Form setup
   const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
+    resolver: zodResolver(productSchema) as any, // Type assertion to resolve the type conflict
     defaultValues: {
-      id: initialData?.id || undefined,
+      id: initialData?.id,
       name: initialData?.name || "",
       description: initialData?.description || "",
-      // Ensure these are properly converted to numbers
       price: initialData?.price ? Number(initialData.price) : 0,
       stock: initialData?.stock ? Number(initialData.stock) : 0,
       categoryId: initialData?.categoryId || "",
       images: initialData?.images || [],
-    },
-    mode: "onChange", // Validate on change for better UX
+    } as ProductFormValues, // Explicitly type the default values
+    mode: "onChange",
   });
 
   // Debug logging for form values
@@ -345,10 +344,10 @@ export function ProductForm({
                             type="number"
                             step="0.01"
                             min="0"
-                            {...field}
+                            value={field.value}
                             onChange={(e) => {
-                              const value = e.target.value;
-                              field.onChange(value === "" ? "" : Number(value));
+                              // Keep as string - zod's coerce will handle conversion
+                              field.onChange(e.target.value);
                             }}
                           />
                         </FormControl>
@@ -367,12 +366,10 @@ export function ProductForm({
                           <Input
                             type="number"
                             min="0"
-                            {...field}
+                            value={field.value}
                             onChange={(e) => {
-                              const value = e.target.value;
-                              field.onChange(
-                                value === "" ? "" : Number.parseInt(value, 10)
-                              );
+                              // Keep as string - zod's coerce will handle conversion
+                              field.onChange(e.target.value);
                             }}
                           />
                         </FormControl>

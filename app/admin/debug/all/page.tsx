@@ -93,11 +93,13 @@ export default function AdminDebugPage() {
                 <div className="p-4 bg-yellow-50 text-yellow-700 rounded-md">
                   <p className="font-medium">Authentication Troubleshooting:</p>
                   <ul className="list-disc pl-5 mt-2">
-                    <li>Ensure you're logged in with a Clerk account</li>
-                    <li>Check that your user has the "admin" role in the database</li>
+                    <li>Ensure you&apos;re logged in with a Clerk account</li>
+                    <li>Check that your user has the &quot;admin&quot; role in the database</li>
                     <li>Verify that the Clerk webhook is properly configured</li>
                     <li>Check for CORS issues in the browser console</li>
                   </ul>
+                  <span>{`You can use the &apos;admin&apos; role to access all endpoints.`}</span>
+                  <span>{`See the "Admin API" tab for details.`}</span>
                 </div>
               </div>
             </TabsContent>

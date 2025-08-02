@@ -7,6 +7,10 @@ import { auth } from "@clerk/nextjs/server"
 // Product validation schema
 const productSchema = z.object({
   name: z.string().min(3, "Product name must be at least 3 characters"),
+  slug: z
+    .string()
+    .min(2, "Slug must be at least 2 characters")
+    .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   price: z.number().positive("Price must be positive"),
   stock: z.number().int().nonnegative("Stock cannot be negative"),

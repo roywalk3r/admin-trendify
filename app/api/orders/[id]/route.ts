@@ -2,14 +2,15 @@ import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { adminAuthMiddleware } from "@/lib/admin-auth"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     // Check admin authentication
     const authResponse = await adminAuthMiddleware(request)
     if (authResponse.status !== 200) {
       return authResponse
     }
-    const orderId = params.id
+
+    const { id: orderId } = await context.params
 
     // Fetch the order with related data
     const order = await prisma.order.findUnique({
@@ -50,14 +51,15 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     // Check admin authentication
     const authResponse = await adminAuthMiddleware(request)
     if (authResponse.status !== 200) {
       return authResponse
     }
-    const orderId = params.id
+
+    const { id: orderId } = await context.params
     const { status, paymentStatus } = await request.json()
 
     // Validate input

@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { uploadToAppwrite } from "@/lib/appwrite/utils"
+import Image from "next/image"
 
 interface FileUpload {
   id: string
@@ -233,10 +234,12 @@ export function DragDropUpload({
                       {/* File Preview/Icon */}
                       <div className="flex-shrink-0">
                         {upload.preview ? (
-                          <img
+                          <Image
                             src={upload.preview || "/placeholder.svg"}
                             alt={upload.file.name}
-                            className="h-12 w-12 object-cover rounded"
+                            width={48}
+                            height={48}
+                            className="object-cover rounded"
                           />
                         ) : (
                           <div className="h-12 w-12 bg-muted rounded flex items-center justify-center">

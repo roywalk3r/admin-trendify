@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
+import Image from 'next/image';
 import { ShoppingCart, Heart, Star } from "lucide-react"
 import { useApi } from "@/lib/hooks/use-api"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
@@ -87,9 +88,11 @@ export function ProductShowcase() {
           <Link href={`/products/${product.id}`} className="group block">
             <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-lg">
               <div className="aspect-square overflow-hidden relative">
-                <img
-                  src={product.images[0] || "/placeholder.svg?height=300&width=300"}
+                <Image
+                  src={product.images[0] || "/placeholder.svg"}
                   alt={product.name}
+                  width={300}
+                  height={300}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -1,148 +1,265 @@
-import { NextResponse, type NextRequest } from "next/server";
-import prisma from "@/lib/prisma";
-import { createApiResponse, handleApiError } from "@/lib/api-utils";
-import { adminAuthMiddleware } from "@/lib/admin-auth";
-import { getCache, setCache, deleteCache } from "@/lib/redis";
+import prisma from "@/lib/prisma"
+import { createApiResponse, handleApiError } from "@/lib/api-utils"
+import type { NextRequest } from "next/server"
+import { z } from "zod"
+import { auth } from "@clerk/nextjs/server"
+import { deleteCache } from "@/lib/redis"
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const authResponse = await adminAuthMiddleware(req);
-  if (authResponse.status !== 200) {
-    return authResponse;
-  }
+// Product validation schema
+const productSchema = z.object({
+  name: z.string().min(2, "Product name must be at least 2 characters"),
+  slug: z
+      .string()
+      .min(2, "Slug must be at least 2 characters")
+      .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  price: z.number().positive("Price must be positive"),
+  comparePrice: z.number().positive().optional(),
+  sku: z.string().optional(),
+  stock: z.number().int().min(0, "Stock cannot be negative"),
+  categoryId: z.string().min(1, "Category is required"),
+  images: z.array(z.string().url()).min(1, "At least one image is required"),
+  isActive: z.boolean().default(true),
+  isFeatured: z.boolean().default(false),
+  status: z.enum(["active", "inactive", "draft"]).default("active"),
+})
 
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const productId = await params.id;
-    const cacheKey = `product:${productId}`;
+    const { id } = await context.params
 
-    // 🔹 Attempt to fetch from Redis cache
-    const cachedProduct = await getCache(cacheKey);
-    if (cachedProduct) {
-      return NextResponse.json({ data: cachedProduct, cached: true });
-    }
-
-    // 🔹 Fetch from DB if not in cache
+    // Fetch product with all related data
     const product = await prisma.product.findUnique({
-      where: { id: productId },
+      where: { id },
       include: {
-        category: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        variants: true,
+        reviews: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        _count: {
+          select: {
+            reviews: true,
+            orderItems: true,
+            wishlistItems: true,
+          },
+        },
       },
-    });
+    })
 
     if (!product) {
       return createApiResponse({
         error: "Product not found",
         status: 404,
-      });
+      })
     }
-
-    // 🔹 Store in cache for 5 minutes (300 seconds)
-    await setCache(cacheKey, product, 300);
 
     return createApiResponse({
       data: product,
       status: 200,
-    });
+    })
   } catch (error) {
-    console.error(`Error fetching product with ID ${params.id}:`, error);
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const authResponse = await adminAuthMiddleware(req);
-  if (authResponse.status !== 200) {
-    return authResponse;
-  }
-
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const productId = params.id;
-    const data = await req.json();
-    const cacheKey = `product:${productId}`;
+    const { userId } = await auth()
 
+    // Check if user is authenticated
+    if (!userId) {
+      return createApiResponse({
+        error: "Unauthorized",
+        status: 401,
+      })
+    }
+
+    const { id } = await context.params
+
+    // Parse and validate request body
+    const body = await req.json()
+    const validatedData = productSchema.parse(body)
+
+    // Check if product exists
     const existingProduct = await prisma.product.findUnique({
-      where: { id: productId },
-    });
+      where: { id },
+    })
 
     if (!existingProduct) {
       return createApiResponse({
         error: "Product not found",
         status: 404,
-      });
+      })
     }
 
-    const updatedProduct = await prisma.product.update({
-      where: { id: productId },
-      data: {
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        stock: data.stock,
-        categoryId: data.category_id,
-        images: data.images,
-        updatedAt: new Date(),
-      },
-      include: {
-        category: true,
-      },
-    });
+    // Check if category exists
+    if (validatedData.categoryId) {
+      const category = await prisma.category.findUnique({
+        where: { id: validatedData.categoryId },
+      })
 
-    // 🔹 Update cache with new product data
-    await setCache(cacheKey, updatedProduct, 300);
+      if (!category) {
+        return createApiResponse({
+          error: "Category not found",
+          status: 404,
+        })
+      }
+    }
+
+    // Check if slug or name conflicts with another product
+    const conflictingProduct = await prisma.product.findFirst({
+      where: {
+        OR: [{ name: validatedData.name }, { slug: validatedData.slug }],
+        NOT: { id },
+        isDeleted: false,
+        deletedAt: null,
+      },
+    })
+
+    if (conflictingProduct) {
+      return createApiResponse({
+        error: "A different product with this name or slug already exists",
+        status: 409,
+      })
+    }
+
+    // Check if SKU conflicts with another product (if provided)
+    if (validatedData.sku) {
+      const conflictingSku = await prisma.product.findFirst({
+        where: {
+          sku: validatedData.sku,
+          NOT: { id },
+          isDeleted: false,
+          deletedAt: null,
+        },
+      })
+
+      if (conflictingSku) {
+        return createApiResponse({
+          error: "A different product with this SKU already exists",
+          status: 409,
+        })
+      }
+    }
+
+    // Update product
+    const updatedProduct = await prisma.product.update({
+      where: { id },
+      data: validatedData,
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        _count: {
+          select: {
+            reviews: true,
+            orderItems: true,
+          },
+        },
+      },
+    })
+
+    // Invalidate all product caches
+    await deleteCache("products:*")
 
     return createApiResponse({
       data: updatedProduct,
       status: 200,
-    });
+    })
   } catch (error) {
-    console.error(`Error updating product with ID ${params.id}:`, error);
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const authResponse = await adminAuthMiddleware(req);
-  if (authResponse.status !== 200) {
-    return authResponse;
-  }
-
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const productId = params.id;
-    const cacheKey = `product:${productId}`;
-    console.log("Deleting product with ID:", productId);
+    const { userId } = await auth()
 
+    // Check if user is authenticated
+    if (!userId) {
+      return createApiResponse({
+        error: "Unauthorized",
+        status: 401,
+      })
+    }
+
+    const { id } = await context.params
+    const url = new URL(req.url)
+    const force = url.searchParams.get("force") === "true"
+
+    // Check if product exists
     const existingProduct = await prisma.product.findUnique({
-      where: { id: productId },
-    });
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            orderItems: true,
+          },
+        },
+      },
+    })
 
     if (!existingProduct) {
       return createApiResponse({
         error: "Product not found",
         status: 404,
-      });
+      })
     }
 
-    await prisma.product.delete({
-      where: { id: productId },
-    });
+    // Check if product has orders
+    if (!force && existingProduct._count.orderItems > 0) {
+      return createApiResponse({
+        error: "Cannot delete product with existing orders",
+        status: 409,
+      })
+    }
 
-    // 🔹 Invalidate the cache after deletion
-    await deleteCache(cacheKey);
+    if (force) {
+      // Hard delete
+      await prisma.product.delete({
+        where: { id },
+      })
+    } else {
+      // Soft delete
+      await prisma.product.update({
+        where: { id },
+        data: {
+          isDeleted: true,
+          deletedAt: new Date(),
+        },
+      })
+    }
+
+    // Invalidate all product caches
+    await deleteCache("products:*")
 
     return createApiResponse({
-      data: { message: "Product deleted successfully" },
+      data: { message: "Product deleted successfully", force },
       status: 200,
-    });
+    })
   } catch (error) {
-    console.error(`Error deleting product with ID ${params.id}:`, error);
-    return handleApiError(error);
+    return handleApiError(error)
   }
 }

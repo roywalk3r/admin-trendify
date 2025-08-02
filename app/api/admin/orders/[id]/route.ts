@@ -1,22 +1,23 @@
-import type { NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
+import type { NextRequest } from "next/server"
 import { z } from "zod"
+import { auth } from "@clerk/nextjs/server"
 
-// Validation schema for order status update
-const updateOrderSchema = z.object({
-  status: z.enum(["pending", "processing", "shipped", "delivered", "canceled"]).optional(),
-  payment_status: z.enum(["unpaid", "paid", "refunded"]).optional(),
+// Order status validation schema
+const orderStatusSchema = z.object({
+  status: z.enum(["pending", "processing", "shipped", "delivered", "canceled"]),
+  trackingNumber: z.string().optional(),
+  notes: z.string().optional(),
 })
 
-export async function GET(req: NextRequest, context: { params: { id: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    // const orderId = await params.id
-    const orderId = context.params.id // Check admin authorization
+    const { id } = await context.params
 
-    // Get order with related data
+    // Fetch order with all related data
     const order = await prisma.order.findUnique({
-      where: { id: orderId },
+      where: { id },
       include: {
         user: {
           select: {
@@ -31,13 +32,14 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
               select: {
                 id: true,
                 name: true,
+                slug: true,
                 images: true,
+                price: true,
               },
             },
           },
         },
         shippingAddress: true,
-        payment: true,
       },
     })
 
@@ -57,57 +59,125 @@ export async function GET(req: NextRequest, context: { params: { id: string } })
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  // Check admin authorization
-
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const orderId = params.id
-    const body = await req.json()
+    const { userId } = await auth()
 
-    // Validate request body
-    const validatedData = updateOrderSchema.parse(body)
+    // Check if user is authenticated
+    if (!userId) {
+      return createApiResponse({
+        error: "Unauthorized",
+        status: 401,
+      })
+    }
+
+    const { id } = await context.params
+
+    // Parse and validate request body
+    const body = await req.json()
+    const validatedData = orderStatusSchema.parse(body)
 
     // Check if order exists
-    const orderExists = await prisma.order.findUnique({
-      where: { id: orderId },
+    const existingOrder = await prisma.order.findUnique({
+      where: { id },
     })
 
-    if (!orderExists) {
+    if (!existingOrder) {
       return createApiResponse({
         error: "Order not found",
         status: 404,
       })
     }
 
-    // Update order status
-    const updateData: any = {}
-    if (validatedData.status) {
-      updateData.status = validatedData.status
-    }
-    if (validatedData.payment_status) {
-      updateData.payment_status = validatedData.payment_status
-
-      // Also update payment status if payment exists
-      const payment = await prisma.payment.findUnique({
-        where: { orderId },
-      })
-
-      if (payment) {
-        await prisma.payment.update({
-          where: { id: payment.id },
-          data: { paymentStatus: validatedData.payment_status },
-        })
-      }
-    }
-
     // Update order
     const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: updateData,
+      where: { id },
+      data: {
+        status: validatedData.status,
+        trackingNumber: validatedData.trackingNumber,
+        notes: validatedData.notes,
+        updatedAt: new Date(),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        orderItems: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                images: true,
+                price: true,
+              },
+            },
+          },
+        },
+        shippingAddress: true,
+      },
     })
 
     return createApiResponse({
       data: updatedOrder,
+      status: 200,
+    })
+  } catch (error) {
+    return handleApiError(error)
+  }
+}
+
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const { userId } = await auth()
+
+    // Check if user is authenticated
+    if (!userId) {
+      return createApiResponse({
+        error: "Unauthorized",
+        status: 401,
+      })
+    }
+
+    const { id } = await context.params
+
+    // Check if order exists
+    const existingOrder = await prisma.order.findUnique({
+      where: { id },
+    })
+
+    if (!existingOrder) {
+      return createApiResponse({
+        error: "Order not found",
+        status: 404,
+      })
+    }
+
+    // Check if order can be deleted (only pending orders)
+    if (existingOrder.status !== "pending") {
+      return createApiResponse({
+        error: "Only pending orders can be deleted",
+        status: 409,
+      })
+    }
+
+    // Delete order and related items
+    await prisma.$transaction([
+      prisma.orderItem.deleteMany({
+        where: { orderId: id },
+      }),
+      prisma.order.delete({
+        where: { id },
+      }),
+    ])
+
+    return createApiResponse({
+      data: { message: "Order deleted successfully" },
       status: 200,
     })
   } catch (error) {

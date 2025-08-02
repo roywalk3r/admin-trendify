@@ -206,7 +206,13 @@ export default function AdminUsersPage() {
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page <= 1} />
+                <PaginationPrevious
+                    size={"default"}
+                  onClick={() => setPage(page > 1 ? page - 1 : 1)}
+                  aria-disabled={page <= 1}
+                  tabIndex={page <= 1 ? -1 : 0}
+                  className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                />
               </PaginationItem>
               {Array.from({ length: pagination.pages }, (_, i) => i + 1)
                 .filter((p) => p === 1 || p === pagination.pages || (p >= page - 1 && p <= page + 1))
@@ -219,8 +225,11 @@ export default function AdminUsersPage() {
                 ))}
               <PaginationItem>
                 <PaginationNext
+                    size={"default"}
                   onClick={() => setPage(page < pagination.pages ? page + 1 : pagination.pages)}
-                  disabled={page >= pagination.pages}
+                  aria-disabled={page >= pagination.pages}
+                  tabIndex={page >= pagination.pages ? -1 : 0}
+                  className={page >= pagination.pages ? 'pointer-events-none opacity-50' : ''}
                 />
               </PaginationItem>
             </PaginationContent>

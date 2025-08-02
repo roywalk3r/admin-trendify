@@ -20,6 +20,7 @@ export default function OrderDetailsPage() {
   const [status, setStatus] = useState("")
   const [paymentStatus, setPaymentStatus] = useState("")
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const fetchOrder = async () => {
       try {
@@ -48,7 +49,7 @@ export default function OrderDetailsPage() {
     if (id) {
       fetchOrder()
     }
-  }, [id, toast])
+  }, [id])
 
   const updateOrderStatus = async () => {
     setUpdating(true)

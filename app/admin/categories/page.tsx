@@ -295,7 +295,7 @@ export default function AdminCategoriesPage() {
           <p className="text-muted-foreground mt-2">
             {searchQuery
               ? "Try a different search term"
-              : "Add your first category to get started"}
+              : `You can use the "Add Category" button to create a new category.`}
           </p>
           {searchQuery && (
             <Button
@@ -655,7 +655,7 @@ export default function AdminCategoriesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Category</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{categoryToDelete?.name}"? This
+              Are you sure you want to delete &quot;{categoryToDelete?.name}&quot;? This
               action cannot be undone.
               {deleteError && (
                 <div className="mt-2 p-2 bg-destructive/10 text-destructive rounded-md text-sm">

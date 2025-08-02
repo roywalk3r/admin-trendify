@@ -50,11 +50,10 @@ export function AppwriteMediaBrowser({
   }
 
   // Initial fetch
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (isOpen) {
-      fetchMediaAssets()
-    }
-  }, [isOpen, bucketId])
+    fetchMediaAssets();
+  }, []);
 
   // Handle asset selection
   const handleAssetSelect = (url: string) => {

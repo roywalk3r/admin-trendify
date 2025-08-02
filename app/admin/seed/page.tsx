@@ -47,7 +47,7 @@ export default function AdminSeedPage() {
         <h1 className="text-3xl font-bold tracking-tight">Seed Database</h1>
       </div>
 
-      <Alert variant="warning">
+      <Alert variant="destructive">
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Warning</AlertTitle>
         <AlertDescription>
@@ -75,7 +75,7 @@ export default function AdminSeedPage() {
           </ul>
 
           {isSuccess && (
-            <Alert className="mt-4" variant="success">
+            <Alert className="mt-4" variant="default">
               <Check className="h-4 w-4" />
               <AlertTitle>Success</AlertTitle>
               <AlertDescription>Database has been successfully seeded with sample data.</AlertDescription>

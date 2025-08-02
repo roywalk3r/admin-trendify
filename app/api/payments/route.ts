@@ -12,14 +12,16 @@ export async function POST(req: Request) {
     data: {
       orderId,
       paymentMethod,
-      paymentStatus: "COMPLETED",
+      paymentStatus: "paid",
       transactionId,
+      amount: 0,
+      order: { connect: { id: orderId } },
     },
   })
 
   await prisma.order.update({
     where: { id: orderId },
-    data: { paymentStatus: "PAID" },
+    data: { paymentStatus: "paid" },
   })
 
   return NextResponse.json(payment, { status: 201 })

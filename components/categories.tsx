@@ -1,6 +1,7 @@
 import Link from "next/link"
+import Image from 'next/image';
 
-export default function Cartegories() {
+export default function Categories({ categories }:{ categories: any[] }) {
   return (
     <>
       <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/40">
@@ -14,7 +15,7 @@ export default function Cartegories() {
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 mt-8">
-            {categories.map((category) => (
+            {categories.map((category:any) => (
               <Link
                 href={`/categories/${category.slug}`}
                 key={category.name}

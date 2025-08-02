@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
+import Image from 'next/image';
 
 interface AppwriteImgProps {
   src: string
@@ -43,16 +44,17 @@ export function AppwriteImg({ src, alt, width = "100%", height = "auto", classNa
           <span className="text-muted-foreground">{error}</span>
         </div>
       ) : (
-        <img
-          src={src || "/placeholder.svg"}
-          alt={alt}
-          className={className}
-          style={{ width, height, objectFit: "cover" }}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
+        <Image
+            src={src || "/placeholder.svg"}
+            alt={alt}
+            className={className}
+            style={{ objectFit: "cover" }}
+            width={typeof width === "number" ? width : undefined}
+            height={typeof height === "number" ? height : undefined}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
         />
       )}
     </div>
   )
 }
-

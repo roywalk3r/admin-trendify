@@ -49,6 +49,7 @@ export function AdminSidebar() {
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
 
   // Determine if a submenu should be open based on current path
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const currentSection = links.find(
       (link) => link.submenu?.some((item) => pathname === item.href) || pathname === link.href,

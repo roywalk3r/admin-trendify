@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error(`Error performing bulk action:`, error)
         if (error instanceof z.ZodError) {
-            return NextResponse.json({ error: "Validation error", details: error.errors }, { status: 400 })
+            return NextResponse.json({ error: "Validation error", details: error.issues }, { status: 400 })
         }
         return NextResponse.json({ error: "Failed to perform bulk action" }, { status: 500 })
     }

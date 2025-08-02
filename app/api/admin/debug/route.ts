@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
         if (count > 0) {
           const settings = await prisma.settings.findMany({
             select: {
-              type: true,
+              key: true,
               createdAt: true,
               updatedAt: true,
             },
