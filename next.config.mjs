@@ -11,6 +11,17 @@ const nextConfig = {
         hostname: 'cloud.appwrite.io',
         pathname: '**',
       },
+      {
+        protocol: 'https',
+        hostname: 'fra.cloud.appwrite.io',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'admin-trendify.vercel.app',
+        port: '',
+        pathname: '/**',
+      }
     ],
   },
   async headers() {

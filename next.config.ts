@@ -6,9 +6,11 @@ const nextConfig: NextConfig = {
     domains: [
       'cloud.appwrite.io',
       'localhost',
-      'admin-trendify.vercel.app'
+      'placeholder.svg',
+        'fra.cloud.appwrite.io'
     ],
     remotePatterns: [
+      new URL('https://fra.cloud.appwrite.io/**'),
       {
         protocol: 'https',
         hostname: 'cloud.appwrite.io',
@@ -20,6 +22,12 @@ const nextConfig: NextConfig = {
         hostname: 'admin-trendify.vercel.app',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'fra.cloud.appwrite.io',
+        port: '',
+        pathname: '/v1/**',
       },
       {
         protocol: 'http',

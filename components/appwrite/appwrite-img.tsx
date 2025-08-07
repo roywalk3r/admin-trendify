@@ -49,8 +49,8 @@ export function AppwriteImg({ src, alt, width = "100%", height = "auto", classNa
             alt={alt}
             className={className}
             style={{ objectFit: "cover" }}
-            width={typeof width === "number" ? width : 500}
-            height={typeof height === "number" ? height : 500}
+            width={typeof width === "number" ? width : 800}
+            height={typeof height === "number" ? height : 800}
             onLoad={handleImageLoad}
             onError={handleImageError}
         />
