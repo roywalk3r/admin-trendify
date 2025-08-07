@@ -119,7 +119,7 @@ export function ProductForm({
   // Debug logging for form values
   useEffect(() => {
     const subscription = form.watch((value) => {
-      console.log("Form values changed:", value);
+      // console.log("Form values changed:", value);
     });
     return () => subscription.unsubscribe();
   }, [form]);
