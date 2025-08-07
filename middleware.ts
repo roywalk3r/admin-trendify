@@ -3,7 +3,7 @@ import arcjet, { createMiddleware, detectBot } from "@arcjet/next"
 
 const isProtectedRoute = createRouteMatcher(["/admin(.*)", "/api/admin(.*)"])
 
-const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)", "/api/webhooks(.*)"])
+// const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)", "/api/webhooks(.*)", "/api/products(.*), /api/reviews(.*)"])
 
 // Initialize Arcjet
 const aj = arcjet({
@@ -28,7 +28,7 @@ const combinedMiddleware = createMiddleware(aj, async (req) => {
   // Run Clerk middleware
   // @ts-ignore
   return clerkMiddleware(async (auth, req) => {
-    if (!isPublicRoute(req)) {
+    if (isProtectedRoute(req)) {
       await auth.protect()
     }
 
