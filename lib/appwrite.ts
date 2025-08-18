@@ -24,7 +24,7 @@ export async function uploadFile(file: File) {
 
 // Function to get a file preview URL
 export function getFilePreview(fileId: string) {
-  return storage.getFilePreview(process.env.NEXT_PUBLIC_APPWRITE_BUCKET_ID || "", fileId).href
+  return storage.getFilePreview(process.env.NEXT_PUBLIC_APPWRITE_BUCKET_ID || "", fileId).toString()
 }
 
 // Function to delete a file from Appwrite Storage

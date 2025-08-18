@@ -212,4 +212,3 @@ export function CheckoutShipping({ shippingInfo, setShippingInfo, onNext }: Chec
     </div>
   )
 }
-

@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
 import { isAdmin } from "@/lib/admin-auth"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(req: NextRequest) {
   try {
     const isUserAdmin = await isAdmin()

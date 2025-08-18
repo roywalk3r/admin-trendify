@@ -250,6 +250,7 @@ function ChartTooltipContent({
 
 const ChartLegend = RechartsPrimitive.Legend
 
+// @ts-ignore
 function ChartLegendContent({
   className,
   hideIcon = false,

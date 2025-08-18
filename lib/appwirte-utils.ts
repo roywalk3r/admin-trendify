@@ -47,7 +47,8 @@ export function getFilePreview(fileId: string, width?: number, height?: number):
   if (!fileId || !BUCKET_ID) return ""
 
   try {
-    const url = storage.getFilePreview(BUCKET_ID, fileId)
+    const href = storage.getFilePreview(BUCKET_ID, fileId) as unknown as string
+    const url = new URL(href)
 
     if (width) {
       url.searchParams.set("width", width.toString())

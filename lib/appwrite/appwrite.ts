@@ -14,4 +14,3 @@ const account = new Account(client)
 const uniqueId = () => ID.unique()
 
 export { client, storage, databases, account, uniqueId, ID, Query }
-

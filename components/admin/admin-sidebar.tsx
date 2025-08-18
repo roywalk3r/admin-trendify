@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -15,48 +15,62 @@ import {
   Menu,
   ChevronDown,
   ChevronRight,
-} from "lucide-react"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+  Images,
+  Palette,
+  Sparkles,
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface SidebarLink {
-  title: string
-  href: string
-  icon: React.ElementType
-  submenu?: { title: string; href: string }[]
+  title: string;
+  href: string;
+  icon: React.ElementType;
+  submenu?: { title: string; href: string }[];
 }
 
 export function AdminSidebar() {
-  const pathname = usePathname()
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
-  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null)
+  const pathname = usePathname();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
 
   // Close mobile sidebar when path changes
   useEffect(() => {
-    setIsMobileOpen(false)
-  }, [pathname])
+    setIsMobileOpen(false);
+  }, [pathname]);
 
   // Determine if a submenu should be open based on current path
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const currentSection = links.find(
-      (link) => link.submenu?.some((item) => pathname === item.href) || pathname === link.href,
-    )
+      (link) =>
+        link.submenu?.some((item) => pathname === item.href) ||
+        pathname === link.href
+    );
 
     if (currentSection?.submenu) {
-      setOpenSubmenu(currentSection.title)
+      setOpenSubmenu(currentSection.title);
     }
-  }, [pathname])
+  }, [pathname]);
 
   const links: SidebarLink[] = [
     {
       title: "Dashboard",
       href: "/admin",
       icon: LayoutDashboard,
+    },
+    {
+      title: "AI Dashboard",
+      href: "/admin/ai-dashboard",
+      icon: Sparkles,
     },
     {
       title: "Products",
@@ -79,6 +93,16 @@ export function AdminSidebar() {
       icon: Users,
     },
     {
+      title: "Media",
+      href: "/admin/media",
+      icon: Images,
+    },
+    {
+      title: "Hero",
+      href: "/admin/hero",
+      icon: Palette,
+    },
+    {
       title: "Analytics",
       href: "/admin/analytics",
       icon: BarChart,
@@ -88,26 +112,26 @@ export function AdminSidebar() {
       href: "/admin/settings",
       icon: Settings,
     },
-  ]
+  ];
 
   const toggleSubmenu = (title: string) => {
-    setOpenSubmenu(openSubmenu === title ? null : title)
-  }
+    setOpenSubmenu(openSubmenu === title ? null : title);
+  };
 
   const isLinkActive = (href: string) => {
-    return pathname === href
-  }
+    return pathname === href;
+  };
 
   const isSubmenuActive = (submenu?: { title: string; href: string }[]) => {
-    return submenu?.some((item) => pathname === item.href)
-  }
+    return submenu?.some((item) => pathname === item.href);
+  };
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/admin" className="flex items-center gap-2 font-semibold">
           <Package className="h-6 w-6" />
-          <span>Admin Panel</span>
+          <span>Trendify Panel</span>
         </Link>
         <div className="ml-auto flex items-center gap-2">
           <ThemeToggle />
@@ -125,13 +149,17 @@ export function AdminSidebar() {
               >
                 <CollapsibleTrigger asChild>
                   <Button
-                    variant={isSubmenuActive(link.submenu) ? "secondary" : "ghost"}
+                    variant={
+                      isSubmenuActive(link.submenu) ? "secondary" : "ghost"
+                    }
                     className="w-full justify-start gap-2"
                   >
                     <link.icon className="h-4 w-4" />
                     {link.title}
                     <ChevronDown
-                      className={`ml-auto h-4 w-4 transition-transform ${openSubmenu === link.title ? "rotate-180" : ""}`}
+                      className={`ml-auto h-4 w-4 transition-transform ${
+                        openSubmenu === link.title ? "rotate-180" : ""
+                      }`}
                     />
                   </Button>
                 </CollapsibleTrigger>
@@ -163,12 +191,16 @@ export function AdminSidebar() {
                   {link.title}
                 </Link>
               </Button>
-            ),
+            )
           )}
         </nav>
       </ScrollArea>
       <div className="mt-auto border-t p-4">
-        <Button variant="outline" className="w-full justify-start gap-2" asChild>
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-2"
+          asChild
+        >
           <Link href="/">
             <LogOut className="h-4 w-4" />
             Back to Store
@@ -176,7 +208,7 @@ export function AdminSidebar() {
         </Button>
       </div>
     </div>
-  )
+  );
 
   return (
     <>
@@ -204,5 +236,5 @@ export function AdminSidebar() {
         </div>
       </div>
     </>
-  )
+  );
 }

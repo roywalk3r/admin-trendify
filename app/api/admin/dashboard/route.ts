@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
 import { adminAuthMiddleware } from "@/lib/admin-auth"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(req: NextRequest) {
   const authResponse = await adminAuthMiddleware(req)
   if (authResponse.status !== 200) {

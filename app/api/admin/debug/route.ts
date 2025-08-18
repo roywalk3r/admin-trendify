@@ -4,6 +4,7 @@ import { adminAuthMiddleware } from "@/lib/admin-auth"
 import { testDatabaseConnection } from "@/lib/db-test"
 import prisma from "@/lib/prisma"
 
+export const dynamic = "force-dynamic"
 export async function GET(req: NextRequest) {
   try {
     // Check admin authorization

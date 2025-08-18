@@ -75,14 +75,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({success: false, message: "Missing required fields"}, {status: 400})
     }
 
-    // Validate items and calculate total
+    // Validate items and calculate subtotal
     let calculatedSubtotal = 0
-    const validatedItems: { productId: any; quantity: any; price: Decimal }[] = []
+    const validatedItems: {
+      productId: string
+      quantity: number
+      unitPrice: number
+      totalPrice: number
+      productName: string
+      productSku?: string | null
+    }[] = []
 
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
-        select: { id: true, price: true, stock: true },
+        select: { id: true, price: true, stock: true, name: true, sku: true },
       })
 
       if (!product) {
@@ -96,13 +103,17 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const itemTotal =item.totalAmount
+      const unitPrice = Number(product.price as unknown as Decimal)
+      const itemTotal = unitPrice * item.quantity
       calculatedSubtotal += itemTotal
 
       validatedItems.push({
         productId: item.productId,
         quantity: item.quantity,
-        price: product.price,
+        unitPrice,
+        totalPrice: itemTotal,
+        productName: product.name,
+        productSku: product.sku ?? undefined,
       })
     }
 
@@ -111,6 +122,7 @@ export async function POST(request: NextRequest) {
       // Create order
       const newOrder = await tx.order.create({
         data: {
+          orderNumber: `ORD-${Date.now()}`,
           userId,
           status: "pending",
           paymentStatus: "unpaid",
@@ -125,7 +137,12 @@ export async function POST(request: NextRequest) {
       await tx.orderItem.createMany({
         data: validatedItems.map((item) => ({
           orderId: newOrder.id,
-          ...item,
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+          productName: item.productName,
+          productSku: item.productSku ?? null,
         })),
       })
 
@@ -144,9 +161,9 @@ export async function POST(request: NextRequest) {
         await tx.payment.create({
           data: {
             orderId: newOrder.id,
-            paymentMethod,
+            method: paymentMethod,
             amount: newOrder.totalAmount,
-            paymentStatus: "paid",
+            status: "paid",
           },
         })
       }

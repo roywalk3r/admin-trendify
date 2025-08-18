@@ -39,6 +39,8 @@ import {
   Star,
   Package,
   AlertCircle,
+  DollarSign,
+  Tag,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -49,20 +51,33 @@ interface Product {
   name: string;
   description: string;
   price: string;
+  comparePrice?: string;
+  sku?: string;
   stock: number;
+  lowStockThreshold?: number;
   categoryId: string;
   category: {
     id: string;
     name: string;
+    slug: string;
   };
   images: string[];
+  metaTitle?: string;
+  metaDescription?: string;
+  tags?: string[];
   isActive: boolean;
   isFeatured: boolean;
   status: string;
+  trackInventory: boolean;
+  allowBackorder: boolean;
+  weight?: number;
+  dimensions?: string;
+  variants?: any[];
   createdAt: string;
   updatedAt: string;
   reviewCount: number;
   orderCount: number;
+  wishlistCount?: number;
 }
 
 interface ProductsResponse {
@@ -88,6 +103,7 @@ interface ProductsResponse {
 interface Category {
   id: string;
   name: string;
+  slug: string;
   _count: {
     products: number;
   };
@@ -172,14 +188,12 @@ export default function ProductsPage() {
       const json = await response.json();
       console.log("Categories response:", json);
 
-      // Extract the array from `data`
       if (json && Array.isArray(json.data)) {
         setCategories(json.data);
+      } else if (json && Array.isArray(json)) {
+        setCategories(json);
       } else {
-        console.error(
-          "Categories response is not an array under `data`:",
-          json
-        );
+        console.error("Categories response is not an array:", json);
         toast.error("Invalid categories format");
         setCategories([]);
       }
@@ -193,18 +207,18 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchCategories();
   }, []);
-  useEffect(() => {
-    fetchCategories();
-  }, []);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchProducts();
-  });
+  }, [
+    search,
+    categoryFilter,
+    statusFilter,
+    featuredFilter,
+    sortBy,
+    sortOrder,
+    currentPage,
+  ]);
 
   const handleDelete = async (productId: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -333,17 +347,11 @@ export default function ProductsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories ? (
-                  Object.entries(categories).map(([id, category]) => (
-                    <SelectItem key={id} value={id}>
-                      {category.name} ({category._count?.products || 0})
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="no-categories" disabled>
-                    No categories available
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name} ({category._count?.products || 0})
                   </SelectItem>
-                )}
+                ))}
               </SelectContent>
             </Select>
 
@@ -484,8 +492,7 @@ export default function ProductsPage() {
                   <TableHead>Price</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Reviews</TableHead>
-                  <TableHead>Orders</TableHead>
+                  <TableHead>Performance</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -507,7 +514,8 @@ export default function ProductsPage() {
                             <Image
                               src={
                                 product.images[0] ||
-                                "/placeholder.svg?height=40&width=40"
+                                "/placeholder.svg?height=40&width=40" ||
+                                "/placeholder.svg"
                               }
                               alt={product.name}
                               className="w-full h-full object-cover rounded-md"
@@ -518,15 +526,27 @@ export default function ProductsPage() {
                             <Package className="h-4 w-4 text-muted-foreground" />
                           )}
                         </div>
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <div className="font-medium flex items-center gap-2">
-                            {product.name}
+                            <span className="truncate">{product.name}</span>
                             {product.isFeatured && (
-                              <Star className="h-3 w-3 text-yellow-500 fill-current" />
+                              <Star className="h-3 w-3 text-yellow-500 fill-current flex-shrink-0" />
                             )}
                           </div>
-                          <div className="text-sm text-muted-foreground truncate max-w-xs">
-                            {product.description}
+                          <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                            {product.sku && (
+                              <span className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">
+                                {product.sku}
+                              </span>
+                            )}
+                            {product.tags && product.tags.length > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Tag className="h-3 w-3" />
+                                <span className="text-xs">
+                                  {product.tags.length}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -536,29 +556,81 @@ export default function ProductsPage() {
                         {product.category?.name || "No Category"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium">
-                      ${product.price}
-                    </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {product.stock}
-                        {product.stock < 10 && (
-                          <AlertCircle className="h-4 w-4 text-orange-500" />
+                      <div className="space-y-1">
+                        <div className="font-medium flex items-center gap-1">
+                          <DollarSign className="h-3 w-3" />
+                          {product.price}
+                        </div>
+                        {product.comparePrice && (
+                          <div className="text-xs text-muted-foreground line-through">
+                            ${product.comparePrice}
+                          </div>
                         )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={product.isActive ? "default" : "secondary"}
-                      >
-                        {product.isActive ? "Active" : "Inactive"}
-                      </Badge>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{product.stock}</span>
+                          {product.lowStockThreshold &&
+                            product.stock <= product.lowStockThreshold && (
+                              <AlertCircle className="h-4 w-4 text-orange-500" />
+                            )}
+                          {product.stock === 0 && (
+                            <Badge variant="destructive" className="text-xs">
+                              Out
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          {!product.trackInventory && (
+                            <Badge variant="outline" className="text-xs">
+                              No Track
+                            </Badge>
+                          )}
+                          {product.allowBackorder && (
+                            <Badge variant="secondary" className="text-xs">
+                              Backorder
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
-                    <TableCell>{product.reviewCount}</TableCell>
-                    <TableCell>{product.orderCount}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={product.isActive ? "default" : "secondary"}
+                        >
+                          {product.status === "draft"
+                            ? "Draft"
+                            : product.isActive
+                            ? "Active"
+                            : "Inactive"}
+                        </Badge>
+                        {product.variants && product.variants.length > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            {product.variants.length} variants
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-center gap-4">
+                          <span>{product.reviewCount} reviews</span>
+                          <span>{product.orderCount} orders</span>
+                        </div>
+                        {product.wishlistCount !== undefined && (
+                          <div className="text-xs text-muted-foreground">
+                            {product.wishlistCount} wishlisted
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger>
                           <Button variant="ghost" size="sm">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>

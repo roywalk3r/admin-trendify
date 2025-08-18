@@ -1,121 +1,142 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Input } from "@/components/ui/input"
-import { Loader2, Filter, X } from "lucide-react"
-import { toast } from "sonner"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Loader2, Filter, X } from "lucide-react";
+import { toast } from "sonner";
 
 export default function OrdersPage() {
-  const router = useRouter()
-  const [orders, setOrders] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [status, setStatus] = useState("")
-  const [paymentStatus, setPaymentStatus] = useState("")
-  const [customerEmail, setCustomerEmail] = useState("")
-  const [hasActiveFilters, setHasActiveFilters] = useState(false)
+  const router = useRouter();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [hasActiveFilters, setHasActiveFilters] = useState(false);
 
   useEffect(() => {
-    fetchOrders()
-  }, [])
+    fetchOrders();
+  }, []);
 
   const fetchOrders = async (queryString = "") => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const response = await fetch(`/api/admin/orders${queryString}`)
-      const data = await response.json()
-      console.log(data)
+      const response = await fetch(`/api/admin/orders${queryString}`);
+      const data = await response.json();
+      console.log(data);
       if (data.data.orders) {
-        setOrders(data.data.orders)
+        setOrders(data.data.orders);
       } else {
         toast.error("Error", {
           description: "Failed to load orders",
-        })
+        });
       }
     } catch (error) {
-      console.error("Error fetching orders:", error)
+      console.error("Error fetching orders:", error);
       toast.error("Error", {
         description: "Failed to load orders",
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const buildQueryString = () => {
-    const params = new URLSearchParams()
-    if (status) params.append("status", status)
-    if (paymentStatus) params.append("paymentStatus", paymentStatus)
-    if (customerEmail) params.append("customerEmail", customerEmail)
+    const params = new URLSearchParams();
+    if (status) params.append("status", status);
+    if (paymentStatus) params.append("paymentStatus", paymentStatus);
+    if (customerEmail) params.append("customerEmail", customerEmail);
 
-    const queryString = params.toString()
-    return queryString ? `?${queryString}` : ""
-  }
+    const queryString = params.toString();
+    return queryString ? `?${queryString}` : "";
+  };
 
   const applyFilters = () => {
-    const queryString = buildQueryString()
-    fetchOrders(queryString)
-    setHasActiveFilters(!!status || !!paymentStatus || !!customerEmail)
-  }
+    const queryString = buildQueryString();
+    fetchOrders(queryString);
+    setHasActiveFilters(!!status || !!paymentStatus || !!customerEmail);
+  };
 
   const resetFilters = () => {
-    setStatus("")
-    setPaymentStatus("")
-    setCustomerEmail("")
-    fetchOrders()
-    setHasActiveFilters(false)
-  }
+    setStatus("");
+    setPaymentStatus("");
+    setCustomerEmail("");
+    fetchOrders();
+    setHasActiveFilters(false);
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
-    })
-  }
+    });
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-    }).format(amount)
-  }
+    }).format(amount);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-800";
       case "shipped":
-        return "bg-blue-100 text-blue-800"
+        return "bg-blue-100 text-blue-800";
       case "delivered":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800";
       case "canceled":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-800";
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800";
     }
-  }
+  };
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
       case "paid":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800";
       case "unpaid":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-800";
       case "refunded":
-        return "bg-purple-100 text-purple-800"
+        return "bg-purple-100 text-purple-800";
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800";
     }
-  }
+  };
 
-  const activeFilterCount = [status ? 1 : 0, paymentStatus ? 1 : 0, customerEmail ? 1 : 0].reduce((a, b) => a + b, 0)
+  const activeFilterCount = [
+    status ? 1 : 0,
+    paymentStatus ? 1 : 0,
+    customerEmail ? 1 : 0,
+  ].reduce((a, b) => a + b, 0);
 
   return (
     <div className="container mx-auto py-6">
@@ -123,7 +144,7 @@ export default function OrdersPage() {
         <h1 className="text-3xl font-bold">Orders</h1>
         <div className="flex items-center gap-2">
           <Popover>
-            <PopoverTrigger asChild>
+            <PopoverTrigger>
               <Button variant="outline" className="flex items-center gap-2">
                 <Filter className="h-4 w-4" />
                 Filter
@@ -156,7 +177,10 @@ export default function OrdersPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Payment Status</label>
-                  <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+                  <Select
+                    value={paymentStatus}
+                    onValueChange={setPaymentStatus}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Any payment status" />
                     </SelectTrigger>
@@ -198,8 +222,8 @@ export default function OrdersPage() {
               <X
                 className="h-3 w-3 cursor-pointer"
                 onClick={() => {
-                  setStatus("")
-                  applyFilters()
+                  setStatus("");
+                  applyFilters();
                 }}
               />
             </Badge>
@@ -210,8 +234,8 @@ export default function OrdersPage() {
               <X
                 className="h-3 w-3 cursor-pointer"
                 onClick={() => {
-                  setPaymentStatus("")
-                  applyFilters()
+                  setPaymentStatus("");
+                  applyFilters();
                 }}
               />
             </Badge>
@@ -222,8 +246,8 @@ export default function OrdersPage() {
               <X
                 className="h-3 w-3 cursor-pointer"
                 onClick={() => {
-                  setCustomerEmail("")
-                  applyFilters()
+                  setCustomerEmail("");
+                  applyFilters();
                 }}
               />
             </Badge>
@@ -263,22 +287,34 @@ export default function OrdersPage() {
               <TableBody>
                 {orders.map((order) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-medium">#{order.id.substring(0, 8)}</TableCell>
+                    <TableCell className="font-medium">
+                      #{order.id.substring(0, 8)}
+                    </TableCell>
                     <TableCell>{formatDate(order.createdAt)}</TableCell>
                     <TableCell>{order.user?.email || "N/A"}</TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(order.status)}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        {order.status.charAt(0).toUpperCase() +
+                          order.status.slice(1)}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getPaymentStatusColor(order.paymentStatus)}>
-                        {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                      <Badge
+                        className={getPaymentStatusColor(order.paymentStatus)}
+                      >
+                        {order.paymentStatus.charAt(0).toUpperCase() +
+                          order.paymentStatus.slice(1)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">{formatCurrency(Number(order.totalAmount))}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm" onClick={() => router.push(`/admin/orders/${order.id}`)}>
+                      {formatCurrency(Number(order.totalAmount))}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/admin/orders/${order.id}`)}
+                      >
                         View
                       </Button>
                     </TableCell>
@@ -290,5 +326,5 @@ export default function OrdersPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -11,11 +11,10 @@ export async function POST(req: Request) {
   const payment = await prisma.payment.create({
     data: {
       orderId,
-      paymentMethod,
-      paymentStatus: "paid",
+      method: paymentMethod,
+      status: "paid",
       transactionId,
       amount: 0,
-      order: { connect: { id: orderId } },
     },
   })
 

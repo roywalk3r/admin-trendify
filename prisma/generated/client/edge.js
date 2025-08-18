@@ -1,4 +1,3 @@
-
 Object.defineProperty(exports, "__esModule", { value: true });
 
 const {
@@ -461,4 +460,3 @@ if (typeof globalThis !== 'undefined' && globalThis['DEBUG'] || typeof process !
 const PrismaClient = getPrismaClient(config)
 exports.PrismaClient = PrismaClient
 Object.assign(exports, Prisma)
-

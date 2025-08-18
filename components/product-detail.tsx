@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AppwriteGallery } from "@/components/appwrite/appwrite-gallery"
 import { useProductView } from "@/hooks/use-product-view"
-import { useCartStore } from "@/lib/store/cart-store"
+import { useCartStore } from "@/lib/cart-store"
 import { toast } from "sonner"
 import type { Product } from "@/types/product"
 

@@ -18,7 +18,7 @@ const categorySchema = z.object({
     ),
   image: z.string().url("Invalid image URL").optional(),
   description: z.string().optional(),
-  parentId: z.string().optional(),
+  parentId: z.string().nullable().optional(),
 });
 
 // Query params validation schema
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
     // Build where clause
     const where: any = {};
 
-    if (parentId) {
+    if (parentId !== undefined) {
       where.parentId = parentId;
     } else if (parentId === "") {
       // Explicitly query for root categories (no parent)
@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
     const validatedData = categorySchema.parse(body);
 
     // If parentId is provided, verify it exists
-    if (validatedData.parentId) {
+    if (validatedData.parentId !== null) {
       const parentCategory = await prisma.category.findUnique({
         where: { id: validatedData.parentId },
       });
@@ -316,7 +316,7 @@ export async function PATCH(req: NextRequest) {
 
     // If parentId is being changed, check for circular references
     if (
-      validatedData.parentId &&
+      validatedData.parentId !== null &&
       validatedData.parentId !== existingCategory.parentId
     ) {
       // Cannot set parent to self

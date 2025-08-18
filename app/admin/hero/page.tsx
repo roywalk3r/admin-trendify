@@ -49,6 +49,7 @@ import {
 import { useApi, useApiMutation } from "@/lib/hooks/use-api";
 import { AppwriteMediaBrowser } from "@/components/appwrite/appwrite-media-browser";
 import { AppwriteImg } from "@/components/appwrite/appwrite-img";
+import { title } from "process";
 
 interface HeroSlide {
   id: string;
@@ -96,7 +97,7 @@ export default function HeroManagementPage() {
     data: slidesResponse,
     isLoading,
     refetch,
-  } = useApi<{ data: HeroSlide[] }>("/api/admin/hero");
+  } = useApi<{ slides: HeroSlide[] }>("/api/admin/hero");
 
   const { mutate: createSlide, isLoading: isCreating } = useApiMutation(
     "/api/admin/hero",
@@ -167,8 +168,9 @@ export default function HeroManagementPage() {
   );
 
   useEffect(() => {
-    if (slidesResponse?.data) {
-      setSlides(slidesResponse.data);
+    console.log(slidesResponse);
+    if (slidesResponse?.slides) {
+      setSlides(slidesResponse.slides);
     }
   }, [slidesResponse]);
 
@@ -223,6 +225,7 @@ export default function HeroManagementPage() {
 
     const slideData = {
       ...formData,
+      title: formData.title,
       subtitle: formData.subtitle || undefined,
       description: formData.description || undefined,
       imageUrl: formData.imageUrl || undefined,
@@ -264,6 +267,12 @@ export default function HeroManagementPage() {
   const toggleSlideStatus = (slide: HeroSlide) => {
     updateSlide({
       id: slide.id,
+      title: slide.title,
+      subtitle: slide.subtitle,
+      description: slide.description,
+      imageUrl: slide.imageUrl,
+      buttonText: slide.buttonText,
+      buttonUrl: slide.buttonUrl,
       isActive: !slide.isActive,
     });
   };

@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
         'fra.cloud.appwrite.io'
     ],
     remotePatterns: [
-      new URL('https://fra.cloud.appwrite.io/**'),
+      // new URL('https://fra.cloud.appwrite.io/**'),
       {
         protocol: 'https',
         hostname: 'cloud.appwrite.io',

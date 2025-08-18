@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Plus, X, ImageIcon } from "lucide-react";
+import { Loader2, Plus, X, ImageIcon, Sparkles, Copy, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,13 @@ import type { Product, Category } from "@/types/product";
 const productSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(3, "Product name must be at least 3 characters"),
+  slug: z
+    .string()
+    .min(3, "Product slug must be at least 3 characters")
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Slug can only contain lowercase letters, numbers, and hyphens"
+    ),
   description: z.string().min(10, "Description must be at least 10 characters"),
   price: z.coerce.number().positive("Price must be positive"),
   stock: z.coerce.number().int().nonnegative("Stock cannot be negative"),
@@ -107,6 +114,7 @@ export function ProductForm({
     defaultValues: {
       id: initialData?.id,
       name: initialData?.name || "",
+      slug: initialData?.slug || "",
       description: initialData?.description || "",
       price: initialData?.price ? Number(initialData.price) : 0,
       stock: initialData?.stock ? Number(initialData.stock) : 0,
@@ -270,6 +278,15 @@ export function ProductForm({
     await onSubmit(formValues);
   };
 
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+      .replace(/\s+/g, "-") // Replace spaces with hyphens
+      .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+      .trim();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -307,8 +324,38 @@ export function ProductForm({
                     <FormItem>
                       <FormLabel>Product Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter product name" {...field} />
+                        <Input
+                          placeholder="Enter product name"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            if (!isEditing) {
+                              const slug = generateSlug(e.target.value);
+                              form.setValue("slug", slug, {
+                                shouldValidate: true,
+                              });
+                            }
+                          }}
+                        />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="slug"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product Slug</FormLabel>
+                      <FormControl>
+                        <Input placeholder="product-slug" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        URL-friendly version of the product name. Only lowercase
+                        letters, numbers, and hyphens allowed.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

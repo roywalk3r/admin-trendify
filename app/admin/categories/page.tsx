@@ -1,11 +1,14 @@
 "use client";
-
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
-import { Loader2, Plus, Search, Edit, Trash2, Tag } from "lucide-react";
-import { useApi, useApiMutation } from "@/lib/hooks/use-api";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -14,7 +17,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -22,22 +31,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { AppwriteUpload } from "@/components/appwrite/appwrite-upload";
-import { AppwriteImage } from "@/components/appwrite/appwrite-image";
-import { AppwriteMediaBrowser } from "@/components/appwrite/appwrite-media-browser";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,64 +43,84 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-// Category validation schema
-const categorySchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(2, "Category name must be at least 2 characters"),
-  slug: z
-    .string()
-    .min(2, "Slug must be at least 2 characters")
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Slug can only contain lowercase letters, numbers, and hyphens"
-    ),
-  image: z.string().url("Invalid image URL").optional().or(z.literal("")),
-  description: z.string().optional(),
-});
-
-type CategoryFormValues = z.infer<typeof categorySchema>;
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { AppwriteMediaBrowser } from "@/components/appwrite/appwrite-media-browser";
+import { AppwriteImage } from "@/components/appwrite/appwrite-image";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  MoreHorizontal,
+  FolderTree,
+  ImageIcon,
+  Search,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useApi, useApiMutation } from "@/lib/hooks/use-api";
 
 interface Category {
   id: string;
   name: string;
   slug: string;
-  image?: string;
-  description?: string;
-  parentId?: string;
+  description: string | null;
+  image: string | null;
+  parentId: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  _count: {
+  parent?: {
+    id: string;
+    name: string;
+  } | null;
+  _count?: {
     products: number;
-    children: number;
+    subcategories: number;
   };
-  products: any[];
-  children: any[];
 }
 
 interface CategoriesResponse {
   data: Category[];
-  meta: {
-    currentPage: number;
-    totalPages: number;
-    totalCount: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-  };
 }
 
+const categorySchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, "Category name is required"),
+  slug: z.string().optional(),
+  image: z.string().optional(),
+  description: z.string().optional(),
+  parentId: z.string().optional(),
+  isActive: z.boolean(),
+});
+
+type CategoryFormValues = z.infer<typeof categorySchema>;
+
 export default function AdminCategoriesPage() {
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(
     null
   );
-  const [searchQuery, setSearchQuery] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<any>([]);
+  const [showMediaBrowser, setShowMediaBrowser] = useState(false);
+  const [activeForm, setActiveForm] = useState<"create" | "edit">("create");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch categories
   const {
     data: categoriesResponse,
     isLoading,
@@ -114,13 +129,10 @@ export default function AdminCategoriesPage() {
 
   useEffect(() => {
     if (categoriesResponse) {
-      setCategories(categoriesResponse.data);
-      console.log("Categories response:", categoriesResponse);
-      setCategories(categoriesResponse);
+      setCategories((categoriesResponse as unknown as Category[]) || []);
     }
   }, [categoriesResponse]);
 
-  // Create category mutation
   const { mutate: createCategory, isLoading: isCreatingCategory } =
     useApiMutation("/api/categories", "POST", {
       onSuccess: () => {
@@ -134,7 +146,6 @@ export default function AdminCategoriesPage() {
       },
     });
 
-  // Update category mutation
   const { mutate: updateCategory, isLoading: isUpdatingCategory } =
     useApiMutation("/api/categories", "PATCH", {
       onSuccess: () => {
@@ -148,9 +159,8 @@ export default function AdminCategoriesPage() {
       },
     });
 
-  // Delete category mutation
   const { mutate: deleteCategory, isLoading: isDeletingCategory } =
-    useApiMutation(`/api/categories?id=${categoryToDelete?.id}`, "DELETE", {
+    useApiMutation(`/api/categories/${categoryToDelete?.id}`, "DELETE", {
       onSuccess: () => {
         toast.success("Category deleted successfully");
         refetch();
@@ -168,7 +178,6 @@ export default function AdminCategoriesPage() {
       },
     });
 
-  // Create form
   const createForm = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
@@ -176,10 +185,11 @@ export default function AdminCategoriesPage() {
       slug: "",
       image: "",
       description: "",
+      parentId: "",
+      isActive: true,
     },
   });
 
-  // Edit form
   const editForm = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
@@ -188,44 +198,48 @@ export default function AdminCategoriesPage() {
       slug: "",
       image: "",
       description: "",
+      parentId: "",
+      isActive: true,
     },
   });
 
-  // Handle create form submission
   const onCreateSubmit = (data: CategoryFormValues) => {
+    const slug = generateSlug(data.name);
     const submitData = {
       ...data,
+      slug,
       image: data.image || undefined,
       description: data.description || undefined,
+      parentId: data.parentId && data.parentId !== "" ? data.parentId : null,
     };
     createCategory(submitData);
   };
 
-  // Handle edit form submission
   const onEditSubmit = (data: CategoryFormValues) => {
+    const slug = generateSlug(data.name);
     const submitData = {
       ...data,
+      slug,
       image: data.image || undefined,
       description: data.description || undefined,
+      parentId: data.parentId && data.parentId !== "" ? data.parentId : null,
     };
     updateCategory(submitData);
   };
 
-  // Handle image upload
   const handleImageUpload = (urls: string[], form: any) => {
     if (urls.length > 0) {
       form.setValue("image", urls[0]);
     }
   };
 
-  // Handle media browser selection
   const handleMediaSelect = (urls: string[], form: any) => {
     if (urls.length > 0) {
       form.setValue("image", urls[0]);
     }
+    setShowMediaBrowser(false);
   };
 
-  // Handle edit category
   const handleEditCategory = (category: Category) => {
     editForm.reset({
       id: category.id,
@@ -233,18 +247,18 @@ export default function AdminCategoriesPage() {
       slug: category.slug,
       image: category.image || "",
       description: category.description || "",
+      parentId: category.parentId || "",
+      isActive: category.isActive,
     });
     setIsEditing(true);
   };
 
-  // Handle delete category
   const handleDeleteCategory = () => {
     if (categoryToDelete?.id) {
       deleteCategory(categoryToDelete.id);
     }
   };
 
-  // Generate slug from name
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
@@ -252,317 +266,307 @@ export default function AdminCategoriesPage() {
       .replace(/\s+/g, "-");
   };
 
-  // Filter categories based on search query
   const filteredCategories = categories.filter((category: Category) =>
     category.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  console.log("Current categories:", categories);
-  console.log("Filtered categories:", filteredCategories);
-  console.log("Is loading:", isLoading);
+  const getAvailableParents = () => {
+    const editingId = editForm.getValues("id");
+    if (!editingId) return categories;
+
+    // Filter out the current category and its descendants to prevent circular references
+    const filterDescendants = (
+      cats: Category[],
+      excludeId: string
+    ): Category[] => {
+      return cats.filter((cat) => {
+        if (cat.id === excludeId) return false;
+        if (cat.parentId === excludeId) return false;
+        return true;
+      });
+    };
+
+    return filterDescendants(categories, editingId);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Categories</h1>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {Array(5)
+                .fill(0)
+                .map((_, i) => (
+                  <div key={i} className="flex items-center space-x-4">
+                    <Skeleton className="h-12 w-12 rounded" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-1/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
-        <Button onClick={() => setIsCreating(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Category
-        </Button>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search categories..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : filteredCategories.length === 0 ? (
-        <div className="text-center py-12 border rounded-lg">
-          <Tag className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">No categories found</h2>
-          <p className="text-muted-foreground mt-2">
-            {searchQuery
-              ? "Try a different search term"
-              : `You can use the "Add Category" button to create a new category.`}
+        <div>
+          <h1 className="text-3xl font-bold">Categories</h1>
+          <p className="text-muted-foreground">
+            {categories.length} categories total
           </p>
-          {searchQuery && (
-            <Button
-              variant="outline"
-              className="mt-4 bg-transparent"
-              onClick={() => setSearchQuery("")}
-            >
-              Clear Search
+        </div>
+        <Dialog
+          open={isCreating}
+          onOpenChange={(open) => {
+            setIsCreating(open);
+            if (!open) createForm.reset();
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Category
             </Button>
-          )}
-        </div>
-      ) : (
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[80px]">Image</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Products</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCategories.map((category: Category) => (
-                <TableRow key={category.id}>
-                  <TableCell>
-                    <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100">
-                      {category.image ? (
-                        <AppwriteImage
-                          src={category.image}
-                          alt={category.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Tag className="h-6 w-6 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{category.name}</div>
-                    {category.description && (
-                      <div className="text-sm text-muted-foreground">
-                        {category.description}
-                      </div>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Create Category</DialogTitle>
+              <DialogDescription>
+                Add a new category to organize your products.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...createForm}>
+              <form
+                onSubmit={createForm.handleSubmit(onCreateSubmit)}
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={createForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter category name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <code className="text-sm bg-gray-600 px-2 py-1 rounded">
-                      {category.slug}
-                    </code>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {category._count?.products || 0} products
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditCategory(category)}
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setCategoryToDelete(category)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                  />
+                  <FormField
+                    control={createForm.control}
+                    name="parentId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Parent Category</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select parent category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              No Parent (Top Level)
+                            </SelectItem>
+                            {categories.map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-      {/* Create Category Dialog */}
-      <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Category</DialogTitle>
-            <DialogDescription>
-              Add a new product category to your store.
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...createForm}>
-            <form
-              onSubmit={createForm.handleSubmit(onCreateSubmit)}
-              className="space-y-4"
-            >
-              <FormField
-                control={createForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Category name"
-                        onChange={(e) => {
-                          field.onChange(e);
-                          // Auto-generate slug when name changes
-                          if (!createForm.getValues("slug")) {
-                            createForm.setValue(
-                              "slug",
-                              generateSlug(e.target.value)
-                            );
-                          }
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createForm.control}
-                name="slug"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Slug</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="category-slug" />
-                    </FormControl>
-                    <FormDescription>
-                      Used in URLs. Only lowercase letters, numbers, and
-                      hyphens.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Category description (optional)"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createForm.control}
-                name="image"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Image</FormLabel>
-                    <FormControl>
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <AppwriteUpload
-                            onUploadSuccess={(urls) =>
-                              handleImageUpload(urls, createForm)
-                            }
-                            buttonText="Upload Image"
-                            multiple={false}
-                          />
-                          <AppwriteMediaBrowser
-                            onSelect={(urls) =>
-                              handleMediaSelect(urls, createForm)
-                            }
-                            maxSelections={1}
-                            buttonText="Browse Media"
-                          />
-                        </div>
-                        {field.value && (
-                          <div className="mt-2">
-                            <AppwriteImage
-                              src={field.value}
-                              alt="Category image"
-                              width={200}
-                              height={200}
-                              className="rounded-md"
-                            />
-                          </div>
-                        )}
-                        <Input type="hidden" {...field} />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsCreating(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isCreatingCategory}>
-                  {isCreatingCategory ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Category"
+                <FormField
+                  control={createForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter category description"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+                />
 
-      {/* Edit Category Dialog */}
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="max-w-md">
+                <div className="space-y-2">
+                  <Label>Category Image</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setActiveForm("create");
+                        setShowMediaBrowser(true);
+                      }}
+                      className="flex-1"
+                    >
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      {createForm.watch("image")
+                        ? "Change Image"
+                        : "Select Image"}
+                    </Button>
+                    {createForm.watch("image") && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => createForm.setValue("image", "")}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                  {createForm.watch("image") && (
+                    <div className="mt-2">
+                      <AppwriteImage
+                        src={createForm.watch("image") || ""}
+                        alt="Category preview"
+                        width={200}
+                        height={100}
+                        className="rounded border object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <FormField
+                  control={createForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Active</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsCreating(false)}
+                    disabled={isCreatingCategory}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isCreatingCategory}>
+                    {isCreatingCategory ? "Creating..." : "Create"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Dialog
+        open={isEditing}
+        onOpenChange={(open) => {
+          setIsEditing(open);
+          if (!open) editForm.reset();
+        }}
+      >
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
-            <DialogDescription>Update the category details.</DialogDescription>
+            <DialogDescription>
+              Update the category details below.
+            </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
             <form
               onSubmit={editForm.handleSubmit(onEditSubmit)}
               className="space-y-4"
             >
-              <FormField
-                control={editForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Category name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="slug"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Slug</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="category-slug" />
-                    </FormControl>
-                    <FormDescription>
-                      Used in URLs. Only lowercase letters, numbers, and
-                      hyphens.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter category name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="parentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Parent Category</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select parent category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">
+                            No Parent (Top Level)
+                          </SelectItem>
+                          {getAvailableParents().map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={editForm.control}
                 name="description"
@@ -571,74 +575,85 @@ export default function AdminCategoriesPage() {
                     <FormLabel>Description</FormLabel>
                     <FormControl>
                       <Input
+                        placeholder="Enter category description"
                         {...field}
-                        placeholder="Category description (optional)"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              <div className="space-y-2">
+                <Label>Category Image</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setActiveForm("edit");
+                      setShowMediaBrowser(true);
+                    }}
+                    className="flex-1"
+                  >
+                    <ImageIcon className="mr-2 h-4 w-4" />
+                    {editForm.watch("image") ? "Change Image" : "Select Image"}
+                  </Button>
+                  {editForm.watch("image") && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => editForm.setValue("image", "")}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                {editForm.watch("image") && (
+                  <div className="mt-2">
+                    <AppwriteImage
+                      src={editForm.watch("image") || ""}
+                      alt="Category preview"
+                      width={200}
+                      height={100}
+                      className="rounded border object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+
               <FormField
                 control={editForm.control}
-                name="image"
+                name="isActive"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Image</FormLabel>
+                    <FormLabel>Active</FormLabel>
                     <FormControl>
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <AppwriteUpload
-                            onUploadSuccess={(urls) =>
-                              handleImageUpload(urls, editForm)
-                            }
-                            buttonText="Upload Image"
-                            multiple={false}
-                          />
-                          <AppwriteMediaBrowser
-                            onSelect={(urls) =>
-                              handleMediaSelect(urls, editForm)
-                            }
-                            maxSelections={1}
-                            buttonText="Browse Media"
-                          />
-                        </div>
-                        {field.value && (
-                          <div className="mt-2">
-                            <AppwriteImage
-                              src={field.value}
-                              alt="Category image"
-                              width={200}
-                              height={200}
-                              className="rounded-md"
-                            />
-                          </div>
-                        )}
-                        <Input type="hidden" {...field} />
-                      </div>
+                      <Input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <input type="hidden" {...editForm.register("id")} />
+
               <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsEditing(false)}
+                  disabled={isUpdatingCategory}
                 >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isUpdatingCategory}>
-                  {isUpdatingCategory ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    "Update Category"
-                  )}
+                  {isUpdatingCategory ? "Updating..." : "Update"}
                 </Button>
               </DialogFooter>
             </form>
@@ -646,50 +661,205 @@ export default function AdminCategoriesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        open={!!categoryToDelete}
-        onOpenChange={(open) => !open && setCategoryToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Category</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{categoryToDelete?.name}&quot;? This
-              action cannot be undone.
-              {deleteError && (
-                <div className="mt-2 p-2 bg-destructive/10 text-destructive rounded-md text-sm">
-                  {deleteError}
-                </div>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setCategoryToDelete(null);
-                setDeleteError(null);
-              }}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteCategory}
-              disabled={isDeletingCategory}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeletingCategory ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {showMediaBrowser && (
+        <Dialog open={showMediaBrowser} onOpenChange={setShowMediaBrowser}>
+          <DialogContent className="max-w-2xl h-auto">
+            <DialogHeader>
+              <DialogTitle>Select Category Image</DialogTitle>
+              <AppwriteMediaBrowser
+                onSelect={(urls) =>
+                  handleMediaSelect(
+                    urls,
+                    activeForm === "create" ? createForm : editForm
+                  )
+                }
+              />
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FolderTree className="h-5 w-5" />
+              Categories
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search categories..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 w-64"
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {filteredCategories.length === 0 ? (
+            <div className="text-center py-12">
+              <h3 className="text-lg font-semibold mb-2">No categories yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Create your first category to organize your products.
+              </p>
+              <Button onClick={() => setIsCreating(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Category
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Parent</TableHead>
+                  <TableHead>Products</TableHead>
+                  <TableHead>Subcategories</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCategories.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        {category.image ? (
+                          <AppwriteImage
+                            src={category.image}
+                            alt={category.name}
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
+                            <FolderTree className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium">{category.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            /{category.slug}
+                          </div>
+                          {category.description && (
+                            <div className="text-xs text-muted-foreground mt-1 max-w-xs truncate">
+                              {category.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {category.parent ? (
+                        <Badge variant="outline">{category.parent.name}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">Top Level</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">
+                        {category._count?.products || 0}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">
+                        {category._count?.subcategories || 0}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={category.isActive ? "default" : "secondary"}
+                      >
+                        {category.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-muted-foreground">
+                        {formatDate(category.createdAt)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleEditCategory(category)}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              setCategoryToDelete(category);
+                            }}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <AlertDialog
+                        open={categoryToDelete?.id === category.id}
+                        onOpenChange={(open) => {
+                          if (!open) {
+                            setCategoryToDelete(null);
+                            setDeleteError(null);
+                          }
+                        }}
+                      >
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{category.name}"?
+                              This action cannot be undone and will affect all
+                              products in this category.
+                              {deleteError && (
+                                <div className="mt-2 text-sm text-destructive">
+                                  {deleteError}
+                                </div>
+                              )}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel
+                              onClick={() => setDeleteError(null)}
+                            >
+                              Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleDeleteCategory}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              disabled={isDeletingCategory}
+                            >
+                              {isDeletingCategory ? "Deleting..." : "Delete"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,30 +1,41 @@
 import { NextResponse } from "next/server"
 import { ZodError } from "zod"
 
-type ApiResponse<T> = {
+type ApiResponse<T = any> = {
   data?: T
   error?: string | string[] | Record<string, string[]> | null
   status?: number
+} & Record<string, any>
+
+// Backward-compatible error helper: supports both direct Error handling and (message, status)
+export function apiError(errorOrMessage: unknown, status?: number): NextResponse {
+  if (typeof errorOrMessage === "string") {
+    return createApiResponse({ error: errorOrMessage, status: status ?? 500 })
+  }
+  return handleApiError(errorOrMessage)
 }
 
 export function createApiResponse<T>(response: ApiResponse<T>): NextResponse {
-  const { data, error, status } = response
+  const { data, error, status, ...rest } = response
 
-  let serializeData: T | null = null
+  let payload: any = null
+  const source = data !== undefined ? data : Object.keys(rest).length ? rest : null
 
-  if (data !== undefined) {
+  if (source !== null) {
     try {
-      serializeData = JSON.parse(
-        JSON.stringify(data, (_, value) => (typeof value === "bigint" ? Number(value) : value)),
+      payload = JSON.parse(
+        JSON.stringify(source, (_, value) => (typeof value === "bigint" ? Number(value) : value)),
       )
     } catch (err) {
       console.error("Serialization Error:", err)
-      serializeData = null
+      payload = null
     }
   }
 
-  return NextResponse.json({ data: serializeData, error: error || null }, { status })
+  return NextResponse.json({ data: payload, error: error || null }, { status })
 }
+
+export { createApiResponse as apiResponse }
 
 export function handleApiError(error: unknown): NextResponse {
   console.error("API Error:", error)

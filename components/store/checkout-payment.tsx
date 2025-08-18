@@ -137,4 +137,3 @@ export function CheckoutPayment({ paymentInfo, setPaymentInfo, onBack, onNext }:
     </div>
   )
 }
-

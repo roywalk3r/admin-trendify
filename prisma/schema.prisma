@@ -10,20 +10,27 @@ datasource db {
 
 model User {
   id              String           @id @default(cuid())
+  clerkId         String?          @unique @map("clerk_id") @db.VarChar(255) // Added Clerk ID for better integration
   name            String           @db.VarChar(100)
   email           String           @unique @db.VarChar(255)
+  avatar          String?          @db.VarChar(500) // Added avatar field
   role            UserRole         @default(customer)
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   isActive        Boolean          @default(true)
+  isVerified      Boolean          @default(false) @map("is_verified") // Added email verification
+  lastLoginAt     DateTime?        @map("last_login_at") // Added last login tracking
   deletedAt       DateTime?        @map("deleted_at")
   addresses       Address[]
   analyticsEvents AnalyticsEvent[]
   orders          Order[]
   reviews         Review[]
   wishlist        Wishlist?
+  auditLogs       Audit[]          // Added relation to audit logs
 
   @@index([email])
+  @@index([clerkId]) // Added index for Clerk ID
+  @@index([role, isActive]) // Added composite index for admin queries
   @@index([deletedAt])
   @@map("users")
 }
@@ -31,49 +38,62 @@ model User {
 model Hero {
   id          String   @id @default(cuid())
   title       String   @db.VarChar(255)
-  image       String?
+  subtitle    String?  @db.VarChar(500) // Added subtitle field
+  image       String?  @db.VarChar(500)
   isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order") // Added sort order for multiple slides
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  buttonLink  String?
-  buttonText  String?
-  color       String?
-  description String?
+  buttonLink  String?  @db.VarChar(500)
+  buttonText  String?  @db.VarChar(100)
+  color       String?  @db.VarChar(50)
+  description String?  @db.Text
 
-  @@map("hero")
+  @@index([isActive, sortOrder]) // Added composite index for ordering active slides
+  @@map("hero_slides")
 }
 
 model Product {
   id            String           @id @default(cuid())
   name          String           @db.VarChar(255)
   slug          String           @unique @db.VarChar(255)
-  description   String
-  price         Decimal          @db.Decimal(10, 2)
-  comparePrice  Decimal?         @map("compare_price") @db.Decimal(10, 2)
-  sku           String?          @unique @db.VarChar(50)
+  description   String           @db.Text
+  shortDesc     String?          @map("short_description") @db.VarChar(500) // Added short description
+  price         Decimal          @db.Decimal(12, 2) // Increased precision
+  comparePrice  Decimal?         @map("compare_price") @db.Decimal(12, 2)
+  costPrice     Decimal?         @map("cost_price") @db.Decimal(12, 2) // Added cost price for profit tracking
+  sku           String?          @unique @db.VarChar(100) // Increased SKU length
+  barcode       String?          @unique @db.VarChar(100) // Added barcode field
   stock         Int              @default(0)
+  lowStockAlert Int              @default(5) @map("low_stock_alert") // Added low stock threshold
+  weight        Decimal?         @db.Decimal(8, 3) // Added weight for shipping
+  dimensions    Json? // Added dimensions (length, width, height)
   categoryId    String           @map("category_id")
   images        String[]
   isDeleted     Boolean          @default(false) @map("is_deleted")
   isActive      Boolean          @default(true) @map("is_active")
   isFeatured    Boolean          @default(false) @map("is_featured")
-  status        String           @default("active") // active, inactive, draft
+  status        ProductStatus    @default(active) // Changed to enum
+  seoTitle      String?          @map("seo_title") @db.VarChar(255) // Added SEO fields
+  seoDesc       String?          @map("seo_description") @db.VarChar(500)
   createdAt     DateTime         @default(now()) @map("created_at")
   updatedAt     DateTime         @updatedAt @map("updated_at")
   deletedAt     DateTime?        @map("deleted_at")
   orderItems    OrderItem[]
   variants      ProductVariant[]
-  category      Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  tags          Tags[]
+  category      Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict) // Changed to Restrict
+  tags          ProductTag[]     
   reviews       Review[]
   wishlistItems WishlistItem[]
 
   @@index([categoryId])
   @@index([slug])
-  @@index([isDeleted])
-  @@index([isActive])
-  @@index([isFeatured])
-  @@index([status])
+  @@index([sku])
+  @@index([barcode]) // Added barcode index
+  @@index([isDeleted, isActive]) // Composite index for active products
+  @@index([isFeatured, isActive]) // Composite index for featured products
+  @@index([status, isActive])
+  @@index([stock]) // Added stock index for inventory queries
   @@index([deletedAt])
   @@map("products")
 }
@@ -82,16 +102,23 @@ model ProductVariant {
   id         String    @id @default(cuid())
   productId  String    @map("product_id")
   name       String    @db.VarChar(100)
-  sku        String?   @db.VarChar(50)
-  price      Decimal   @db.Decimal(10, 2)
+  sku        String?   @unique @db.VarChar(100) // Made unique and increased length
+  barcode    String?   @unique @db.VarChar(100) // Added barcode
+  price      Decimal   @db.Decimal(12, 2)
+  costPrice  Decimal?  @map("cost_price") @db.Decimal(12, 2) // Added cost price
   stock      Int       @default(0)
+  weight     Decimal?  @db.Decimal(8, 3) // Added weight
   attributes Json
+  isActive   Boolean   @default(true) @map("is_active") // Added active status
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
   deletedAt  DateTime? @map("deleted_at")
   product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+  @@index([sku])
+  @@index([barcode]) // Added barcode index
+  @@index([isActive]) // Added active index
   @@index([deletedAt])
   @@map("product_variants")
 }
@@ -100,101 +127,90 @@ model Category {
   id          String     @id @default(cuid())
   name        String     @unique @db.VarChar(100)
   slug        String     @unique @db.VarChar(100)
-  image       String?
-  description String?
+  image       String?    @db.VarChar(500)
+  description String?    @db.Text
   isActive    Boolean    @default(true) @map("is_active")
+  isFeatured  Boolean    @default(false) @map("is_featured") // Added featured categories
+  sortOrder   Int        @default(0) @map("sort_order") // Added sort order
   parentId    String?    @map("parent_id")
+  seoTitle    String?    @map("seo_title") @db.VarChar(255) // Added SEO fields
+  seoDesc     String?    @map("seo_description") @db.VarChar(500)
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
   deletedAt   DateTime?  @map("deleted_at")
-  parent      Category?  @relation("CategoryToSubcategory", fields: [parentId], references: [id])
+  parent      Category?  @relation("CategoryToSubcategory", fields: [parentId], references: [id], onDelete: Restrict) // Changed to Restrict
   children    Category[] @relation("CategoryToSubcategory")
   products    Product[]
 
   @@index([slug])
-  @@index([isActive])
+  @@index([parentId]) // Added parent index
+  @@index([isActive, isFeatured]) // Composite index for featured categories
+  @@index([sortOrder]) // Added sort order index
   @@index([deletedAt])
   @@map("categories")
 }
 
+model Tag {
+  id        String       @id @default(cuid())
+  name      String       @unique @db.VarChar(50)
+  slug      String       @unique @db.VarChar(50) // Added slug for URLs
+  color     String?      @db.VarChar(7) // Added color for UI (hex color)
+  isActive  Boolean      @default(true) @map("is_active")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  products  ProductTag[]
+
+  @@index([isActive])
+  @@map("tags")
+}
+
+model ProductTag {
+  id        String   @id @default(cuid())
+  productId String   @map("product_id")
+  tagId     String   @map("tag_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, tagId])
+  @@index([productId])
+  @@index([tagId])
+  @@map("product_tags")
+}
+
 model Order {
   id              String           @id @default(cuid())
+  orderNumber     String           @unique @map("order_number") @db.VarChar(50) // Added human-readable order number
   userId          String           @map("user_id")
   status          OrderStatus      @default(pending)
-  totalAmount     Decimal          @map("total_amount") @db.Decimal(10, 2)
-  subtotal        Decimal          @db.Decimal(10, 2)
-  tax             Decimal          @db.Decimal(10, 2)
-  shipping        Decimal          @db.Decimal(10, 2)
-  discount        Decimal          @default(0) @db.Decimal(10, 2)
+  totalAmount     Decimal          @map("total_amount") @db.Decimal(12, 2)
+  subtotal        Decimal          @db.Decimal(12, 2)
+  tax             Decimal          @db.Decimal(12, 2)
+  shipping        Decimal          @db.Decimal(12, 2)
+  discount        Decimal          @default(0) @db.Decimal(12, 2)
   paymentStatus   PaymentStatus    @default(unpaid) @map("payment_status")
   couponId        String?          @map("coupon_id")
   trackingNumber  String?          @map("tracking_number") @db.VarChar(100)
-  notes           String?
+  shippingMethod  String?          @map("shipping_method") @db.VarChar(100) // Added shipping method
+  estimatedDelivery DateTime?      @map("estimated_delivery") // Added estimated delivery
+  notes           String?          @db.Text
+  customerNotes   String?          @map("customer_notes") @db.Text // Added customer notes
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
   deletedAt       DateTime?        @map("deleted_at")
   orderItems      OrderItem[]
   coupon          Coupon?          @relation(fields: [couponId], references: [id])
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict) // Changed to Restrict
   payment         Payment?
   refund          Refund?
   shippingAddress ShippingAddress?
 
+  @@index([orderNumber]) // Added order number index
   @@index([userId])
-  @@index([status])
-  @@index([paymentStatus])
+  @@index([status, paymentStatus]) // Composite index for order management
+  @@index([createdAt]) // Added date index for reporting
   @@index([deletedAt])
   @@map("orders")
-}
-
-model OrderItem {
-  id        String  @id @default(cuid())
-  orderId   String  @map("order_id")
-  productId String  @map("product_id")
-  variantId String? @map("variant_id")
-  quantity  Int
-  price     Decimal @db.Decimal(10, 2)
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id])
-
-  @@index([orderId])
-  @@index([productId])
-  @@map("order_items")
-}
-
-model Payment {
-  id            String        @id @default(cuid())
-  orderId       String        @unique @map("order_id")
-  paymentMethod PaymentMethod @map("payment_method")
-  paymentStatus PaymentStatus @default(unpaid) @map("payment_status")
-  transactionId String?       @map("transaction_id") @db.VarChar(255)
-  amount        Decimal       @db.Decimal(10, 2)
-  currency      String        @default("USD") @db.VarChar(3)
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@index([paymentStatus])
-  @@map("payments")
-}
-
-model Review {
-  id        String    @id @default(cuid())
-  userId    String    @map("user_id")
-  productId String    @map("product_id")
-  rating    Int       @db.SmallInt
-  title     String?   @db.VarChar(255)
-  comment   String?
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-  @@index([userId])
-  @@index([deletedAt])
-  @@map("reviews")
 }
 
 model Address {
@@ -289,17 +305,22 @@ model Coupon {
 }
 
 model Audit {
-  id         String   @id @default(cuid())
-  userId     String?  @map("user_id")
-  action     String
-  entityType String   @map("entity_type")
-  entityId   String   @map("entity_id")
-  oldValue   Json?    @map("old_value")
-  newValue   Json?    @map("new_value")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id         String    @id @default(cuid())
+  userId     String?   @map("user_id")
+  userEmail  String?   @map("user_email") @db.VarChar(255) // Added user email for better tracking
+  action     String    @db.VarChar(100)
+  entityType String    @map("entity_type") @db.VarChar(50)
+  entityId   String    @map("entity_id")
+  oldValue   Json?     @map("old_value")
+  newValue   Json?     @map("new_value")
+  ipAddress  String?   @map("ip_address") @db.VarChar(45) // Added IP tracking
+  userAgent  String?   @map("user_agent") @db.VarChar(500) // Added user agent
+  createdAt  DateTime  @default(now()) @map("created_at")
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull) // Added relation
 
   @@index([entityType, entityId])
   @@index([userId])
+  @@index([action]) // Added action index
   @@index([createdAt])
   @@map("audit_logs")
 }
@@ -336,6 +357,80 @@ model AnalyticsEvent {
   @@map("analytics_events")
 }
 
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String        @unique @map("order_id")
+  amount        Decimal       @db.Decimal(12, 2)
+  currency      String        @default("USD") @db.VarChar(3)
+  method        PaymentMethod
+  status        PaymentStatus @default(unpaid)
+  transactionId String?       @map("transaction_id") @db.VarChar(255) // External payment ID
+  gatewayFee    Decimal?      @map("gateway_fee") @db.Decimal(10, 2) // Payment processing fee
+  metadata      Json? // Store gateway-specific data
+  paidAt        DateTime?     @map("paid_at")
+  failedAt      DateTime?     @map("failed_at")
+  failureReason String?       @map("failure_reason") @db.Text
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([method])
+  @@index([transactionId])
+  @@index([createdAt])
+  @@map("payments")
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String   @map("order_id")
+  productId   String   @map("product_id")
+  variantId   String?  @map("variant_id") // For product variants
+  quantity    Int
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(12, 2)
+  totalPrice  Decimal  @map("total_price") @db.Decimal(12, 2)
+  productName String   @map("product_name") @db.VarChar(255) // Snapshot of product name
+  productSku  String?  @map("product_sku") @db.VarChar(100) // Snapshot of SKU
+  productData Json?    @map("product_data") // Snapshot of product details
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([variantId])
+  @@map("order_items")
+}
+
+model Review {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  productId   String    @map("product_id")
+  orderId     String?   @map("order_id") // Link to verified purchase
+  rating      Int // 1-5 stars
+  title       String?   @db.VarChar(255)
+  comment     String?   @db.Text
+  images      String[] // Review images
+  isVerified  Boolean   @default(false) @map("is_verified") // Verified purchase
+  isApproved  Boolean   @default(false) @map("is_approved") // Admin approval
+  isHelpful   Int       @default(0) @map("helpful_count") // Helpful votes
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId]) // One review per user per product
+  @@index([productId])
+  @@index([rating])
+  @@index([isApproved])
+  @@index([isVerified])
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@map("reviews")
+}
+
 enum UserRole {
   admin
   staff
@@ -344,15 +439,14 @@ enum UserRole {
   @@map("user_role")
 }
 
-model Tags {
-  id        String   @id @default(cuid())
-  name      String   @unique @db.VarChar(50)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  Product   Product? @relation(fields: [productId], references: [id])
-  productId String?
+enum ProductStatus {
+  active
+  inactive
+  draft
+  archived
+  out_of_stock
 
-  @@map("tags")
+  @@map("product_status")
 }
 
 enum OrderStatus {
@@ -410,6 +504,7 @@ enum EventType {
   SIGN_UP
   SEARCH
   FILTER
+  PURCHASE
 
   @@map("event_type")
 }

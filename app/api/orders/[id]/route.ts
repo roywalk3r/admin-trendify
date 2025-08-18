@@ -91,7 +91,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     if (paymentStatus) {
       await prisma.payment.updateMany({
         where: { orderId },
-        data: { paymentStatus },
+        data: { status: paymentStatus },
       })
     }
 

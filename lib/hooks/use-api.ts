@@ -87,13 +87,21 @@ export function useApi<T>(url: string, options: UseApiOptions = {}) {
 
 export function useApiMutation<T, U = any>(
   url: string,
-  method: "POST" | "PUT" | "DELETE" | "PATCH" = "POST",
-  options: UseApiOptions = {},
+  methodOrOptions: "POST" | "PUT" | "DELETE" | "PATCH" | UseApiOptions = "POST",
+  maybeOptions: UseApiOptions = {},
 ) {
   const [data, setData] = useState<T | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isSuccess, setIsSuccess] = useState<boolean>(false)
+
+  // Normalize arguments to support both signatures:
+  // useApiMutation(url, options)
+  // useApiMutation(url, method, options)
+  const method: "POST" | "PUT" | "DELETE" | "PATCH" =
+    typeof methodOrOptions === "string" ? methodOrOptions : "POST"
+  const options: UseApiOptions =
+    typeof methodOrOptions === "object" ? (methodOrOptions as UseApiOptions) : maybeOptions
 
   const { onSuccess, onError } = options
 
@@ -160,6 +168,7 @@ export function useApiMutation<T, U = any>(
     data,
     error,
     isLoading,
+    isPending: isLoading,
     isSuccess,
     reset: () => {
       setData(undefined)

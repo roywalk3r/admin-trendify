@@ -345,7 +345,7 @@ export function MediaLibrary({
           <p className="text-muted-foreground">No files found</p>
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols- 5 xl:grid-cols-6 gap-4">
           {filteredAndSortedFiles.map((file) => (
             <Card
               key={file.id}
@@ -389,10 +389,7 @@ export function MediaLibrary({
                 )}
 
                 <DropdownMenu>
-                  <DropdownMenuTrigger
-                    asChild
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <DropdownMenuTrigger onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -574,7 +571,13 @@ export function MediaLibrary({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete File</AlertDialogTitle>
             <AlertDialogDescription>
-              {`You can't delete ${deleteConfirm?.type.startsWith("image/") ? 'images' : deleteConfirm?.type.startsWith("video/") ? 'videos' : 'files'} that are in use.`}
+              {`You can't delete ${
+                deleteConfirm?.type.startsWith("image/")
+                  ? "images"
+                  : deleteConfirm?.type.startsWith("video/")
+                  ? "videos"
+                  : "files"
+              } that are in use.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

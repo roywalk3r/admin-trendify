@@ -25,17 +25,18 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
     });
 
-    // Transform database fields to match frontend expectations
     const transformedSlides = slides.map((slide, index) => ({
       id: slide.id,
       title: slide.title,
       subtitle: slide.description || "",
-      description: slide.buttonText || "",
+      description: slide.color || "", // Using color field for additional description
       imageUrl: slide.image || "",
-      buttonText: slide.buttonLink || "Learn More",
-      buttonUrl: slide.color || "#",
+      buttonText: slide.buttonText || "",
+      buttonUrl: slide.buttonLink || "",
       isActive: slide.isActive,
       order: index,
+      createdAt: slide.createdAt.toISOString(),
+      updatedAt: slide.updatedAt.toISOString(),
     }));
 
     return createApiResponse({
@@ -50,7 +51,17 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { slides } = heroSlidesRequestSchema.parse(body);
+
+    let slides;
+    if (body.slides) {
+      // If slides array is provided, use it
+      const { slides: parsedSlides } = heroSlidesRequestSchema.parse(body);
+      slides = parsedSlides;
+    } else {
+      // If single slide object is provided, wrap it in an array
+      const singleSlide = heroSlideSchema.parse(body);
+      slides = [singleSlide];
+    }
 
     // Delete all existing slides and create new ones
     await prisma.hero.deleteMany();
@@ -60,11 +71,11 @@ export async function POST(req: Request) {
         prisma.hero.create({
           data: {
             title: slide.title,
-            description: slide.subtitle || null,
-            buttonText: slide.description || null,
-            buttonLink: slide.buttonText || null,
+            description: slide.subtitle || null, // subtitle maps to description
+            color: slide.description || null, // description maps to color field
             image: slide.imageUrl || null,
-            color: slide.buttonUrl || null,
+            buttonText: slide.buttonText || null,
+            buttonLink: slide.buttonUrl || null,
             isActive: slide.isActive,
           },
         })
@@ -97,10 +108,10 @@ export async function PATCH(req: Request) {
       data: {
         title: slideData.title,
         description: slideData.subtitle || null,
-        buttonText: slideData.description || null,
-        buttonLink: slideData.buttonText || null,
+        color: slideData.description || null,
         image: slideData.imageUrl || null,
-        color: slideData.buttonUrl || null,
+        buttonText: slideData.buttonText || null,
+        buttonLink: slideData.buttonUrl || null,
         isActive: slideData.isActive,
       },
     });

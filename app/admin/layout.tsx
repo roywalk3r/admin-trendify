@@ -1,64 +1,28 @@
-import type { ReactNode } from "react"
-import { redirect } from "next/navigation"
-import { auth } from "@clerk/nextjs/server"
-import { AdminSidebar } from "@/components/admin-sidebar"
-import prisma from "@/lib/prisma"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/sonner"
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
+import type React from "react";
+import type { Metadata } from "next";
+import { Poppins } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
+import { ThemeProvider } from "@/components/theme-provider";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { Toaster } from "@/components/ui/sonner";
+import GeminiPopover from "@/components/gemini-popover";
 
-export default async function AdminLayout({
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+});
+
+export const metadata: Metadata = {
+  title: "Trendify | Admin",
+  description: "Manage Your store front",
+};
+
+export default function RootLayout({
   children,
-}: {
-  children: ReactNode
-}) {
-  // Check if user is authenticated
-  const { userId } = await auth()
-
-  if (!userId) {
-    redirect("/sign-in?redirect_url=/admin")
-  }
-
-  try {
-    // Try to check admin status with flexible approach to handle schema differences
-    let isAdmin = false
-
-    try {
-      // First try with the new snake_case schema
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { role: true },
-      })
-
-      isAdmin = user?.role === "admin"
-    } catch (error) {
-      console.log("Error with snake_case schema, trying PascalCase...")
-
-      try {
-        // Try with PascalCase schema
-        const result = await prisma.$queryRaw`
-          SELECT "role" FROM "users" WHERE id = ${userId}
-        `
-
-        if (Array.isArray(result) && result.length > 0) {
-          isAdmin = result[0].role === "admin"
-        }
-      } catch (innerError) {
-        console.error("Error with PascalCase schema:", innerError)
-        // Both approaches failed, redirect to fix-schema page
-        redirect("/admin/fix-schema")
-      }
-    }
-
-    if (!isAdmin) {
-      redirect("/")
-    }
-  } catch (error) {
-    console.error("Database error:", error)
-    // Redirect to the fix-schema page
-    redirect("/admin/fix-schema")
-  }
-
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <SidebarProvider>
@@ -67,9 +31,12 @@ export default async function AdminLayout({
           <SidebarInset className="flex-1">
             <div className="container p-6 mx-auto">{children}</div>
           </SidebarInset>
+          <div className="fixed bottom-6 right-6">
+            <GeminiPopover />
+          </div>
         </div>
         <Toaster />
       </SidebarProvider>
     </ThemeProvider>
-  )
+  );
 }

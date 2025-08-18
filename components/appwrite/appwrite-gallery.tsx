@@ -64,4 +64,3 @@ export function AppwriteGallery({ images, productName, className = "" }: Appwrit
     </div>
   )
 }
-
