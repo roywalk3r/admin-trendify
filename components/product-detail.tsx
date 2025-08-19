@@ -1,112 +1,215 @@
 "use client"
-
 import { useState } from "react"
-import { ShoppingCart, Heart, Star } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { AppwriteGallery } from "@/components/appwrite/appwrite-gallery"
-import { useProductView } from "@/hooks/use-product-view"
-import { useCartStore } from "@/lib/cart-store"
-import { toast } from "sonner"
-import type { Product } from "@/types/product"
+import { motion } from "framer-motion"
+import Image from "next/image"
+import { Button } from "./ui/button"
+import { Badge } from "./ui/badge"
+import { Star, Heart, Share2, ShoppingCart, Minus, Plus } from "lucide-react"
 
-interface ProductDetailProps {
-  product: Product & {
-    category?: {
-      id: string
-      name: string
-    }
-  }
+interface Product {
+  id: string
+  name: string
+  price: number
+  originalPrice?: number
+  images: string[]
+  rating: number
+  reviews: number
+  description: string
+  features: string[]
+  sizes: string[]
+  colors: string[]
+  category: string
+  brand: string
+  sku: string
+  inStock: boolean
+  stockCount: number
+  isNew?: boolean
+  isSale?: boolean
 }
 
-export function ProductDetail({ product }: ProductDetailProps) {
+interface ProductDetailProps {
+  product: Product
+}
+
+export default function ProductDetail({ product }: ProductDetailProps) {
+  const [selectedImage, setSelectedImage] = useState(0)
+  const [selectedSize, setSelectedSize] = useState("")
+  const [selectedColor, setSelectedColor] = useState("")
   const [quantity, setQuantity] = useState(1)
-  const { addItem } = useCartStore()
+  const [isWishlisted, setIsWishlisted] = useState(false)
 
-  // Track product view
-  useProductView(product.id)
-
-  const handleAddToCart = () => {
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: Number(product.price),
-      quantity,
-      image: product.images[0] || "/placeholder.svg",
-    })
-
-    toast.success(`${product.name} added to cart`, {
-      description: `${quantity} item${quantity > 1 ? "s" : ""} added to your cart`,
-    })
-  }
-
-  const increaseQuantity = () => {
-    if (quantity < product.stock) {
-      setQuantity((prev) => prev + 1)
-    }
-  }
-
-  const decreaseQuantity = () => {
-    if (quantity > 1) {
-      setQuantity((prev) => prev - 1)
-    }
-  }
+  const discount = product.originalPrice
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : 0
 
   return (
-    <div className="grid md:grid-cols-2 gap-8">
-      <div>
-        <AppwriteGallery images={product.images} productName={product.name} />
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      {/* Product Images */}
+      <div className="space-y-4">
+        {/* Main Image */}
+        <motion.div
+          className="aspect-square rounded-3xl overflow-hidden bg-gray-100"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Image
+            src={product.images[selectedImage] || "/placeholder.svg"}
+            alt={product.name}
+            width={600}
+            height={600}
+            className="w-full h-full object-cover"
+          />
+        </motion.div>
+
+        {/* Thumbnail Images */}
+        <div className="flex gap-4">
+          {product.images.map((image, index) => (
+            <motion.button
+              key={index}
+              className={`w-20 h-20 rounded-xl overflow-hidden border-2 ${
+                selectedImage === index ? "border-primary" : "border-gray-200"
+              }`}
+              onClick={() => setSelectedImage(index)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Image
+                src={image || "/placeholder.svg"}
+                alt={`${product.name} ${index + 1}`}
+                width={80}
+                height={80}
+                className="w-full h-full object-cover"
+              />
+            </motion.button>
+          ))}
+        </div>
       </div>
 
+      {/* Product Info */}
       <div className="space-y-6">
+        {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold">{product.name}</h1>
-          {product.category && (
-            <Badge variant="outline" className="mt-2">
-              {product.category.name}
-            </Badge>
+          <div className="flex items-center gap-2 mb-2">
+            {product.isNew && <Badge className="bg-green-500">New</Badge>}
+            {product.isSale && <Badge className="bg-red-500">Sale</Badge>}
+            <span className="text-sm text-muted-foreground">{product.brand}</span>
+          </div>
+          <h1 className="typography text-3xl md:text-4xl mb-2">{product.name}</h1>
+          <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
+        </div>
+
+        {/* Rating */}
+        <div className="flex items-center gap-2">
+          <div className="flex">
+            {[...Array(5)].map((_, i) => (
+              <Star
+                key={i}
+                className={`w-5 h-5 ${
+                  i < Math.floor(product.rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                }`}
+              />
+            ))}
+          </div>
+          <span className="text-sm text-muted-foreground">
+            {product.rating} ({product.reviews} reviews)
+          </span>
+        </div>
+
+        {/* Price */}
+        <div className="flex items-center gap-3">
+          <span className="text-3xl font-bold">${product.price}</span>
+          {product.originalPrice && (
+            <>
+              <span className="text-xl text-muted-foreground line-through">${product.originalPrice}</span>
+              <Badge variant="destructive">-{discount}%</Badge>
+            </>
           )}
-          <div className="flex items-center gap-2 mt-2">
-            <div className="flex">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star key={star} className="h-4 w-4" fill={star <= 4 ? "currentColor" : "none"} />
-              ))}
-            </div>
-            <span className="text-sm text-muted-foreground">(24 reviews)</span>
+        </div>
+
+        {/* Description */}
+        <p className="text-muted-foreground leading-relaxed">{product.description}</p>
+
+        {/* Features */}
+        <div>
+          <h3 className="font-semibold mb-2">Features</h3>
+          <ul className="space-y-1">
+            {product.features.map((feature, index) => (
+              <li key={index} className="text-sm text-muted-foreground flex items-center">
+                <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2" />
+                {feature}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Size Selection */}
+        <div>
+          <h3 className="font-semibold mb-3">Size</h3>
+          <div className="flex flex-wrap gap-2">
+            {product.sizes.map((size) => (
+              <Button
+                key={size}
+                variant={selectedSize === size ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedSize(size)}
+              >
+                {size}
+              </Button>
+            ))}
           </div>
         </div>
 
-        <div className="text-3xl font-bold">${Number(product.price).toFixed(2)}</div>
-
+        {/* Color Selection */}
         <div>
-          <h3 className="font-medium mb-2">Description</h3>
-          <p className="text-muted-foreground">{product.description}</p>
+          <h3 className="font-semibold mb-3">Color</h3>
+          <div className="flex flex-wrap gap-2">
+            {product.colors.map((color) => (
+              <Button
+                key={color}
+                variant={selectedColor === color ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedColor(color)}
+              >
+                {color}
+              </Button>
+            ))}
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <h3 className="font-medium">Quantity</h3>
-          <div className="flex items-center">
-            <Button variant="outline" size="icon" onClick={decreaseQuantity} disabled={quantity <= 1}>
-              -
+        {/* Quantity */}
+        <div>
+          <h3 className="font-semibold mb-3">Quantity</h3>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
+              <Minus className="w-4 h-4" />
             </Button>
             <span className="w-12 text-center">{quantity}</span>
-            <Button variant="outline" size="icon" onClick={increaseQuantity} disabled={product.stock <= quantity}>
-              +
+            <Button variant="outline" size="sm" onClick={() => setQuantity(Math.min(product.stockCount, quantity + 1))}>
+              <Plus className="w-4 h-4" />
             </Button>
-            <span className="ml-4 text-sm text-muted-foreground">{product.stock} available</span>
           </div>
+          <p className="text-sm text-muted-foreground mt-1">{product.stockCount} items in stock</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Button onClick={handleAddToCart} disabled={product.stock <= 0} className="flex-1" size="lg">
-            <ShoppingCart className="mr-2 h-4 w-4" />
+        {/* Actions */}
+        <div className="flex gap-4">
+          <Button className="flex-1 gap-2" size="lg">
+            <ShoppingCart className="w-5 h-5" />
             Add to Cart
           </Button>
-
-          <Button variant="outline" size="lg">
-            <Heart className="mr-2 h-4 w-4" />
-            Add to Wishlist
+          <Button variant="outline" size="lg" onClick={() => setIsWishlisted(!isWishlisted)}>
+            <Heart className={`w-5 h-5 ${isWishlisted ? "fill-red-500 text-red-500" : ""}`} />
           </Button>
+          <Button variant="outline" size="lg">
+            <Share2 className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Stock Status */}
+        <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+          <p className="text-green-800 font-medium">✓ In Stock</p>
+          <p className="text-green-600 text-sm">Ready to ship in 1-2 business days</p>
         </div>
       </div>
     </div>

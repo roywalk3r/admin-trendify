@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import type { CartItem } from "@/lib/store/cart-store"
+import { PaystackPayButton } from "@/components/store/paystack-pay-button"
 
 interface CheckoutReviewProps {
   shippingInfo: any
@@ -16,6 +17,10 @@ interface CheckoutReviewProps {
   onBack: () => void
   onSubmit: () => void
   isSubmitting: boolean
+  // Optional Paystack integration
+  paystackOrderId?: string
+  paystackEmail?: string
+  paystackCallbackUrl?: string
 }
 
 export function CheckoutReview({
@@ -29,6 +34,9 @@ export function CheckoutReview({
   onBack,
   onSubmit,
   isSubmitting,
+  paystackOrderId,
+  paystackEmail,
+  paystackCallbackUrl,
 }: CheckoutReviewProps) {
   return (
     <div>
@@ -118,14 +126,24 @@ export function CheckoutReview({
           </div>
         </div>
 
-        <div className="flex justify-between">
+        <div className="flex justify-between items-center gap-3 flex-wrap">
           <Button type="button" variant="outline" onClick={onBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Payment
           </Button>
-          <Button onClick={onSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Processing..." : "Place Order"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {paystackOrderId && paystackEmail ? (
+              <PaystackPayButton
+                orderId={paystackOrderId}
+                email={paystackEmail}
+                callbackUrl={paystackCallbackUrl}
+                label="Pay with Paystack"
+              />
+            ) : null}
+            <Button onClick={onSubmit} disabled={isSubmitting}>
+              {isSubmitting ? "Processing..." : "Place Order"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

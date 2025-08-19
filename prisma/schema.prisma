@@ -472,6 +472,7 @@ enum PaymentStatus {
 enum PaymentMethod {
   stripe
   paypal
+  paystack
   bank_transfer
 
   @@map("payment_method")
