@@ -1,19 +1,12 @@
 "use client"
-import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Plus, Minus, ShoppingBag, Trash2 } from "lucide-react"
 import { Button } from "./ui/button"
 import Image from "next/image"
-
-interface CartItem {
-  id: string
-  name: string
-  price: number
-  image: string
-  quantity: number
-  size?: string
-  color?: string
-}
+import { useCartStore } from "@/lib/store/cart-store"
+import { useToast } from "@/hooks/use-toast"
+import { useEffect, useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 
 interface CartSidebarProps {
   isOpen: boolean
@@ -21,41 +14,76 @@ interface CartSidebarProps {
 }
 
 export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: "1",
-      name: "Premium Cotton T-Shirt",
-      price: 29.99,
-      image: "/images/product_1.png",
-      quantity: 2,
-      size: "M",
-      color: "Blue",
-    },
-    {
-      id: "2",
-      name: "Designer Denim Jacket",
-      price: 89.99,
-      image: "/images/product_2.png",
-      quantity: 1,
-      size: "L",
-    },
-  ])
+  const { items: cartItems, removeItem, updateQuantity, subtotal, setItems } = useCartStore()
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(false)
+  const fetchedRef = useRef(false)
+  const router = useRouter()
 
-  const updateQuantity = (id: string, newQuantity: number) => {
-    if (newQuantity === 0) {
-      setCartItems((items) => items.filter((item) => item.id !== id))
-    } else {
-      setCartItems((items) => items.map((item) => (item.id === id ? { ...item, quantity: newQuantity } : item)))
+  const shipping = subtotal() > 100 ? 0 : 9.99
+  const total = subtotal() + shipping
+
+  // Load cart from backend when sidebar opens (once per open session)
+  useEffect(() => {
+    const load = async () => {
+      if (!isOpen) return
+      setLoading(true)
+      try {
+        const res = await fetch("/api/cart", { cache: "no-store" })
+        if (!res.ok) throw new Error(`${res.status}`)
+        const json = await res.json()
+        const items = json?.data?.items || []
+        if (Array.isArray(items)) setItems(items)
+      } catch (e: any) {
+        // Ignore 401 (unauthenticated) and keep local cart
+        if (String(e?.message) !== "401") {
+          console.warn("Cart fetch failed", e)
+        }
+      } finally {
+        setLoading(false)
+        fetchedRef.current = true
+      }
+    }
+    // Prevent repeated fetches while open toggles
+    if (isOpen && !fetchedRef.current) void load()
+    if (!isOpen) fetchedRef.current = false
+  }, [isOpen, setItems])
+
+  const serverUpdateQuantity = async (id: string, qty: number) => {
+    const prev = [...cartItems]
+    updateQuantity(id, qty)
+    try {
+      const res = await fetch("/api/cart", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, quantity: qty }),
+      })
+      if (!res.ok) throw new Error(`${res.status}`)
+      const json = await res.json()
+      const items = json?.data?.items || []
+      if (Array.isArray(items)) setItems(items)
+    } catch (e: any) {
+      // rollback
+      setItems(prev)
+      toast({ title: "Failed to update quantity", description: String(e?.message || ""), variant: "destructive" })
     }
   }
 
-  const removeItem = (id: string) => {
-    setCartItems((items) => items.filter((item) => item.id !== id))
+  const serverRemoveItem = async (id: string, name?: string) => {
+    const prev = [...cartItems]
+    removeItem(id)
+    try {
+      const res = await fetch(`/api/cart?id=${encodeURIComponent(id)}`, { method: "DELETE" })
+      if (!res.ok) throw new Error(`${res.status}`)
+      const json = await res.json()
+      const items = json?.data?.items || []
+      if (Array.isArray(items)) setItems(items)
+      toast({ title: "Item removed", description: name ? `${name} removed from cart.` : undefined })
+    } catch (e: any) {
+      setItems(prev)
+      toast({ title: "Failed to remove item", description: String(e?.message || ""), variant: "destructive" })
+    }
   }
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const shipping = subtotal > 100 ? 0 : 9.99
-  const total = subtotal + shipping
 
   return (
     <AnimatePresence>
@@ -130,7 +158,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              onClick={() => serverUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
                               className="w-8 h-8 p-0"
                             >
                               <Minus className="w-3 h-3" />
@@ -139,7 +167,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              onClick={() => serverUpdateQuantity(item.id, item.quantity + 1)}
                               className="w-8 h-8 p-0"
                             >
                               <Plus className="w-3 h-3" />
@@ -150,7 +178,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => serverRemoveItem(item.id, item.name)}
                         className="text-red-500 hover:text-red-700"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -167,7 +195,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>${subtotal().toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Shipping</span>
@@ -178,7 +206,15 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                     <span>${total.toFixed(2)}</span>
                   </div>
                 </div>
-                <Button className="w-full bg-ascent hover:bg-ascent/90">Proceed to Checkout</Button>
+                <Button
+                  className="w-full bg-ascent hover:bg-ascent/90"
+                  onClick={() => {
+                    onClose()
+                    router.push("/checkout")
+                  }}
+                >
+                  Proceed to Checkout
+                </Button>
                 <p className="text-xs text-center text-muted-foreground">
                   {shipping > 0 && `Free shipping on orders over $100`}
                 </p>

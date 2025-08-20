@@ -1,18 +1,12 @@
 "use client"
-import { useState } from "react"
+import { useMemo, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Heart, ShoppingCart, Trash2 } from "lucide-react"
 import { Button } from "./ui/button"
 import Image from "next/image"
-
-interface WishlistItem {
-  id: string
-  name: string
-  price: number
-  originalPrice?: number
-  image: string
-  inStock: boolean
-}
+import { useApi } from "@/lib/hooks/use-api"
+import { useCartStore } from "@/lib/store/cart-store"
+import { useToast } from "@/hooks/use-toast"
 
 interface WishlistSidebarProps {
   isOpen: boolean
@@ -20,44 +14,79 @@ interface WishlistSidebarProps {
 }
 
 export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProps) {
-  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([
-    {
-      id: "1",
-      name: "Elegant Summer Dress",
-      price: 45.99,
-      originalPrice: 65.99,
-      image: "/images/product_3.png",
-      inStock: true,
-    },
-    {
-      id: "2",
-      name: "Classic Leather Boots",
-      price: 129.99,
-      image: "/images/product_4.png",
-      inStock: false,
-    },
-    {
-      id: "3",
-      name: "Vintage Graphic Hoodie",
-      price: 59.99,
-      image: "/images/product_5.png",
-      inStock: true,
-    },
-  ])
+  const { toast } = useToast()
+  const addToCart = useCartStore((s) => s.addItem)
 
-  const removeItem = (id: string) => {
-    setWishlistItems((items) => items.filter((item) => item.id !== id))
+  // Fetch wishlist only when sidebar is open
+  const { data, error, isLoading, refetch } = useApi<any>("/api/wishlist", { enabled: isOpen });
+
+  // Fetching is controlled by useApi via the `enabled` option; no extra effect needed
+
+  const wishlistItems = useMemo(() => {
+    // useApi unwraps the top-level { data: ... } so `data` is the wishlist object
+    const items = data?.items || []
+    // Map API items (each has .product) to UI shape
+    return items.map((item: any) => {
+      const p = item.product || item
+      return {
+        id: p.id as string,
+        name: p.name as string,
+        // API returns Decimal/number as string -> coerce
+        price: typeof p.price === "string" ? Number(p.price) : (p.price as number),
+        image: (p.images && p.images[0]) || "/placeholder.svg",
+        inStock: (p.stock ?? 0) > 0,
+      }
+    }) as Array<{
+      id: string
+      name: string
+      price: number
+      image: string
+      inStock: boolean
+    }>
+  }, [data]);
+
+  // (Mutations for wishlist add/remove are done via fetch; hooks optional here)
+   const handleRemove = async (productId: string) => {
+    try {
+      await fetch(`/api/wishlist?productId=${encodeURIComponent(productId)}`, { method: "DELETE" })
+      refetch()
+      // notify header to refresh count
+      window.dispatchEvent(new Event("wishlist:updated"))
+      toast({ title: "Removed from wishlist" })
+    } catch (e: any) {
+      toast({ title: "Failed to remove", description: e?.message || "", variant: "destructive" })
+    }
   }
 
-  const moveToCart = (id: string) => {
-    // In a real app, this would add to cart and remove from wishlist
-    removeItem(id)
+  const moveToCart = async (item: { id: string; name: string; price: number; image: string }) => {
+    // Optimistic local add
+    addToCart({ id: item.id, name: item.name, price: item.price, quantity: 1, image: item.image })
+    try {
+      const res = await fetch("/api/cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, name: item.name, price: item.price, quantity: 1, image: item.image }),
+      })
+      if (!res.ok) throw new Error(`${res.status}`)
+    } catch (e: any) {
+      // keep local cart but inform if not synced
+      const msg = String(e?.message || "")
+      if (msg === "401") {
+        toast({ title: "Sign in to sync your cart", description: "Item added locally.", variant: "destructive" })
+      } else {
+        toast({ title: "Failed to sync cart", description: msg, variant: "destructive" })
+      }
+    }
+    // Remove from wishlist and notify
+    await handleRemove(item.id)
+    window.dispatchEvent(new Event("wishlist:updated"))
+    toast({ title: "Added to cart", description: item.name })
   }
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <div>
           {/* Backdrop */}
           <motion.div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
@@ -89,7 +118,31 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
 
             {/* Wishlist Items */}
             <div className="flex-1 overflow-y-auto p-6">
-              {wishlistItems.length === 0 ? (
+              {/* Error state */}
+              {error && error !== "Unauthorized" && (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">{String(error)}</p>
+                </div>
+              )}
+
+              {/* Loading state */}
+              {!error && isLoading && (
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex gap-4 p-4 border rounded-lg animate-pulse">
+                      <div className="w-20 h-20 bg-muted rounded" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-2/3 bg-muted rounded" />
+                        <div className="h-4 w-1/3 bg-muted rounded" />
+                        <div className="h-8 w-1/2 bg-muted rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Empty state */}
+              {(!error || error === "Unauthorized") && !isLoading && wishlistItems.length === 0 && (
                 <div className="text-center py-12">
                   <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">Your wishlist is empty</p>
@@ -97,7 +150,10 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
                     Continue Shopping
                   </Button>
                 </div>
-              ) : (
+              )}
+
+              {/* List */}
+              {(!error || error === "Unauthorized") && !isLoading && wishlistItems.length > 0 && (
                 <div className="space-y-4">
                   {wishlistItems.map((item) => (
                     <motion.div
@@ -126,14 +182,11 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
                         <h3 className="font-medium text-sm line-clamp-2">{item.name}</h3>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="font-semibold">${item.price}</span>
-                          {item.originalPrice && (
-                            <span className="text-sm text-muted-foreground line-through">${item.originalPrice}</span>
-                          )}
                         </div>
                         <div className="flex gap-2 mt-3">
                           <Button
                             size="sm"
-                            onClick={() => moveToCart(item.id)}
+                            onClick={() => moveToCart(item)}
                             disabled={!item.inStock}
                             className="flex-1 text-xs"
                           >
@@ -143,7 +196,7 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => removeItem(item.id)}
+                            onClick={() => handleRemove(item.id)}
                             className="text-red-500 hover:text-red-700"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -163,7 +216,9 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
                   className="w-full bg-ascent hover:bg-ascent/90"
                   onClick={() => {
                     // Move all in-stock items to cart
-                    wishlistItems.filter((item) => item.inStock).forEach((item) => moveToCart(item.id))
+                    wishlistItems
+                      .filter((item) => item.inStock)
+                      .forEach((item) => void moveToCart(item))
                   }}
                 >
                   Add All to Cart
@@ -171,7 +226,7 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
               </div>
             )}
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   )

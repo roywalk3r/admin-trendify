@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 
 type ApiResponse<T> = {
   data?: T
@@ -21,14 +21,19 @@ export function useApi<T>(url: string, options: UseApiOptions = {}) {
 
   const { onSuccess, onError, enabled = true } = options
 
-  const fetchData = async () => {
-    if (!enabled) return
+  // Guard against overlapping requests without tying to render state
+  const inFlightRef = useRef(false)
+
+  const fetchData = useCallback(async () => {
+    // Gate by enabled and avoid overlapping requests
+    if (!enabled || inFlightRef.current) return
 
     setIsLoading(true)
+    inFlightRef.current = true
     setError(null)
 
     try {
-      const response = await fetch(url)
+      const response = await fetch(url, { cache: "no-store" })
 
       // Check if response has content before parsing
       const contentType = response.headers.get("content-type")
@@ -68,13 +73,13 @@ export function useApi<T>(url: string, options: UseApiOptions = {}) {
       setIsSuccess(false)
     } finally {
       setIsLoading(false)
+      inFlightRef.current = false
     }
-  }
+  }, [enabled, url, onSuccess, onError])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   return {
     data,

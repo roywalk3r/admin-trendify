@@ -2,77 +2,91 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
 export type CartItem = {
-  id: string
-  name: string
-  price: number
-  quantity: number
-  color?: string
-  size?: string
-  image: string
+    id: string
+    name: string
+    price: number
+    quantity: number
+    color?: string
+    size?: string
+    image: string
 }
 
 type CartStore = {
-  items: CartItem[]
-  addItem: (item: CartItem) => void
-  removeItem: (id: string) => void
-  updateQuantity: (id: string, quantity: number) => void
-  clearCart: () => void
-  totalItems: () => number
-  subtotal: () => number
+    items: CartItem[]
+    setItems: (items: CartItem[]) => void
+    addItem: (item: CartItem) => void
+    removeItem: (id: string, color?: string, size?: string) => void
+    updateQuantity: (id: string, quantity: number, color?: string, size?: string) => void
+    clearCart: () => void
+    totalItems: () => number
+    subtotal: () => number
 }
 
 export const useCartStore = create<CartStore>()(
-  persist(
-    (set, get) => ({
-      items: [],
+    persist(
+        (set, get) => ({
+            items: [],
 
-      addItem: (item) => {
-        const { items } = get()
-        const existingItem = items.find((i) => i.id === item.id && i.color === item.color && i.size === item.size)
+            setItems: (items) => set({ items }),
 
-        if (existingItem) {
-          // Update quantity if item exists
-          set({
-            items: items.map((i) =>
-              i.id === item.id && i.color === item.color && i.size === item.size
-                ? { ...i, quantity: i.quantity + item.quantity }
-                : i,
-            ),
-          })
-        } else {
-          // Add new item
-          set({ items: [...items, item] })
-        }
-      },
+            addItem: (item) => {
+                const { items } = get()
+                const existingItemIndex = items.findIndex(
+                    (i) => i.id === item.id && i.color === item.color && i.size === item.size
+                )
 
-      removeItem: (id) => {
-        const { items } = get()
-        set({ items: items.filter((i) => i.id !== id) })
-      },
+                if (existingItemIndex !== -1) {
+                    // Update quantity if item exists - more efficient than map
+                    const newItems = [...items]
+                    newItems[existingItemIndex] = {
+                        ...newItems[existingItemIndex],
+                        quantity: newItems[existingItemIndex].quantity + item.quantity
+                    }
+                    set({ items: newItems })
+                } else {
+                    // Add new item
+                    set({ items: [...items, item] })
+                }
+            },
 
-      updateQuantity: (id, quantity) => {
-        const { items } = get()
-        if (quantity < 1) return
+            removeItem: (id, color, size) => {
+                const { items } = get()
+                set({
+                    items: items.filter((i) =>
+                        !(i.id === id && i.color === color && i.size === size)
+                    )
+                })
+            },
 
-        set({
-          items: items.map((i) => (i.id === id ? { ...i, quantity } : i)),
-        })
-      },
+            updateQuantity: (id, quantity, color, size) => {
+                if (quantity < 1) return
 
-      clearCart: () => set({ items: [] }),
+                const { items } = get()
+                const itemIndex = items.findIndex(
+                    (i) => i.id === id && i.color === color && i.size === size
+                )
 
-      totalItems: () => {
-        const { items } = get()
-        return items.reduce((total, item) => total + item.quantity, 0)
-      },
+                if (itemIndex !== -1) {
+                    const newItems = [...items]
+                    newItems[itemIndex] = { ...newItems[itemIndex], quantity }
+                    set({ items: newItems })
+                }
+            },
 
-      subtotal: () => {
-        const { items } = get()
-        return items.reduce((total, item) => total + item.price * item.quantity, 0)
-      },
-    }),
-    {
-      name: "cart-storage",
-    },
-  ),
+            clearCart: () => set({ items: [] }),
+
+            totalItems: () => {
+                const { items } = get()
+                return items.reduce((total, item) => total + item.quantity, 0)
+            },
+
+            subtotal: () => {
+                const { items } = get()
+                return items.reduce((total, item) => total + item.price * item.quantity, 0)
+            },
+        }),
+        {
+            name: "cart-storage",
+        },
+    ),
 )

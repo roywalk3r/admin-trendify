@@ -1,10 +1,12 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import type { Variants } from "framer-motion"
 import Image, {StaticImageData} from "next/image"
 import { Heart, ShoppingCart, Star, Eye } from "lucide-react"
 import { Button } from "./ui/button"
+import { useCartStore } from "@/lib/store/cart-store"
+import { useToast } from "@/hooks/use-toast"
 
 interface ProductCardProps {
     id: string
@@ -32,7 +34,10 @@ export default function ProductCard({
                                         index = 0,
                                     }: ProductCardProps) {
     const [isWishlisted, setIsWishlisted] = useState(false)
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false)
     const [isHovered, setIsHovered] = useState(false)
+    const addToCartStore = useCartStore((s) => s.addItem)
+    const { toast } = useToast()
 
     const cardVariants: Variants = {
         hidden: { opacity: 0, y: 20 },
@@ -66,6 +71,77 @@ export default function ProductCard({
 
     const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0
 
+    const imgSrc = typeof image === "string" ? image : (image as StaticImageData).src
+
+    // initialize wishlist heart state from server
+    useEffect(() => {
+        let mounted = true
+        const check = async () => {
+            try {
+                const res = await fetch(`/api/wishlist?productId=${encodeURIComponent(id)}`, { cache: "no-store" })
+                if (!res.ok) return
+                const json = await res.json()
+                const inWishlist = json?.data?.inWishlist ?? json?.inWishlist
+                if (mounted && typeof inWishlist === "boolean") setIsWishlisted(inWishlist)
+            } catch {}
+        }
+        check()
+        return () => { mounted = false }
+    }, [id])
+
+    const handleAddToCart = async () => {
+        // optimistic local add
+        addToCartStore({ id, name, price, quantity: 1, image: imgSrc })
+        try {
+            const res = await fetch("/api/cart", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, name, price, quantity: 1, image: imgSrc }),
+            })
+            if (!res.ok) throw new Error(`${res.status}`)
+            toast({ title: "Added to cart", description: name })
+        } catch (e: any) {
+            // server may fail if unauthenticated; keep local cart but inform user
+            const msg = String(e?.message || "")
+            if (msg === "401") {
+                toast({ title: "Sign in to sync your cart", description: "Item kept locally.", variant: "destructive" })
+            } else {
+                toast({ title: "Failed to sync cart", description: msg, variant: "destructive" })
+            }
+        }
+    }
+
+    const toggleWishlist = async () => {
+        if (isWishlistLoading) return
+        const next = !isWishlisted
+        setIsWishlisted(next) // optimistic
+        setIsWishlistLoading(true)
+        try {
+            if (next) {
+                const res = await fetch("/api/wishlist", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ productId: id }),
+                })
+                if (!res.ok) throw new Error(await res.text())
+                toast({ title: "Added to wishlist", description: name })
+                // notify global listeners (e.g., header) to refresh count
+                window.dispatchEvent(new Event("wishlist:updated"))
+            } else {
+                const res = await fetch(`/api/wishlist?productId=${encodeURIComponent(id)}`, { method: "DELETE" })
+                if (!res.ok) throw new Error(await res.text())
+                toast({ title: "Removed from wishlist", description: name })
+                window.dispatchEvent(new Event("wishlist:updated"))
+            }
+        } catch (e: any) {
+            // revert on error
+            setIsWishlisted(!next)
+            toast({ title: "Wishlist action failed", description: e?.message || "", variant: "destructive" })
+        } finally {
+            setIsWishlistLoading(false)
+        }
+    }
+
     return (
         <motion.div
             className="group relative bg-card rounded-2xl border border-muted overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
@@ -81,7 +157,7 @@ export default function ProductCard({
             <div className="relative aspect-square overflow-hidden bg-gray-50">
                 <motion.div variants={imageVariants} className="w-full h-full">
                     <Image
-                        src={image || "/placeholder.svg"}
+                        src={imgSrc || "/placeholder.svg"}
                         alt={name}
                         fill
                         className="object-cover"
@@ -115,10 +191,11 @@ export default function ProductCard({
 
                 {/* Wishlist Button */}
                 <motion.button
-                    className="absolute top-3 right-3 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md"
+                    className="absolute top-3 z-10 right-3 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => setIsWishlisted(!isWishlisted)}
+                    onClick={toggleWishlist}
+                    disabled={isWishlistLoading}
                 >
                     <Heart
                         className={`w-4 h-4 transition-colors ${isWishlisted ? "fill-red-500 text-red-500" : "text-gray-600"}`}
@@ -137,6 +214,7 @@ export default function ProductCard({
                         initial={{ y: 20, opacity: 0 }}
                         animate={isHovered ? { y: 0, opacity: 1 } : { y: 20, opacity: 0 }}
                         transition={{ delay: 0.1 }}
+                        onClick={handleAddToCart}
                     >
                         <Eye className="w-5 h-5 text-gray-700" />
                     </motion.button>
@@ -147,6 +225,7 @@ export default function ProductCard({
                         initial={{ y: 20, opacity: 0 }}
                         animate={isHovered ? { y: 0, opacity: 1 } : { y: 20, opacity: 0 }}
                         transition={{ delay: 0.2 }}
+                        onClick={handleAddToCart}
                     >
                         <ShoppingCart className="w-5 h-5" />
                     </motion.button>
@@ -205,9 +284,13 @@ export default function ProductCard({
                         whileTap={{ scale: 0.98 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <Button variant={"ghost"} className="w-full bg-ascent-foreground hover:bg-ascent hover:text-white transition ease-in-out delay-250 duration-300 text-ascent font-semibold py-2 rounded-full
-                         motion-reduce:transition-none ">
-                        Add to Cart
+                        <Button
+                            variant={"ghost"}
+                            className="w-full bg-ascent-foreground hover:bg-ascent hover:text-white transition ease-in-out delay-250 duration-300 text-ascent font-semibold py-2 rounded-full
+                         motion-reduce:transition-none "
+                            onClick={handleAddToCart}
+                        >
+                            Add to Cart
                         </Button>
                     </motion.div>
                 </motion.div>

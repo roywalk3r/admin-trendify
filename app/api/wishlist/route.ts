@@ -23,6 +23,19 @@ export async function GET(req: NextRequest) {
       })
     }
 
+    const url = new URL(req.url)
+    const productId = url.searchParams.get("productId")
+
+    // If a specific productId is queried, return lightweight boolean
+    if (productId) {
+      const wishlist = await prisma.wishlist.findUnique({
+        where: { userId },
+        include: { items: { select: { productId: true } } },
+      })
+      const inWishlist = Boolean(wishlist?.items?.some((i) => i.productId === productId))
+      return createApiResponse({ data: { inWishlist }, status: 200 })
+    }
+
     // Get user's wishlist with products
     const wishlist = await prisma.wishlist.findUnique({
       where: { userId },

@@ -1,16 +1,17 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Variants } from "framer-motion"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { HeartIcon, SearchIcon, ShoppingBag, Menu, X, LockKeyhole } from "lucide-react"
-import { SignedOut, SignInButton, useAuth } from "@clerk/nextjs"
+import { SignedOut, SignedIn, SignInButton } from "@clerk/nextjs"
 import { Button } from "./ui/button"
 import Link from "next/link"
 import SearchModal from "./search-modal"
 import CartSidebar from "./cart-sidebar"
 import WishlistSidebar from "./wishlist-sidebar"
+import { useCartStore } from "@/lib/store/cart-store"
 
 export default function NavBar() {
     const [isScrolled, setIsScrolled] = useState(false)
@@ -19,7 +20,11 @@ export default function NavBar() {
     const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
     const [isCartOpen, setIsCartOpen] = useState(false)
     const [isWishlistOpen, setIsWishlistOpen] = useState(false)
-    const { isLoaded, isSignedIn, userId, sessionId, getToken } = useAuth()
+    const [wishlistCount, setWishlistCount] = useState(0)
+
+    // Cart count from zustand store
+    const cartItems = useCartStore((s) => s.items)
+    const cartCount = useMemo(() => cartItems.reduce((n, it) => n + it.quantity, 0), [cartItems])
 
     useEffect(() => {
         const handleScroll = () => {
@@ -27,6 +32,27 @@ export default function NavBar() {
         }
         window.addEventListener("scroll", handleScroll)
         return () => window.removeEventListener("scroll", handleScroll)
+    }, [])
+
+    // Fetch wishlist count and refresh on custom events
+    useEffect(() => {
+        const fetchWishlistCount = async () => {
+            try {
+                const res = await fetch("/api/wishlist", { cache: "no-store" })
+                if (!res.ok) throw new Error(String(res.status))
+                const json = await res.json()
+                const count = json?.data?.items?.length ?? 0
+                setWishlistCount(count)
+            } catch {
+                // On unauthorized or error, show 0
+                setWishlistCount(0)
+            }
+        }
+        fetchWishlistCount()
+
+        const onUpdated = () => fetchWishlistCount()
+        window.addEventListener("wishlist:updated", onUpdated)
+        return () => window.removeEventListener("wishlist:updated", onUpdated)
     }, [])
 
     const navVariants: Variants = {
@@ -200,7 +226,7 @@ export default function NavBar() {
                         >
                             <HeartIcon className={"text-[#8A6163] w-5 h-5"} />
                             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                3
+                {wishlistCount}
               </span>
                         </motion.button>
                         <motion.button
@@ -211,11 +237,11 @@ export default function NavBar() {
                         >
                             <ShoppingBag className={"text-[#8A6163] w-5 h-5"} />
                             <span className="absolute -top-1 -right-1 bg-ascent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                2
+                {cartCount}
               </span>
                         </motion.button>
                         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="cursor-pointer">
-                            {isSignedIn ? (
+                            <SignedIn>
                                 <Image
                                     src="/images/avatar.png"
                                     className="dark:invert rounded-full"
@@ -223,16 +249,15 @@ export default function NavBar() {
                                     height={32}
                                     alt="Avatar"
                                 />
-                            ) : (
-                                <SignedOut>
-                                    <SignInButton mode="modal">
-                                        <Button variant={"outline"} className="bg-ascent text-ascent-foreground">
-                                            Sign in
-                                            <LockKeyhole className="w-5 h-5" />
-                                        </Button>
-                                    </SignInButton>
-                                </SignedOut>
-                            )}
+                            </SignedIn>
+                            <SignedOut>
+                                <SignInButton mode="modal">
+                                    <Button variant={"outline"} className="bg-ascent text-ascent-foreground">
+                                        Sign in
+                                        <LockKeyhole className="w-5 h-5" />
+                                    </Button>
+                                </SignInButton>
+                            </SignedOut>
                         </motion.div>
                     </motion.div>
                 </motion.div>

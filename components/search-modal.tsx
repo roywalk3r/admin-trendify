@@ -1,10 +1,9 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Search, X, TrendingUp } from "lucide-react"
 import { Input } from "./ui/input"
 import { Button } from "./ui/button"
-import { all_products } from "@/lib/data"
 import Image from "next/image"
 
 interface SearchModalProps {
@@ -14,27 +13,77 @@ interface SearchModalProps {
 
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<typeof all_products>([])
+  type SearchProduct = {
+    id: string
+    name: string
+    price: number
+    images?: string[]
+  }
+  const [searchResults, setSearchResults] = useState<SearchProduct[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const trendingSearches = ["Summer Dress", "Leather Jacket", "Sneakers", "Handbag", "Sunglasses"]
 
   useEffect(() => {
-    if (searchQuery.length > 2) {
-      setIsSearching(true)
-      const timer = setTimeout(() => {
-        const results = all_products.filter(
-          (product) =>
-            product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            product.category.toLowerCase().includes(searchQuery.toLowerCase()),
-        )
-        setSearchResults(results)
-        setIsSearching(false)
-      }, 300)
-
-      return () => clearTimeout(timer)
-    } else {
+    if (searchQuery.length <= 2) {
+      // Reset results for short queries
       setSearchResults([])
+      setIsSearching(false)
+      setError(null)
+      // Cancel any in-flight request
+      if (abortRef.current) abortRef.current.abort()
+      return
+    }
+
+    setIsSearching(true)
+    setError(null)
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    const timer = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ search: searchQuery, limit: "6" })
+        const res = await fetch(`/api/products?${params.toString()}`, {
+          signal: controller.signal,
+        })
+
+        // If aborted, exit early
+        if (controller.signal.aborted) return
+
+        const contentType = res.headers.get("content-type")
+        let json: any = {}
+        if (contentType && contentType.includes("application/json")) {
+          const text = await res.text()
+          if (text) json = JSON.parse(text)
+        }
+
+        if (!res.ok) {
+          const msg = typeof json?.error === "string" ? json.error : `Search failed (${res.status})`
+          throw new Error(msg)
+        }
+
+        const products: SearchProduct[] = json?.data?.products?.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          images: p.images,
+        })) || []
+
+        setSearchResults(products)
+      } catch (e: any) {
+        if (e?.name === "AbortError") return
+        setError(e?.message || "Something went wrong")
+      } finally {
+        setIsSearching(false)
+      }
+    }, 300)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
     }
   }, [searchQuery])
 
@@ -113,6 +162,12 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 </div>
               )}
 
+              {error && !isSearching && (
+                <div className="p-6 text-center">
+                  <p className="text-sm text-red-500">{error}</p>
+                </div>
+              )}
+
               {searchQuery.length > 2 && !isSearching && searchResults.length === 0 && (
                 <div className="p-6 text-center">
                   <p className="text-muted-foreground">No products found for "{searchQuery}"</p>
@@ -131,7 +186,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                         onClick={onClose}
                       >
                         <Image
-                          src={product.image || "/placeholder.svg"}
+                          src={(product.images && product.images[0]) || "/placeholder.svg"}
                           alt={product.name}
                           width={48}
                           height={48}

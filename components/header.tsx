@@ -19,7 +19,11 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { totalItems } = useCartStore()
+  // subscribe to a numeric slice so re-renders happen when items change
+  const cartCount = useCartStore((s) => s.totalItems())
+  // fetch wishlist for count in header
+  const { data: wishlistData, refetch: refetchWishlist } = useApi<any>("/api/wishlist")
+
   const pathname = usePathname()
 
   // Handle scroll effect
@@ -36,6 +40,13 @@ export default function Header() {
   useEffect(() => {
     setMobileMenuOpen(false)
   }, [pathname])
+
+  // Listen for global wishlist updates to refresh header count
+  useEffect(() => {
+    const handler = () => refetchWishlist()
+    window.addEventListener("wishlist:updated", handler)
+    return () => window.removeEventListener("wishlist:updated", handler)
+  }, [refetchWishlist])
 
   return (
       <header
@@ -108,6 +119,16 @@ export default function Header() {
               <Link href="/wishlist">
                 <Heart className="h-5 w-5" />
                 <span className="sr-only">Wishlist</span>
+                {/* Wishlist count badge */}
+                {(() => {
+                  const items = wishlistData?.items || wishlistData?.data?.items || wishlistData?.data?.wishlist?.items || []
+                  const count = Array.isArray(items) ? items.length : 0
+                  return count > 0 ? (
+                    <span className="absolute right-0 top-0 h-4 min-w-4 px-1 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                      {count}
+                    </span>
+                  ) : null
+                })()}
               </Link>
             </Button>
 
@@ -116,14 +137,14 @@ export default function Header() {
                 <ShoppingBag className="h-5 w-5" />
                 <span className="sr-only">Cart</span>
                 <AnimatePresence>
-                  {totalItems() > 0 && (
+                  {cartCount > 0 && (
                       <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           exit={{ scale: 0 }}
                           className="absolute right-0 top-0 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center"
                       >
-                        {totalItems()}
+                        {cartCount}
                       </motion.div>
                   )}
                 </AnimatePresence>
@@ -203,9 +224,9 @@ export default function Header() {
                   >
                     <ShoppingBag className="h-5 w-5 mr-2" />
                     Cart
-                    {totalItems() > 0 && (
+                    {cartCount > 0 && (
                         <Badge variant="secondary" className="ml-2">
-                          {totalItems()}
+                          {cartCount}
                         </Badge>
                     )}
                   </Link>

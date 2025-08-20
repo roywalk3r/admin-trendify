@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Poppins } from "next/font/google"
 import { Inter, Bruno_Ace } from "next/font/google"
 import NavBar from "@/components/nav-bar"
+import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 import Footer from "@/components/footer";
 import { ClerkProvider } from "@clerk/nextjs"
@@ -41,6 +42,7 @@ export default function RootLayout({
         <body className={`${poppins.className}   ${inter.variable} ${bruno.variable} antialiased`}>
         <NavBar />
         {children}
+        <Toaster />
         <Footer />
         </body>
         </html>

@@ -4,96 +4,20 @@ import type { Variants } from "framer-motion"
 import ProductCard from "./product-card"
 import { Button } from "./ui/button"
 import { ArrowRight } from "lucide-react"
-import {all_products} from "@/public/images/data";
+import { useApi } from "@/lib/hooks/use-api"
 
 export default function FeaturedProducts() {
-    const featuredProducts = [
-        {
-            id: "1",
-            name: "Premium Cotton T-Shirt",
-            price: 29.99,
-            originalPrice: 39.99,
-            image: "/images/product_1.png",
-            rating: 4.5,
-            reviews: 128,
-            isNew: true,
-            isSale: true,
-        },
-        {
-            id: "2",
-            name: "Designer Denim Jacket",
-            price: 89.99,
-            originalPrice: 120.0,
-            image: "/images/product_2.png",
-            rating: 4.8,
-            reviews: 89,
-            isNew: false,
-            isSale: true,
-        },
-        {
-            id: "3",
-            name: "Casual Summer Dress",
-            price: 45.99,
-            image: "/images/product_3.png",
-            rating: 4.6,
-            reviews: 156,
-            isNew: true,
-            isSale: false,
-        },
-        {
-            id: "4",
-            name: "Classic Leather Boots",
-            price: 129.99,
-            originalPrice: 159.99,
-            image: "/images/product_4.png",
-            rating: 4.7,
-            reviews: 203,
-            isNew: false,
-            isSale: true,
-        },
-        {
-            id: "5",
-            name: "Vintage Graphic Hoodie",
-            price: 59.99,
-            image: "/images/product_5.png",
-            rating: 4.4,
-            reviews: 94,
-            isNew: true,
-            isSale: false,
-        },
-        {
-            id: "6",
-            name: "Elegant Evening Gown",
-            price: 199.99,
-            originalPrice: 249.99,
-            image: "/images/product_6.png",
-            rating: 4.9,
-            reviews: 67,
-            isNew: false,
-            isSale: true,
-        },
-        {
-            id: "7",
-            name: "Sports Performance Shorts",
-            price: 34.99,
-            image: "/images/product_7.png",
-            rating: 4.3,
-            reviews: 112,
-            isNew: true,
-            isSale: false,
-        },
-        {
-            id: "8",
-            name: "Luxury Silk Scarf",
-            price: 79.99,
-            originalPrice: 99.99,
-            image: "/images/product_8.png",
-            rating: 4.6,
-            reviews: 45,
-            isNew: false,
-            isSale: true,
-        },
-    ]
+    const { data, isLoading, error } = useApi<{
+        products: Array<{
+            id: string
+            name: string
+            price: number
+            images: string[]
+            averageRating?: number
+            reviewCount?: number
+          }>
+        pagination: any
+      }>("/api/products?limit=8")
 
     const containerVariants: Variants = {
         hidden: { opacity: 0 },
@@ -126,6 +50,12 @@ export default function FeaturedProducts() {
             viewport={{ once: true, margin: "-100px" }}
             variants={containerVariants}
         >
+            {isLoading && (
+                <div className="text-center py-10 text-muted-foreground">Loading featured products...</div>
+            )}
+            {error && (
+                <div className="text-center py-10 text-red-500">Failed to load products: {error}</div>
+            )}
             {/* Section Header */}
             <motion.div className="text-center mb-12" variants={headerVariants}>
                 <motion.span
@@ -163,23 +93,21 @@ export default function FeaturedProducts() {
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12"
                 variants={containerVariants}
             >
-                {Array.from({ length: 8 })
-                    .map((_, index) => all_products[Math.floor(Math.random() * all_products.length)])
-                    .map((product: any) => ({
-                        ...product,
-                        rating: product.rating || 0,  // Default to 0 if not provided
-                        reviews: product.reviews || 0, // Default to 0 if not provided
-                        originalPrice: product.originalPrice || product.price, // Use price as originalPrice if not provided
-                        isNew: product.isNew || false,
-                        isSale: product.isSale || false
-                    }))
-                    .map((product, index) => (
-                        <ProductCard 
-                            key={`${product.id}-${index}`}
-                            {...product}
-                            index={index}
-                        />
-                    ))}
+                {(data?.products || []).map((p, index) => (
+                    <ProductCard
+                        key={p.id}
+                        id={p.id}
+                        name={p.name}
+                        price={p.price}
+                        originalPrice={undefined}
+                        image={p.images?.[0] || "/placeholder.svg"}
+                        rating={p.averageRating || 0}
+                        reviews={p.reviewCount || 0}
+                        isNew={false}
+                        isSale={false}
+                        index={index}
+                    />
+                ))}
             </motion.div>
 
             {/* View All Button */}

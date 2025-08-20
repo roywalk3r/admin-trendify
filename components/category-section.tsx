@@ -2,19 +2,13 @@
 import { motion } from "framer-motion"
 import CategoryItem from "./category-item"
 import type { Variants } from "framer-motion"
+import { useApi } from "@/lib/hooks/use-api"
 
 export default function Category() {
-    const categories = [
-        { image: "/images/men.jpg", title: "Men's Fashion" },
-        { image: "/images/hero3.jpg", title: "Women's Fashion" },
-        { image: "/images/kids.jpg", title: "Kids & Baby" },
-        { image: "/images/accessories.jpg", title: "Accessories" },
-        { image: "/images/shoes.jpg", title: "Shoes" },
-        { image: "/images/bags.jpg", title: "Bags" },
-        { image: "/images/jewel.jpg", title: "Jewelry" },
-        { image: "/images/sports.jpg", title: "Sports" },
-    ]
-
+    // Fetch categories from backend API. We avoid passing parentId due to API filtering semantics.
+    const { data, isLoading, error } = useApi(`/api/categories?limit=16&sortBy=name&sortOrder=asc`)
+    const categories = (data as Array<any>) || []
+// console.log(data, "Categories")
     const containerVariants: Variants = {
         hidden: { opacity: 0 },
         visible: {
@@ -67,12 +61,34 @@ export default function Category() {
                 </motion.h1>
             </motion.div>
 
+            {/* Error state */}
+            {error && (
+                <div className="text-sm text-red-500">Failed to load categories.</div>
+            )}
+
+            {/* Grid */}
             <motion.div
                 className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-6"
                 variants={containerVariants}
             >
-                {categories.map((category, index) => (
-                    <CategoryItem key={index} image={category.image} title={category.title} index={index} />
+                {/* Loading skeletons */}
+                {isLoading && !categories.length &&
+                    Array.from({ length: 8 }).map((_, index) => (
+                        <div key={index} className="flex flex-col items-center w-full pb-6 animate-pulse">
+                            <div className="w-20 h-20 md:w-28 md:h-28 rounded-full bg-muted" />
+                            <div className="h-4 w-16 mt-3 bg-muted rounded" />
+                        </div>
+                    ))}
+
+                {/* Loaded categories */}
+                {!isLoading && categories.map((category: any, index: number) => (
+                    <CategoryItem
+                        key={category.id || index}
+                        image={category.image || "/placeholder.svg"}
+                        title={category.name}
+                        slug={category.slug}
+                        index={index}
+                    />
                 ))}
             </motion.div>
         </motion.div>
