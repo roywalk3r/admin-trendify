@@ -6,7 +6,7 @@ import NavBar from "@/components/nav-bar"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 import Footer from "@/components/footer";
-import { ClerkProvider } from "@clerk/nextjs"
+import Providers from "@/components/providers"
 
 const poppins = Poppins({
     subsets: ["latin"],
@@ -37,15 +37,15 @@ export default function RootLayout({
     children: React.ReactNode
 }>) {
     return (
-        <ClerkProvider>
         <html lang="en">
         <body className={`${poppins.className}   ${inter.variable} ${bruno.variable} antialiased`}>
-        <NavBar />
-        {children}
-        <Toaster />
-        <Footer />
+        <Providers>
+          <NavBar />
+          {children}
+          <Toaster />
+          <Footer />
+        </Providers>
         </body>
         </html>
-        </ClerkProvider>
     )
 }

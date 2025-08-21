@@ -161,7 +161,7 @@ export default function Header() {
                 </Button>
               </SignedOut>
               <SignedIn>
-                <UserButton />
+                <UserButton userProfileUrl="/profile" afterSignOutUrl="/" />
               </SignedIn>
               <AdminLink />
             </div>
@@ -202,7 +202,7 @@ export default function Header() {
               <div className="mt-auto pt-6 border-t">
                 <div className="flex flex-col space-y-4">
                   <Link
-                      href="/account"
+                      href="/profile"
                       className="flex items-center py-2 transition-colors hover:text-primary"
                       onClick={() => setMobileMenuOpen(false)}
                   >

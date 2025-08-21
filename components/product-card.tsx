@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import type { Variants } from "framer-motion"
-import Image, {StaticImageData} from "next/image"
+import Image, { type StaticImageData } from "next/image"
+import Link from "next/link"
 import { Heart, ShoppingCart, Star, Eye } from "lucide-react"
 import { Button } from "./ui/button"
 import { useCartStore } from "@/lib/store/cart-store"
@@ -86,7 +87,9 @@ export default function ProductCard({
             } catch {}
         }
         check()
-        return () => { mounted = false }
+        return () => {
+            mounted = false
+        }
     }, [id])
 
     const handleAddToCart = async () => {
@@ -156,13 +159,15 @@ export default function ProductCard({
             {/* Product Image */}
             <div className="relative aspect-square overflow-hidden bg-gray-50">
                 <motion.div variants={imageVariants} className="w-full h-full">
-                    <Image
-                        src={imgSrc || "/placeholder.svg"}
-                        alt={name}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                    />
+                    <Link href={`/products/${id}`} className="block w-full h-full">
+                        <Image
+                            src={imgSrc || "/placeholder.svg"}
+                            alt={name}
+                            fill
+                            className="object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                        />
+                    </Link>
                 </motion.div>
 
                 {/* Badges */}
@@ -207,17 +212,17 @@ export default function ProductCard({
                     className="absolute inset-0 bg-black/20 flex items-center justify-center gap-2"
                     variants={overlayVariants}
                 >
-                    <motion.button
-                        className="p-3 bg-white rounded-full shadow-lg"
+                    <motion.div
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         initial={{ y: 20, opacity: 0 }}
                         animate={isHovered ? { y: 0, opacity: 1 } : { y: 20, opacity: 0 }}
                         transition={{ delay: 0.1 }}
-                        onClick={handleAddToCart}
                     >
-                        <Eye className="w-5 h-5 text-gray-700" />
-                    </motion.button>
+                        <Link href={`/products/${id}`} className="p-3 bg-white rounded-full shadow-lg block">
+                            <Eye className="w-5 h-5 text-gray-700" />
+                        </Link>
+                    </motion.div>
                     <motion.button
                         className="p-3 bg-ascent text-white rounded-full shadow-lg"
                         whileHover={{ scale: 1.1 }}
@@ -234,15 +239,17 @@ export default function ProductCard({
 
             {/* Product Info */}
             <div className="p-4">
-                <motion.h3
-                    className="font-semibold typography text-sm text-ascent mb-2 line-clamp-2"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.1 + 0.3 }}
-                    key={index}
-                >
-                    {name}
-                </motion.h3>
+                <Link href={`/products/${id}`}>
+                    <motion.h3
+                        className="font-semibold typography text-sm text-ascent mb-2 line-clamp-2 cursor-pointer hover:underline"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: index * 0.1 + 0.3 }}
+                        key={index}
+                    >
+                        {name}
+                    </motion.h3>
+                </Link>
 
                 {/* Rating */}
                 <motion.div
@@ -279,11 +286,7 @@ export default function ProductCard({
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 + 0.6 }}
                 >
-                    <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        transition={{ duration: 0.5 }}
-                    >
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.5 }}>
                         <Button
                             variant={"ghost"}
                             className="w-full bg-ascent-foreground hover:bg-ascent hover:text-white transition ease-in-out delay-250 duration-300 text-ascent font-semibold py-2 rounded-full

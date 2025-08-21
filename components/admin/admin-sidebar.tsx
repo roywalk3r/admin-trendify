@@ -108,6 +108,11 @@ export function AdminSidebar() {
       icon: BarChart,
     },
     {
+      title: "Delivery",
+      href: "/admin/delivery",
+      icon: Settings,
+    },
+    {
       title: "Settings",
       href: "/admin/settings",
       icon: Settings,

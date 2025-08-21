@@ -16,6 +16,7 @@
   "dependencies": {
     "@arcjet/next": "latest",
     "@clerk/nextjs": "latest",
+    "@clerk/themes": "^2.4.12",
     "@emotion/is-prop-valid": "latest",
     "@eslint/eslintrc": "latest",
     "@google/genai": "^1.14.0",

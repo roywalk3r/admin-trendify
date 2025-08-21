@@ -48,13 +48,13 @@ export function UserNav() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/account">Profile</Link>
+              <Link href="/profile">Profile</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/account?tab=orders">Orders</Link>
+              <Link href="/profile?tab=orders">Orders</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/account?tab=settings">Settings</Link>
+              <Link href="/profile?tab=addresses">Addresses</Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

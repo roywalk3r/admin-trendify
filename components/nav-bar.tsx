@@ -4,14 +4,16 @@ import { motion, AnimatePresence } from "framer-motion"
 import type { Variants } from "framer-motion"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
-import { HeartIcon, SearchIcon, ShoppingBag, Menu, X, LockKeyhole } from "lucide-react"
-import { SignedOut, SignedIn, SignInButton } from "@clerk/nextjs"
+import {HeartIcon, SearchIcon, ShoppingBag, Menu, X, LockKeyhole, LayoutDashboard, User2Icon, User} from "lucide-react"
+import {SignedOut, SignedIn, SignInButton, UserButton} from "@clerk/nextjs"
 import { Button } from "./ui/button"
 import Link from "next/link"
 import SearchModal from "./search-modal"
 import CartSidebar from "./cart-sidebar"
 import WishlistSidebar from "./wishlist-sidebar"
 import { useCartStore } from "@/lib/store/cart-store"
+import {useApi} from "@/lib/hooks/use-api";
+import {useRouter} from "next/navigation"
 
 export default function NavBar() {
     const [isScrolled, setIsScrolled] = useState(false)
@@ -21,7 +23,7 @@ export default function NavBar() {
     const [isCartOpen, setIsCartOpen] = useState(false)
     const [isWishlistOpen, setIsWishlistOpen] = useState(false)
     const [wishlistCount, setWishlistCount] = useState(0)
-
+const router = useRouter();
     // Cart count from zustand store
     const cartItems = useCartStore((s) => s.items)
     const cartCount = useMemo(() => cartItems.reduce((n, it) => n + it.quantity, 0), [cartItems])
@@ -240,16 +242,19 @@ export default function NavBar() {
                 {cartCount}
               </span>
                         </motion.button>
-                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="cursor-pointer">
+                        <motion.div whileHover={{ scale: 1.1 }} className="cursor-pointer">
                             <SignedIn>
-                                <Image
-                                    src="/images/avatar.png"
-                                    className="dark:invert rounded-full"
-                                    width={32}
-                                    height={32}
-                                    alt="Avatar"
-                                />
+                                <UserButton>
+                                    <UserButton.MenuItems>
+                                        <UserButton.Action
+                                            label="Basic Profile"
+                                            labelIcon={< User2Icon/>}
+                                            onClick={() => router.push("/profile")}
+                                         />
+                                    </UserButton.MenuItems>
+                                </UserButton>
                             </SignedIn>
+                            <AdminLink />
                             <SignedOut>
                                 <SignInButton mode="modal">
                                     <Button variant={"outline"} className="bg-ascent text-ascent-foreground">
@@ -372,13 +377,30 @@ export default function NavBar() {
                                         </motion.button>
                                     </div>
                                     <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                        <Image
-                                            src={"/images/avatar.png"}
-                                            className={"dark:invert rounded-full"}
-                                            width={28}
-                                            height={28}
-                                            alt={"Avatar"}
-                                        />
+                                        <SignedIn>
+                                            <UserButton>
+                                                <UserButton.MenuItems>
+                                                    <UserButton.Action
+                                                        label="Basic Profile"
+                                                        labelIcon={< User2Icon/>}
+                                                        onClick={() => router.push("/profile")}
+                                                    />
+                                                </UserButton.MenuItems>
+                                            </UserButton>
+                                        </SignedIn>
+                                        <AdminLink />
+                                        <SignedOut>
+                                            <SignInButton mode="modal">
+                                                <motion.button
+                                                    whileHover={{ scale: 1.1 }}
+                                                    whileTap={{ scale: 0.9 }}
+                                                    className="flex items-center gap-2 text-sm typography"
+                                                >
+                                                    <User className={"text-[#8A6163] w-4 h-4"} />
+                                                    Sign In
+                                                </motion.button>
+                                            </SignInButton>
+                                        </SignedOut>
                                     </motion.div>
                                 </motion.div>
                             </div>
@@ -392,5 +414,26 @@ export default function NavBar() {
             <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
             <WishlistSidebar isOpen={isWishlistOpen} onClose={() => setIsWishlistOpen(false)} />
         </>
+    )
+}
+function AdminLink() {
+    const [isAdmin, setIsAdmin] = useState(false)
+    const { data } = useApi<any>("/api/admin/check")
+    console.log(data, "Admin Chexc")
+    useEffect(() => {
+        if (data?.isAdmin) {
+            setIsAdmin(true)
+        }
+    }, [data])
+
+    if (!isAdmin) return null
+
+    return (
+        <Button variant="ghost" size="icon" className="ml-2" asChild>
+            <Link href="/admin">
+                <LayoutDashboard className="h-5 w-5" />
+                <span className="sr-only">Admin Dashboard</span>
+            </Link>
+        </Button>
     )
 }

@@ -4,8 +4,14 @@ import { useUser, SignInButton } from "@clerk/nextjs"
 import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import { computeDeliveryFee, type DeliverySelection } from "@/lib/shipping"
 
-export default function CheckoutButton() {
+type Props = {
+  addressId?: string | null
+  delivery?: DeliverySelection
+}
+
+export default function CheckoutButton({ addressId: addressIdProp, delivery }: Props) {
   // Split selectors to minimize re-renders
   const items = useCartStore((s) => s.items)
   const subtotal = useCartStore((s) => s.subtotal)
@@ -33,16 +39,54 @@ export default function CheckoutButton() {
         toast({ title: "Invalid amount", description: "Cart total must be greater than 0", variant: "destructive" })
         return
       }
+      // Validate delivery selection
+      const deliverySel = delivery || { method: "pickup" as const, pickupCity: null, pickupLocation: null }
+      if (deliverySel.method === "pickup") {
+        if (!deliverySel.pickupCity || !deliverySel.pickupLocation) {
+          toast({ title: "Select pickup city and location", variant: "destructive" })
+          return
+        }
+      }
+      // Require an address only for door-to-door
+      let addressId = addressIdProp || undefined
+      if (deliverySel.method === "door") {
+        if (!addressId) {
+          const addrRes = await fetch("/api/profile/addresses")
+          if (!addrRes.ok) {
+            toast({ title: "Unable to load addresses", description: "Please try again.", variant: "destructive" })
+            return
+          }
+          const addrJson = await addrRes.json()
+          const addresses: any[] = Array.isArray(addrJson?.data) ? addrJson.data : []
+          if (!addresses || addresses.length === 0) {
+            toast({
+              title: "No address on file",
+              description: "Add a shipping address in your profile before checkout.",
+              variant: "destructive",
+            })
+            return
+          }
+          const selected = addresses.find((a: any) => a.isDefault) || addresses[0]
+          addressId = selected?.id
+          if (!addressId) {
+            toast({ title: "Invalid address", description: "Please update your address and try again.", variant: "destructive" })
+            return
+          }
+        }
+      }
+      const shippingFee = computeDeliveryFee(deliverySel.method, deliverySel.pickupCity)
       setLoading(true)
 
       const res = await fetch("/api/paystack/initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: totalAmount,
+          // include shipping fee in amount (server will re-compute too)
+          amount: Number(totalAmount) + Number(shippingFee),
           email: user.primaryEmailAddress.emailAddress,
           currency: "GHS",
-          metadata: { items },
+          metadata: { items, delivery: { ...deliverySel, fee: shippingFee } },
+          addressId,
         }),
       })
       if (!res.ok) {

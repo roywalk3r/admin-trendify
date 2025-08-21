@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Star, ThumbsUp, ThumbsDown, MessageCircle, Flag, CheckCircle } from "lucide-react"
+import { Star, ThumbsUp, Flag, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -15,25 +15,14 @@ interface Review {
   title: string
   comment?: string
   images: string[]
-  isVerifiedPurchase: boolean
-  status: string
+  isVerified: boolean
   createdAt: string
-  helpfulCount: number
-  notHelpfulCount: number
+  isHelpful: number
   user: {
     id: string
     name: string
-    email: string
+    avatar?: string | null
   }
-  replies: Array<{
-    id: string
-    content: string
-    createdAt: string
-    user: {
-      id: string
-      name: string
-    }
-  }>
 }
 
 interface ReviewListProps {
@@ -60,13 +49,18 @@ export function ReviewList({ productId, currentUserId }: ReviewListProps) {
 
   const fetchReviews = async () => {
     try {
-      const response = await fetch(`/api/reviews?productId=${productId}&status=approved`)
-      const data = await response.json()
-
-      if (data.success) {
-        setReviews(data.data.reviews)
-        setStats(data.data.stats)
-      }
+      const response = await fetch(`/api/reviews?productId=${productId}&page=1&limit=10`)
+      const json = await response.json()
+      const items: Review[] = json?.data?.items ?? []
+      setReviews(items)
+      const total = json?.data?.total ?? items.length
+      const average = items.length ? items.reduce((s, r) => s + (r.rating || 0), 0) / items.length : 0
+      const dist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+      items.forEach((r) => {
+        const key = Math.round(r.rating) as 1 | 2 | 3 | 4 | 5
+        dist[key] = (dist[key] || 0) + 1
+      })
+      setStats({ averageRating: Number(average.toFixed(1)), totalReviews: total, ratingDistribution: dist })
     } catch (error) {
       console.error("Error fetching reviews:", error)
     } finally {
@@ -74,12 +68,11 @@ export function ReviewList({ productId, currentUserId }: ReviewListProps) {
     }
   }
 
-  const handleHelpfulVote = async (reviewId: string, helpful: boolean) => {
+  const handleHelpfulVote = async (reviewId: string) => {
     try {
       const response = await fetch(`/api/reviews/${reviewId}/helpful`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ helpful }),
       })
 
       if (response.ok) {
@@ -158,7 +151,7 @@ export function ReviewList({ productId, currentUserId }: ReviewListProps) {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{review.user.name}</span>
-                        {review.isVerifiedPurchase && (
+                        {review.isVerified && (
                           <Badge variant="secondary" className="text-xs">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Verified Purchase
@@ -202,45 +195,14 @@ export function ReviewList({ productId, currentUserId }: ReviewListProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleHelpfulVote(review.id, true)}
+                      onClick={() => handleHelpfulVote(review.id)}
                       disabled={!currentUserId}
                     >
                       <ThumbsUp className="h-4 w-4 mr-1" />
-                      Helpful ({review.helpfulCount})
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleHelpfulVote(review.id, false)}
-                      disabled={!currentUserId}
-                    >
-                      <ThumbsDown className="h-4 w-4 mr-1" />({review.notHelpfulCount})
+                      Helpful ({review.isHelpful || 0})
                     </Button>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    <MessageCircle className="h-4 w-4 mr-1" />
-                    Reply
-                  </Button>
                 </div>
-
-                {review.replies.length > 0 && (
-                  <div className="ml-6 space-y-3 border-l-2 border-gray-100 pl-4">
-                    {review.replies.map((reply) => (
-                      <div key={reply.id} className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-xs">{reply.user.name?.charAt(0) || "U"}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm font-medium">{reply.user.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{reply.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))

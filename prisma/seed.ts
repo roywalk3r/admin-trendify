@@ -23,6 +23,10 @@ export async function seedDatabase() {
   await prisma.category.deleteMany({});
   await prisma.user.deleteMany({});
 
+  // New: clear delivery config
+  await prisma.pickupLocation.deleteMany({});
+  await prisma.deliveryCity.deleteMany({});
+
   // Create users with more variety
   console.log("👤 Creating users...");
   const adminUser = await prisma.user.create({
@@ -65,6 +69,45 @@ export async function seedDatabase() {
       },
     }),
   ]);
+
+  // Seed delivery cities and pickup locations
+  console.log("🚚 Seeding delivery cities & pickup locations...");
+  const accra = await prisma.deliveryCity.create({
+    data: {
+      name: "Accra",
+      doorFee: 20,
+      pickupLocations: {
+        create: [
+          { name: "Osu Shop", address: "Osu, Oxford Street" },
+          { name: "East Legon Center", address: "East Legon, Lagos Ave" },
+          { name: "Spintex Hub", address: "Spintex Road" },
+        ],
+      },
+    },
+  });
+  const kumasi = await prisma.deliveryCity.create({
+    data: {
+      name: "Kumasi",
+      doorFee: 25,
+      pickupLocations: {
+        create: [
+          { name: "Adum Branch", address: "Adum Main Rd" },
+          { name: "Ahodwo Pickup", address: "Ahodwo Roundabout" },
+        ],
+      },
+    },
+  });
+  const tamale = await prisma.deliveryCity.create({
+    data: {
+      name: "Tamale",
+      doorFee: 30,
+      pickupLocations: {
+        create: [
+          { name: "Central Pickup", address: "City Center" },
+        ],
+      },
+    },
+  });
 
   // Create addresses for users
   console.log("🏠 Creating addresses...");
