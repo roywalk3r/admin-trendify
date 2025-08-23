@@ -5,11 +5,19 @@ import FilterSortBar from "@/components/filter-sort-bar"
 import { all_products } from "@/lib/data"
 import Image from "next/image";
 import {useApi} from "@/lib/use-api";
-import { useMemo } from "react"
+import { Suspense, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import ProductCard from "@/components/product-card";
 
 export default function WomenPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-sm text-muted-foreground">Loading…</div>}>
+            <WomenContent />
+        </Suspense>
+    )
+}
+
+function WomenContent() {
     const searchParams = useSearchParams()
 
     const apiUrl = useMemo(() => {

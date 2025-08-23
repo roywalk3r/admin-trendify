@@ -2,6 +2,7 @@ import HeroCard from "@/components/hero-card"
 import FilterSortBar from "@/components/filter-sort-bar"
 import { all_products } from "@/lib/data"
 import Image from "next/image";
+import { Suspense } from "react";
 
 export default function SalePage() {
     // Create sale products with discounted prices
@@ -23,7 +24,9 @@ export default function SalePage() {
                     text="Don't miss out on incredible savings! Discover amazing deals on your favorite fashion pieces with discounts up to 70% off. Limited time only!"
                     style="italic typography"
                 />
-                <FilterSortBar />
+                <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading filters…</div>}>
+                    <FilterSortBar />
+                </Suspense>
 
                 {/* Custom Products Grid for Sale */}
                 <div className="mt-8">

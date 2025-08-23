@@ -4,10 +4,18 @@ import HeroCard from "@/components/hero-card"
 import FilterSortBar from "@/components/filter-sort-bar"
 import ProductCard from "@/components/product-card";
 import {useApi} from "@/lib/use-api";
-import { useMemo } from "react"
+import { Suspense, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 
 export default function MenPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-sm text-muted-foreground">Loading…</div>}>
+            <MenContent />
+        </Suspense>
+    )
+}
+
+function MenContent() {
     const searchParams = useSearchParams()
 
     const apiUrl = useMemo(() => {

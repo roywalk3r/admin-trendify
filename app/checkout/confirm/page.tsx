@@ -1,11 +1,19 @@
 "use client"
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { useCartStore } from "@/lib/store/cart-store"
 import { useToast } from "@/hooks/use-toast"
 
 export default function CheckoutConfirmPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto max-w-3xl py-10 text-sm text-muted-foreground">Loading…</div>}>
+      <CheckoutConfirmContent />
+    </Suspense>
+  )
+}
+
+function CheckoutConfirmContent() {
   const params = useSearchParams()
   const reference = params.get("reference")
   const [status, setStatus] = useState<string>("verifying")

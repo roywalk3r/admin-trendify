@@ -1,11 +1,19 @@
 "use client"
-import { useEffect, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Star, Search } from "lucide-react"
 
 export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading…</div>}>
+      <SearchContent />
+    </Suspense>
+  )
+}
+
+function SearchContent() {
   const params = useSearchParams()
   const router = useRouter()
   const initialQ = params.get("q") || ""
