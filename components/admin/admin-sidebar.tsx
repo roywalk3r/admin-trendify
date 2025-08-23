@@ -18,6 +18,7 @@ import {
   Images,
   Palette,
   Sparkles,
+  History,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,15 @@ export function AdminSidebar() {
       title: "Analytics",
       href: "/admin/analytics",
       icon: BarChart,
+      submenu: [
+        { title: "Overview", href: "/admin/analytics" },
+        { title: "Search Analytics", href: "/admin/analytics/search" },
+      ],
+    },
+    {
+      title: "Audit Logs",
+      href: "/admin/audit",
+      icon: History,
     },
     {
       title: "Delivery",
@@ -217,7 +227,7 @@ export function AdminSidebar() {
 
   return (
     <>
-      <aside className="hidden w-64 border-r bg-background lg:block">
+      <aside className="hidden lg:block sticky top-0 h-[100dvh] w-64 border-r bg-background overflow-hidden">
         <SidebarContent />
       </aside>
       <div className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 lg:hidden">

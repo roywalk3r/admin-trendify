@@ -1,11 +1,47 @@
+"use client"
+
 import HeroCard from "@/components/hero-card"
 import FilterSortBar from "@/components/filter-sort-bar"
 import { all_products } from "@/lib/data"
 import Image from "next/image";
+import {useApi} from "@/lib/use-api";
+import { useMemo } from "react"
+import { useSearchParams } from "next/navigation"
+import ProductCard from "@/components/product-card";
 
 export default function WomenPage() {
-    // Filter products for women's category
-    const womenProducts = all_products.filter((product) => product.category === "Women")
+    const searchParams = useSearchParams()
+
+    const apiUrl = useMemo(() => {
+        const sp = new URLSearchParams()
+        // preserve supported params
+        const limit = searchParams.get("limit") || "12"
+        const sort = searchParams.get("sort") || "createdAt-desc"
+        const page = searchParams.get("page") || "1"
+        const search = searchParams.get("search") || ""
+        if (limit) sp.set("limit", limit)
+        if (sort) sp.set("sort", sort)
+        if (page) sp.set("page", page)
+        if (search) sp.set("search", search)
+        // fixed category for women section
+        sp.set("category", "womens-clothing")
+        return `/api/products?${sp.toString()}`
+    }, [searchParams])
+
+    const {data:all_products, isLoading, error} = useApi<{
+        products: Array<{
+            id: string
+            name: string
+            price: number
+            images: string[]
+            averageRating?: number
+            reviewCount?: number
+        }>
+        pagination: any
+    }>(apiUrl)
+
+
+    const womenProducts = all_products?.products ?? []// Filter products for women's category
 
     return (
         <>
@@ -18,63 +54,31 @@ export default function WomenPage() {
                     text="Embrace your femininity with our curated collection of women's fashion. From elegant dresses to casual chic, discover pieces that celebrate your unique style."
                     style="italic typography"
                 />
-                <FilterSortBar />
+                <FilterSortBar fixedCategory="womens-clothing" />
 
                 {/* Custom Products Grid for Women */}
                 <div className="mt-8">
                     <div className="flex items-center justify-between mb-6 p-4 bg-card rounded-2xl border">
                         <div className="flex items-center gap-4">
-                            <span className="text-sm text-muted-foreground">Showing {womenProducts.length} women's products</span>
+                            <span className="text-sm text-muted-foreground">Showing {all_products?.pagination?.total ?? womenProducts.length} women's products</span>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {womenProducts.map((product, index) => (
-                            <div
-                                key={product.id}
-                                className="group relative bg-card rounded-2xl border border-muted  overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
-                            >
-                                <div className="relative aspect-square overflow-hidden bg-gray-50">
-                                    <Image
-                                        width={500}
-                                        height={500}
-                                        src={product.image || "/placeholder.svg"}
-                                        alt={product.name}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                    />
-
-                                    {/* Badges */}
-                                    <div className="absolute top-3 left-3 flex flex-col gap-2">
-                                        <span className="bg-pink-500 text-white text-xs font-semibold px-2 py-1 rounded-full">WOMEN</span>
-                                    </div>
-                                </div>
-
-                                <div className="p-4">
-                                    <h3 className="font-semibold typography text-sm text-ascent mb-2 line-clamp-2">{product.name}</h3>
-
-                                    <div className="flex items-center gap-1 mb-3">
-                                        <div className="flex">
-                                            {[...Array(5)].map((_, i) => (
-                                                <span
-                                                    key={i}
-                                                    className={`w-4 h-4 ${i < Math.floor(product?.rating) ? "text-yellow-400" : "text-gray-300"}`}
-                                                >
-                          ★
-                        </span>
-                                            ))}
-                                        </div>
-                                        <span className="text-sm text-muted-foreground ml-1">({product.reviews})</span>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <span className="text-xl text-foreground typography">${product.price}</span>
-                                    </div>
-
-                                    <button className="w-full bg-ascent-foreground hover:bg-ascent hover:text-white transition ease-in-out delay-250 duration-300 text-ascent font-semibold py-2 rounded-full">
-                                        Add to Cart
-                                    </button>
-                                </div>
-                            </div>
+                        {(womenProducts || []).map((p, index) => (
+                            <ProductCard
+                                key={p.id}
+                                id={p.id}
+                                name={p.name}
+                                price={Number((p as any).price)}
+                                originalPrice={undefined}
+                                image={p.images?.[0] || "/placeholder.svg"}
+                                rating={p.averageRating || 0}
+                                reviews={p.reviewCount || 0}
+                                isNew={false}
+                                isSale={false}
+                                index={index}
+                            />
                         ))}
                     </div>
                 </div>

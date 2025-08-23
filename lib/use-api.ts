@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 
 type ApiResponse<T> = {
   data?: T
@@ -21,7 +21,7 @@ export function useApi<T>(url: string, options: UseApiOptions = {}) {
 
   const { onSuccess, onError, enabled = true } = options
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!enabled) return
 
     setIsLoading(true)
@@ -69,12 +69,11 @@ export function useApi<T>(url: string, options: UseApiOptions = {}) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [url, enabled, onSuccess, onError])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [fetchData])
 
   return {
     data,

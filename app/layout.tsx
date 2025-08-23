@@ -2,10 +2,9 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Poppins } from "next/font/google"
 import { Inter, Bruno_Ace } from "next/font/google"
-import NavBar from "@/components/nav-bar"
+import AppShell from "@/components/app-shell"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
-import Footer from "@/components/footer";
 import Providers from "@/components/providers"
 
 const poppins = Poppins({
@@ -40,10 +39,10 @@ export default function RootLayout({
         <html lang="en">
         <body className={`${poppins.className}   ${inter.variable} ${bruno.variable} antialiased`}>
         <Providers>
-          <NavBar />
-          {children}
+          <AppShell>
+            {children}
+          </AppShell>
           <Toaster />
-          <Footer />
         </Providers>
         </body>
         </html>

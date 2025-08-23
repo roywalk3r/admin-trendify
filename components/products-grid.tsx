@@ -1,5 +1,6 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import ProductCard from "./product-card"
 import { Button } from "./ui/button"
@@ -7,6 +8,9 @@ import { Grid, List } from "lucide-react"
 // Fetch from API: /api/products
 
 export default function ProductsGrid() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   // UI sort keys mapped to API
   const [sortBy, setSortBy] = useState<
@@ -45,6 +49,17 @@ export default function ProductsGrid() {
       params.set("page", String(targetPage))
       const s = apiSort(sortBy)
       if (s) params.set("sort", s)
+      // include URL-driven filters
+      const minPrice = searchParams.get("minPrice")
+      const maxPrice = searchParams.get("maxPrice")
+      const categories = searchParams.get("categories") || searchParams.get("category")
+      const sizes = searchParams.get("sizes")
+      const colors = searchParams.get("colors")
+      if (minPrice) params.set("minPrice", minPrice)
+      if (maxPrice) params.set("maxPrice", maxPrice)
+      if (categories) params.set("categories", categories)
+      if (sizes) params.set("sizes", sizes)
+      if (colors) params.set("colors", colors)
       const res = await fetch(`/api/products?${params.toString()}`, { cache: "no-store" })
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error || `Failed: ${res.status}`)
@@ -74,7 +89,44 @@ export default function ProductsGrid() {
   useEffect(() => {
     setItems([])
     fetchProducts(1, false)
-  }, [sortBy])
+  }, [sortBy, searchParams])
+
+  // sync sort with URL on mount and when URL changes externally
+  useEffect(() => {
+    const urlSort = searchParams.get("sort")
+    if (!urlSort) {
+      setSortBy("featured")
+      return
+    }
+    switch (urlSort) {
+      case "price-asc":
+        setSortBy("price-low")
+        break
+      case "price-desc":
+        setSortBy("price-high")
+        break
+      case "name-asc":
+        setSortBy("name-asc")
+        break
+      case "name-desc":
+        setSortBy("name-desc")
+        break
+      default:
+        setSortBy("featured")
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  const onSortChange = (next: typeof sortBy) => {
+    setSortBy(next)
+    // push to URL for consistency and to enable shareable state
+    const sp = new URLSearchParams(searchParams.toString())
+    const mapped = apiSort(next)
+    if (mapped) sp.set("sort", mapped)
+    else sp.delete("sort")
+    sp.delete("page")
+    router.push(`${pathname}?${sp.toString()}`)
+  }
 
   return (
     <div>
@@ -91,7 +143,7 @@ export default function ProductsGrid() {
           {/* Sort Dropdown */}
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => onSortChange(e.target.value as any)}
             className="px-3 py-2 border rounded-lg text-sm"
           >
             <option value="featured">Featured</option>

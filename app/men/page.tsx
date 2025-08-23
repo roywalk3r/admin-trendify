@@ -4,8 +4,26 @@ import HeroCard from "@/components/hero-card"
 import FilterSortBar from "@/components/filter-sort-bar"
 import ProductCard from "@/components/product-card";
 import {useApi} from "@/lib/use-api";
+import { useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 
 export default function MenPage() {
+    const searchParams = useSearchParams()
+
+    const apiUrl = useMemo(() => {
+        const sp = new URLSearchParams()
+        const limit = searchParams.get("limit") || "12"
+        const sort = searchParams.get("sort") || "createdAt-desc"
+        const page = searchParams.get("page") || "1"
+        const search = searchParams.get("search") || ""
+        if (limit) sp.set("limit", limit)
+        if (sort) sp.set("sort", sort)
+        if (page) sp.set("page", page)
+        if (search) sp.set("search", search)
+        sp.set("category", "mens-clothing")
+        return `/api/products?${sp.toString()}`
+    }, [searchParams])
+
     const {data:all_products, isLoading, error} = useApi<{
         products: Array<{
             id: string
@@ -16,7 +34,7 @@ export default function MenPage() {
             reviewCount?: number
         }>
         pagination: any
-    }>("/api/products?limit=12&sort=createdAt-desc&category=mens-clothing")
+    }>(apiUrl)
 
     const menProducts = all_products?.products ?? []
 
@@ -31,7 +49,7 @@ export default function MenPage() {
                     text="Discover our premium collection of men's fashion. From casual wear to formal attire, find everything you need to elevate your style."
                     style="italic typography"
                 />
-                <FilterSortBar />
+                <FilterSortBar fixedCategory="mens-clothing" />
 
                 {/* Custom Products Grid for Men */}
                 <div className="mt-8">

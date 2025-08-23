@@ -1,14 +1,15 @@
 import type { NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import { auth } from "@clerk/nextjs/server"
 import { apiResponse, apiError } from "@/lib/api-utils"
+import {isAdmin} from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic"
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return apiError("Unauthorized", 401)
+    const admin = await isAdmin()
+      if (!admin) {
+        return apiError("Unauthorized", 401)
     }
 
     const { searchParams } = new URL(request.url)
@@ -18,6 +19,9 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get("action")
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
+    const sort = searchParams.get("sort") || "createdAt"
+    const order = (searchParams.get("order") || "desc").toLowerCase() === "asc" ? "asc" : "desc"
+    const q = searchParams.get("q") || ""
 
     const where: any = {}
 
@@ -29,10 +33,44 @@ export async function GET(request: NextRequest) {
       if (endDate) where.createdAt.lte = new Date(endDate)
     }
 
+    if (q) {
+      const contains = (field: string) => ({ contains: q, mode: 'insensitive' as const })
+      where.OR = [
+        { entityId: contains('') },
+        { entityType: contains('') },
+        { action: contains('') },
+        { entityName: contains('') },
+        { ipAddress: contains('') },
+        { userAgent: contains('') },
+        { user: { is: { name: contains('') } } },
+        { user: { is: { email: contains('') } } },
+      ]
+    }
+
+    // Sorting
+    const orderBy: any = (() => {
+      switch (sort) {
+        case 'action':
+          return { action: order }
+        case 'entityType':
+          return { entityType: order }
+        case 'user':
+          return { user: { name: order } }
+        case 'ipAddress':
+          return { ipAddress: order }
+        case 'userAgent':
+          return { userAgent: order }
+        case 'createdAt':
+        case 'time':
+        default:
+          return { createdAt: order }
+      }
+    })()
+
     const [logs, total] = await Promise.all([
       prisma.audit.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy,
         skip: (page - 1) * limit,
         take: limit,
         include: {

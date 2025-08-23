@@ -1,3 +1,4 @@
+"use client"
 import HeroCard from "@/components/hero-card";
 import FilterSortBar from "@/components/filter-sort-bar";
 import NewArrivalProduct from "@/components/new-arrival-product";
