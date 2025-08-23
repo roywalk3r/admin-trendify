@@ -12,7 +12,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { useCartStore } from "@/lib/store/cart-store"
 import { useToast } from "@/hooks/use-toast"
 
-export default function CartPage() {
+export default function RNA() {
   const { items, removeItem, updateQuantity, subtotal, totalItems } = useCartStore()
   const { toast } = useToast()
   const [mounted, setMounted] = useState(false)
