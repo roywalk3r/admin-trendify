@@ -1,8 +1,9 @@
 import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError, checkRateLimit } from "@/lib/api-utils"
-import type { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { auth } from "@clerk/nextjs/server"
+import { getCache, setCache } from "@/lib/redis"
 
 // Product validation schema
 const productSchema = z.object({
@@ -60,6 +61,13 @@ export async function GET(req: NextRequest) {
     // Calculate pagination
     const skip = (page - 1) * limit
 
+    // Build cache key and attempt cache
+    const cacheKey = `products:${JSON.stringify({ category, search, sort, limit, page })}`
+    const cached = await getCache<any>(cacheKey)
+    if (cached) {
+      return NextResponse.json(cached, { status: 200 })
+    }
+
     // Get products with pagination
     const [products, total] = await Promise.all([
       prisma.product.findMany({
@@ -79,19 +87,23 @@ export async function GET(req: NextRequest) {
       prisma.product.count({ where }),
     ])
 
-    // Calculate average ratings
+    // Calculate average ratings and serialize Decimal fields
     const productsWithRatings = products.map((product) => {
       const ratings = product.reviews.map((review) => review.rating)
       const averageRating = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0
 
       return {
         ...product,
+        // Ensure Decimal fields are serialized safely
+        price: Number(product.price),
+        comparePrice: product.comparePrice != null ? Number(product.comparePrice) : null,
+        costPrice: product.costPrice != null ? Number(product.costPrice) : null,
         averageRating,
         reviewCount: ratings.length,
       }
     })
 
-    return createApiResponse({
+    const response = {
       data: {
         products: productsWithRatings,
         pagination: {
@@ -101,8 +113,12 @@ export async function GET(req: NextRequest) {
           limit,
         },
       },
-      status: 200,
-    })
+    }
+
+    // Cache for 2 minutes
+    await setCache(cacheKey, response, 120)
+
+    return NextResponse.json(response, { status: 200 })
   } catch (error) {
     return handleApiError(error)
   }

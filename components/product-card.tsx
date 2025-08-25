@@ -8,6 +8,7 @@ import { Heart, ShoppingCart, Star, Eye } from "lucide-react"
 import { Button } from "./ui/button"
 import { useCartStore } from "@/lib/store/cart-store"
 import { useToast } from "@/hooks/use-toast"
+import { useUser } from "@clerk/nextjs"
 
 interface ProductCardProps {
     id: string
@@ -38,6 +39,8 @@ export default function ProductCard({
     const [isWishlistLoading, setIsWishlistLoading] = useState(false)
     const [isHovered, setIsHovered] = useState(false)
     const addToCartStore = useCartStore((s) => s.addItem)
+    // We'll only sync to server if signed in
+    const { isSignedIn } = useUser()
     const { toast } = useToast()
 
     const cardVariants: Variants = {
@@ -94,22 +97,24 @@ export default function ProductCard({
 
     const handleAddToCart = async () => {
         // optimistic local add
-        addToCartStore({ id, name, price, quantity: 1, image: imgSrc })
+        addToCartStore({ id, name, price: Number(price), quantity: 1, image: imgSrc })
         try {
-            const res = await fetch("/api/cart", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id, name, price, quantity: 1, image: imgSrc }),
-            })
-            if (!res.ok) throw new Error(`${res.status}`)
+            if (isSignedIn) {
+                const res = await fetch("/api/cart", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id, name, price: Number(price), quantity: 1, image: imgSrc }),
+                })
+                if (!res.ok) throw new Error(`${res.status}`)
+            }
             toast({ title: "Added to cart", description: name })
         } catch (e: any) {
             // server may fail if unauthenticated; keep local cart but inform user
             const msg = String(e?.message || "")
-            if (msg === "401") {
+            if (!isSignedIn || msg === "401") {
                 toast({ title: "Sign in to sync your cart", description: "Item kept locally.", variant: "destructive" })
             } else {
-                toast({ title: "Failed to sync cart", description: msg, variant: "destructive" })
+                toast({ title: "Failed to sync cart", description: `Error ${msg}`, variant: "destructive" })
             }
         }
     }

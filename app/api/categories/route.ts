@@ -186,7 +186,11 @@ export async function GET(req: NextRequest) {
       createdAt: category.createdAt,
       updatedAt: category.updatedAt,
       _count: category._count,
-      products: category.products || [],
+      // Ensure Decimal fields inside products are serialized safely
+      products: (category.products || []).map((p: any) => ({
+        ...p,
+        price: Number(p.price),
+      })),
       children: category.children || [],
     }));
 

@@ -33,7 +33,12 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
         if (!res.ok) throw new Error(`${res.status}`)
         const json = await res.json()
         const items = json?.data?.items || []
-        if (Array.isArray(items)) setItems(items)
+        // Avoid clobbering local cart with empty server response (possible race with sign-in sync)
+        if (Array.isArray(items)) {
+          if (items.length > 0 || cartItems.length === 0) {
+            setItems(items)
+          }
+        }
       } catch (e: any) {
         // Ignore 401 (unauthenticated) and keep local cart
         if (String(e?.message) !== "401") {
@@ -47,7 +52,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     // Prevent repeated fetches while open toggles
     if (isOpen && !fetchedRef.current) void load()
     if (!isOpen) fetchedRef.current = false
-  }, [isOpen, setItems])
+  }, [isOpen, setItems, cartItems.length])
 
   const serverUpdateQuantity = async (id: string, qty: number) => {
     const prev = [...cartItems]

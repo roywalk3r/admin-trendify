@@ -5,6 +5,7 @@ import ProductCard from "./product-card"
 import { Button } from "./ui/button"
 import { ArrowRight } from "lucide-react"
 import { useApi } from "@/lib/hooks/use-api"
+import Link from "next/link";
 
 export default function FeaturedProducts() {
     const { data, isLoading, error } = useApi<{
@@ -118,8 +119,9 @@ export default function FeaturedProducts() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.8 }}
             >
+                    <Link href="/products">
                 <Button
-                    variant="outline"
+                    variant="link"
                     size="lg"
                     className="group px-8 py-3 rounded-full border-2 border-ascent text-ascent hover:bg-ascent hover:text-white transition-all duration-300 bg-transparent"
                 >
@@ -130,6 +132,7 @@ export default function FeaturedProducts() {
                         <ArrowRight className="ml-2 w-5 h-5" />
                     </motion.div>
                 </Button>
+                        </Link>
             </motion.div>
         </motion.section>
     )

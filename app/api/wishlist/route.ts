@@ -63,8 +63,22 @@ export async function GET(req: NextRequest) {
       })
     }
 
+    // Serialize Decimal fields in nested product data (e.g., price)
+    const safeWishlist = {
+      ...wishlist,
+      items: wishlist.items.map((it) => ({
+        ...it,
+        product: it.product
+          ? {
+              ...it.product,
+              price: Number((it.product as any).price),
+            }
+          : null,
+      })),
+    }
+
     return createApiResponse({
-      data: wishlist,
+      data: safeWishlist,
       status: 200,
     })
   } catch (error) {

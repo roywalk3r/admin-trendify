@@ -13,6 +13,7 @@ export type CartItem = {
 
 type CartStore = {
     items: CartItem[]
+    hydrated: boolean
     setItems: (items: CartItem[]) => void
     addItem: (item: CartItem) => void
     removeItem: (id: string, color?: string, size?: string) => void
@@ -26,6 +27,7 @@ export const useCartStore = create<CartStore>()(
     persist(
         (set, get) => ({
             items: [],
+            hydrated: false,
 
             setItems: (items) => set({ items }),
 
@@ -87,6 +89,17 @@ export const useCartStore = create<CartStore>()(
         }),
         {
             name: "cart-storage",
+            onRehydrateStorage: () => {
+                return (state, error) => {
+                    // Mark store as hydrated regardless of success to avoid blocking forever
+                    // We cannot access `set` here; use the store's static setState API
+                    try {
+                        useCartStore.setState({ hydrated: true })
+                    } catch {
+                        // no-op
+                    }
+                }
+            },
         },
     ),
 )
