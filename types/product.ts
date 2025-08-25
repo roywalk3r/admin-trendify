@@ -12,12 +12,23 @@ export interface Product {
   status?: string;
   createdAt?: string;
   updatedAt?: string;
+  // Optional SEO fields
+  metaTitle?: string;
+  metaDescription?: string;
+  // Optional merchandising fields
+  tags?: string[];
+  comparePrice?: number | null;
+  lowStockThreshold?: number | null;
+  weight?: number | null; // grams
+  dimensions?: string | null; // e.g., "10x5x2 cm"
+  sku?: string | null;
 }
 
 export interface Category {
   id: string;
   name: string;
   description?: string;
+  slug?: string;
 }
 
 export interface CartItem {

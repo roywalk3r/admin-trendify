@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
-import ProductDetail from "@/components/product-detail"
-import { ReviewsSection } from "@/components/reviews/reviews-section"
+import { ProductDetail } from "@/components/product-detail"
+import { ReviewList } from "@/components/reviews/review-list"
+import { RelatedProducts } from "@/components/related-products"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,21 +14,49 @@ import {
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import prisma from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
+import { SettingsProvider } from "@/contexts/settings-context"
 
 interface ProductPageProps {
   params: { id: string }
 }
 
 async function getProduct(id: string) {
-  const product = await prisma.product.findUnique({
-    where: { id },
-    include: {
-      category: true,
-      reviews: { select: { rating: true } },
-    },
-  })
-  return product
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        reviews: {
+          select: { rating: true },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        },
+        tags: {
+          include: { tag: { select: { name: true, slug: true } } },
+        },
+        _count: {
+          select: {
+            reviews: true,
+            wishlistItems: true,
+          },
+        },
+      },
+    })
+
+    if (!product) return null
+
+    return product
+  } catch (error) {
+    console.error("Error fetching product:", error)
+    return null
+  }
 }
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
@@ -41,20 +70,31 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     }
   }
 
+  const metaTitle = (product as any)?.seoTitle || `${product.name} | Trendify`
+  const metaDescription = (product as any)?.seoDesc || product.description || ""
+  const tagNames = Array.isArray((product as any)?.tags)
+    ? ((product as any).tags as any[]).map((pt) => pt?.tag?.name).filter(Boolean)
+    : []
+  const keywords = tagNames.length ? tagNames.join(", ") : undefined
+
   return {
-    title: `${product.name} | Trendify`,
-    description: product.description ?? "",
+    title: metaTitle,
+    description: metaDescription,
+    keywords,
     openGraph: {
-      title: `${product.name} | Trendify`,
-      description: product.description ?? "",
-      images: product.images && product.images.length > 0 ? [product.images[0]] : [],
+      title: metaTitle || product.name,
+      description: metaDescription,
+      images: (product.images || []).slice(0, 4).map((image) => ({
+        url: image,
+        alt: product.name,
+      })),
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
-      title: `${product.name} | Trendify`,
-      description: product.description ?? "",
-      images: product.images && product.images.length > 0 ? [product.images[0]] : [],
+      title: metaTitle || product.name,
+      description: metaDescription,
+      images: (product.images || []).slice(0, 4),
     },
   }
 }
@@ -65,6 +105,30 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   if (!product) {
     notFound()
+  }
+
+  const averageRating =
+      product.reviews.length > 0
+          ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
+          : 0
+
+  // Map DB product to UI-friendly shape
+  const productWithRating = {
+    ...product,
+    // numbers
+    price: Number((product as any).price),
+    comparePrice: (product as any).comparePrice != null ? Number((product as any).comparePrice) : null,
+    weight: (product as any).weight != null ? Number((product as any).weight) : null,
+    // counts and computed
+    averageRating,
+    reviewCount: product._count.reviews,
+    wishlistCount: product._count.wishlistItems,
+    // tags relation -> string[]
+    tags: Array.isArray((product as any).tags)
+      ? ((product as any).tags as any[]).map((pt) => pt?.tag?.name).filter(Boolean)
+      : [],
+    // map threshold naming from schema lowStockAlert
+    lowStockThreshold: (product as any).lowStockAlert ?? undefined,
   }
 
   return (
@@ -88,9 +152,19 @@ export default async function ProductPage({ params }: ProductPageProps) {
                     <BreadcrumbItem>
                       <BreadcrumbLink href="/products">Products</BreadcrumbLink>
                     </BreadcrumbItem>
+                    {product.category && (
+                        <>
+                          <BreadcrumbSeparator />
+                          <BreadcrumbItem>
+                            <BreadcrumbLink href={`/categories/${product.category.slug}`}>
+                              {product.category.name}
+                            </BreadcrumbLink>
+                          </BreadcrumbItem>
+                        </>
+                    )}
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
-                      <BreadcrumbPage className="text-ascent">{product.name}</BreadcrumbPage>
+                      <BreadcrumbPage className="text-accent">{product.name}</BreadcrumbPage>
                     </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
@@ -98,44 +172,47 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </div>
           </div>
         </div>
+        <SettingsProvider>
+          <main className="container mx-auto px-4 py-12">
+            <ProductDetail product={productWithRating as any} />
 
-        <main className="container mx-auto px-4 py-8">
-          {/* Map DB product to the UI shape expected by ProductDetail */}
-          {(() => {
-            const ratings = product.reviews ?? []
-            const reviewsCount = ratings.length
-            const avgRating = reviewsCount
-              ? ratings.reduce((sum, r) => sum + (Number((r as any).rating) || 0), 0) / reviewsCount
-              : 0
+          {(product.weight || product.dimensions || product.sku) && (
+            <div className="mt-12 border-t pt-8">
+              <h2 className="text-2xl font-bold mb-6">Specifications</h2>
+              <div className="grid md:grid-cols-2 gap-6">
+                {product.weight && (
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="font-medium">Weight</span>
+                    <span>{Number(product.weight)}g</span>
+                  </div>
+                )}
+                {product.dimensions && (
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="font-medium">Dimensions</span>
+                    <span>{typeof product.dimensions === "string" ? product.dimensions : JSON.stringify(product.dimensions)}</span>
+                  </div>
+                )}
+                {product.sku && (
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="font-medium">SKU</span>
+                    <span>{product.sku}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
-            const uiProduct = {
-              id: product.id,
-              name: product.name,
-              price: Number(product.price),
-              originalPrice: product.comparePrice ? Number(product.comparePrice) : undefined,
-              images: product.images && product.images.length > 0 ? product.images : ["/placeholder.svg"],
-              rating: avgRating,
-              reviews: reviewsCount,
-              description: product.description ?? "",
-              features: [] as string[],
-              sizes: [] as string[],
-              colors: [] as string[],
-              category: (product as any).category?.name ?? "",
-              brand: (product as any).category?.name ?? "",
-              sku: product.sku ?? "",
-              inStock: product.stock > 0,
-              stockCount: product.stock,
-              isNew: false,
-              isSale: !!(product.comparePrice && Number(product.comparePrice) > Number(product.price)),
-            }
-            return (
-              <>
-                <ProductDetail product={uiProduct as any} />
-                <ReviewsSection productId={product.id} />
-              </>
-            )
-          })()}
-        </main>
+            <div className="mt-12 border-t pt-8">
+              <h2 className="text-2xl font-bold mb-6">Customer Reviews</h2>
+              <ReviewList productId={product.id} />
+            </div>
+
+            <div className="mt-12 border-t pt-8">
+              <h2 className="text-2xl font-bold mb-6">Related Products</h2>
+              <RelatedProducts productId={product.id} categoryId={product.categoryId} />
+            </div>
+          </main>
+        </SettingsProvider>
       </div>
   )
 }

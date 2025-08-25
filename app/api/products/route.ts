@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
     // Get query parameters
     const url = new URL(req.url)
     const category = url.searchParams.get("category")
+    const categoryId = url.searchParams.get("categoryId")
+    const exclude = url.searchParams.get("exclude")
     const search = url.searchParams.get("search")
     const sort = url.searchParams.get("sort")
     const limit = Number.parseInt(url.searchParams.get("limit") || "10")
@@ -32,10 +34,16 @@ export async function GET(req: NextRequest) {
     // Build filter conditions
     const where: any = {}
 
-    if (category) {
+    if (categoryId) {
+      where.categoryId = categoryId
+    } else if (category) {
       where.category = {
         slug: category,
       }
+    }
+
+    if (exclude) {
+      where.NOT = { id: exclude }
     }
 
     if (search) {
@@ -62,7 +70,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit
 
     // Build cache key and attempt cache
-    const cacheKey = `products:${JSON.stringify({ category, search, sort, limit, page })}`
+    const cacheKey = `products:${JSON.stringify({ category, categoryId, exclude, search, sort, limit, page })}`
     const cached = await getCache<any>(cacheKey)
     if (cached) {
       return NextResponse.json(cached, { status: 200 })
