@@ -8,7 +8,13 @@
     "build": "next build",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "type-check": "tsc --noEmit",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
   },
   "prisma": {
     "seed": "tsx scripts/seed.ts"
@@ -63,7 +69,7 @@
     "input-otp": "latest",
     "ioredis": "latest",
     "lucide-react": "^0.454.0",
-    "next": "14.2.16",
+    "next": "^14.2.25",
     "next-themes": "latest",
     "path": "latest",
     "prisma": "latest",
@@ -85,7 +91,10 @@
     "use-sync-external-store": "latest",
     "vaul": "latest",
     "zod": "3.25.67",
-    "zustand": "latest"
+    "zustand": "latest",
+    "pino": "^8.17.2",
+    "pino-pretty": "^10.3.1",
+    "nanoid": "^5.0.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",

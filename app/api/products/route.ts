@@ -144,9 +144,11 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Apply rate limiting
+    // Apply rate limiting (now async, using Redis)
     const clientIp = req.headers.get("x-forwarded-for") || "unknown"
-    if (checkRateLimit(`${clientIp}:product-create`, 5, 60000)) {
+    const isRateLimited = await checkRateLimit(`${clientIp}:product-create`, 5, 60)
+    
+    if (isRateLimited) {
       return createApiResponse({
         error: "Too many requests. Please try again later.",
         status: 429,

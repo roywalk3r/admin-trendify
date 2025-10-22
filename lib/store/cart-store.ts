@@ -19,6 +19,7 @@ type CartStore = {
     removeItem: (id: string, color?: string, size?: string) => void
     updateQuantity: (id: string, quantity: number, color?: string, size?: string) => void
     clearCart: () => void
+    mergeItems: (newItems: CartItem[]) => void
     totalItems: () => number
     subtotal: () => number
 }
@@ -76,6 +77,35 @@ export const useCartStore = create<CartStore>()(
             },
 
             clearCart: () => set({ items: [] }),
+
+            mergeItems: (newItems) => {
+                const { items } = get()
+                const mergedMap = new Map<string, CartItem>()
+
+                // Add existing items to map
+                items.forEach((item) => {
+                    const key = `${item.id}-${item.color || ''}-${item.size || ''}`
+                    mergedMap.set(key, item)
+                })
+
+                // Merge new items
+                newItems.forEach((item) => {
+                    const key = `${item.id}-${item.color || ''}-${item.size || ''}`
+                    const existing = mergedMap.get(key)
+                    
+                    if (existing) {
+                        // Add quantities together
+                        mergedMap.set(key, {
+                            ...existing,
+                            quantity: existing.quantity + item.quantity,
+                        })
+                    } else {
+                        mergedMap.set(key, item)
+                    }
+                })
+
+                set({ items: Array.from(mergedMap.values()) })
+            },
 
             totalItems: () => {
                 const { items } = get()

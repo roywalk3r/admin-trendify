@@ -576,3 +576,88 @@ enum EventType {
 
   @@map("event_type")
 }
+
+// Guest checkout support
+model GuestSession {
+  id        String   @id @default(cuid())
+  sessionId String   @unique @map("session_id")
+  email     String   @db.VarChar(255)
+  cartData  Json     @map("cart_data")
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+  
+  @@index([sessionId])
+  @@index([email])
+  @@index([expiresAt])
+  @@map("guest_sessions")
+}
+
+// Stock notifications
+model StockAlert {
+  id         String    @id @default(cuid())
+  email      String    @db.VarChar(255)
+  productId  String    @map("product_id")
+  variantId  String?   @map("variant_id")
+  notified   Boolean   @default(false)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  notifiedAt DateTime? @map("notified_at")
+  
+  @@index([productId])
+  @@index([email])
+  @@index([notified])
+  @@map("stock_alerts")
+}
+
+// Abandoned cart tracking
+model AbandonedCart {
+  id            String    @id @default(cuid())
+  userId        String?   @map("user_id")
+  email         String    @db.VarChar(255)
+  cartData      Json      @map("cart_data")
+  cartValue     Decimal   @map("cart_value") @db.Decimal(12, 2)
+  remindersSent Int       @default(0) @map("reminders_sent")
+  recovered     Boolean   @default(false)
+  recoveredAt   DateTime? @map("recovered_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  lastReminder  DateTime? @map("last_reminder")
+  
+  @@index([email])
+  @@index([recovered])
+  @@index([createdAt])
+  @@map("abandoned_carts")
+}
+
+// Returns management
+model Return {
+  id            String       @id @default(cuid())
+  orderId       String       @map("order_id")
+  orderItemIds  String[]     @map("order_item_ids")
+  reason        String
+  reasonDetails String?      @map("reason_details") @db.Text
+  status        ReturnStatus @default(pending)
+  refundAmount  Decimal      @map("refund_amount") @db.Decimal(12, 2)
+  restockFee    Decimal?     @map("restock_fee") @db.Decimal(12, 2)
+  shippingCost  Decimal?     @map("shipping_cost") @db.Decimal(12, 2)
+  returnLabel   String?      @map("return_label") @db.VarChar(500)
+  receivedDate  DateTime?    @map("received_date")
+  refundedDate  DateTime?    @map("refunded_date")
+  images        String[]
+  adminNotes    String?      @map("admin_notes") @db.Text
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  
+  @@index([orderId])
+  @@index([status])
+  @@map("returns")
+}
+
+enum ReturnStatus {
+  pending
+  approved
+  rejected
+  received
+  refunded
+  completed
+  
+  @@map("return_status")
+}

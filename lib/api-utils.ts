@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
 import { ZodError } from "zod"
+import { rateLimit as redisRateLimit } from "./redis"
+import { logError, logWarn } from "./logger"
+import { captureException } from "@/lib/monitoring/sentry"
 
 type ApiResponse<T = any> = {
   data?: T
@@ -27,7 +30,7 @@ export function createApiResponse<T>(response: ApiResponse<T>): NextResponse {
         JSON.stringify(source, (_, value) => (typeof value === "bigint" ? Number(value) : value)),
       )
     } catch (err) {
-      console.error("Serialization Error:", err)
+      logError(err, { context: "JSON serialization" })
       payload = null
     }
   }
@@ -38,7 +41,8 @@ export function createApiResponse<T>(response: ApiResponse<T>): NextResponse {
 export { createApiResponse as apiResponse }
 
 export function handleApiError(error: unknown): NextResponse {
-  console.error("API Error:", error)
+  logError(error, { context: "API Error Handler" })
+  try { captureException(error, { scope: "api" }) } catch {}
 
   // Handle Zod validation errors
   if (error instanceof ZodError) {
@@ -68,33 +72,29 @@ export function handleApiError(error: unknown): NextResponse {
   })
 }
 
-// Rate limiting utility
-const rateLimit = new Map<string, { count: number; timestamp: number }>()
-
-export function checkRateLimit(identifier: string, limit: number, windowMs: number): boolean {
-  const now = Date.now()
-  const record = rateLimit.get(identifier)
-
-  if (!record) {
-    rateLimit.set(identifier, { count: 1, timestamp: now })
+/**
+ * Check if request should be rate limited using Redis
+ * @param identifier - Unique identifier (e.g., IP address, user ID)
+ * @param limit - Maximum requests allowed
+ * @param windowInSeconds - Time window in seconds (default 60)
+ * @returns Promise<boolean> - true if rate limited, false if allowed
+ */
+export async function checkRateLimit(
+  identifier: string,
+  limit: number,
+  windowInSeconds: number = 60
+): Promise<boolean> {
+  try {
+    const result = await redisRateLimit(identifier, limit, windowInSeconds)
+    
+    if (!result.success) {
+      logWarn("Rate limit exceeded", { identifier, limit, window: windowInSeconds })
+    }
+    
+    return !result.success // Return true if rate limited
+  } catch (error) {
+    // If Redis fails, log error but allow the request (fail open)
+    logError(error, { context: "Rate limit check failed", identifier })
     return false
   }
-
-  if (now - record.timestamp > windowMs) {
-    // Reset if window has passed
-    rateLimit.set(identifier, { count: 1, timestamp: now })
-    return false
-  }
-
-  if (record.count >= limit) {
-    return true // Rate limited
-  }
-
-  // Increment count
-  rateLimit.set(identifier, {
-    count: record.count + 1,
-    timestamp: record.timestamp,
-  })
-
-  return false
 }

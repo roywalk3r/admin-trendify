@@ -8,50 +8,42 @@ import { useCartStore } from "@/lib/store/cart-store"
 function CartSync() {
   const { isSignedIn, user } = useUser()
   const syncedForUserRef = useRef<string | null>(null)
+  const isSyncingRef = useRef(false)
   const items = useCartStore((s) => s.items)
   const hydrated = useCartStore((s) => s.hydrated)
   const setItems = useCartStore((s) => s.setItems)
+  const mergeItems = useCartStore((s) => s.mergeItems)
 
   useEffect(() => {
-    // Wait until local store is hydrated so we don't lose guest items
+    // Ensure local storage has loaded before any sync
     if (!hydrated) return
 
-    // Only attempt sync when signed in and not already synced for this user
+    // Reset sync marker when signed out
     if (!isSignedIn || !user?.id) {
       syncedForUserRef.current = null
       return
     }
-    if (syncedForUserRef.current === user.id) return
+
+    // Avoid duplicate syncs per user session
+    if (syncedForUserRef.current === user.id || isSyncingRef.current) return
 
     let cancelled = false
+    isSyncingRef.current = true
 
     const sync = async () => {
       try {
-        // Merge local items into server cart (server will upsert/accumulate by product/color/size)
-        for (const it of items) {
-          try {
-            await fetch("/api/cart", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                id: it.id,
-                name: it.name,
-                price: it.price,
-                quantity: it.quantity,
-                image: it.image,
-                color: it.color,
-                size: it.size,
-              }),
-            })
-          } catch {
-            // continue with others
-          }
-        }
+        // 1) POST guest items once to merge on server
+        const postRes = await fetch("/api/cart/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ guestCartItems: items }),
+        })
 
-        // Fetch the server cart and replace local items with server truth
-        const res = await fetch("/api/cart", { cache: "no-store" })
-        if (res.ok) {
-          const json = await res.json()
+        // It's okay if POST fails (network, etc.) — fall back to GET
+        // 2) GET merged server cart
+        const getRes = await fetch("/api/cart/sync", { cache: "no-store" })
+        if (getRes.ok) {
+          const json = await getRes.json()
           const serverItems = (json?.data?.items ?? []).map((i: any) => ({
             id: i.id,
             name: i.name,
@@ -61,26 +53,28 @@ function CartSync() {
             color: i.color,
             size: i.size,
           }))
-          // Only replace local cart if server actually has items, or if local is empty
+
           if (!cancelled) {
-            if (serverItems.length > 0 || items.length === 0) {
-              setItems(serverItems)
+            // Merge server items into local cart to avoid losing guest items
+            if (serverItems.length > 0) {
+              mergeItems(serverItems)
             }
           }
         }
+
         if (!cancelled) syncedForUserRef.current = user.id
       } catch {
-        // ignore
+        // Silent failure — keep guest cart as-is
+      } finally {
+        isSyncingRef.current = false
       }
     }
 
-    // Kick off sync
     void sync()
 
     return () => {
       cancelled = true
     }
-    // Re-run when user id changes or hydration completes
   }, [isSignedIn, user?.id, hydrated])
 
   return null
@@ -88,18 +82,10 @@ function CartSync() {
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider
-      afterSignOutUrl={"/"}
-      appearance={{
-        captcha: {
-          theme: "auto",
-          size: "flexible",
-          language: "es-ES",
-        },
-      }}
-    >
+    <ClerkProvider afterSignOutUrl={"/"}>
       <CartSync />
       {children}
     </ClerkProvider>
   )
 }
+

@@ -1,0 +1,11 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/abandoned-carts",
+      "schedule": "0 * * * *"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

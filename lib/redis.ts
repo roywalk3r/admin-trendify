@@ -1,10 +1,18 @@
 import Valkey from "ioredis";
+import { logError, logDebug } from "./logger";
+
 /**
  * This module initializes a Redis client using Valkey and provides helper functions
  * for caching, rate limiting, and other Redis operations.
  */
 // Initialize Redis client with environment variables
-export const redis = new Valkey(process.env.VALKEY_URL || "");
+export const redis = new Valkey(process.env.VALKEY_URL || "", {
+  maxRetriesPerRequest: 3,
+  retryStrategy(times) {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  },
+});
 
 // Cache helper functions
 export async function getCache<T>(key: string): Promise<T | null> {
@@ -15,11 +23,11 @@ export async function getCache<T>(key: string): Promise<T | null> {
     try {
       return JSON.parse(data) as T;
     } catch (parseError) {
-      console.error("Redis data parse error:", parseError);
+      logError(parseError, { context: "Redis parse error", key });
       return data as T | null;
     }
   } catch (error) {
-    console.error("Redis get error:", error);
+    logError(error, { context: "Redis get error", key });
     return null;
   }
 }
@@ -35,26 +43,28 @@ export async function setCache<T>(
     } else {
       await redis.set(key, JSON.stringify(data));
     }
+    logDebug("Cache set", { key, expireInSeconds });
   } catch (error) {
-    console.error("Redis set error:", error);
+    logError(error, { context: "Redis set error", key });
   }
 }
 
 export async function deleteCache(key: string): Promise<void> {
   try {
     await redis.del(key);
+    logDebug("Cache deleted", { key });
   } catch (error) {
-    console.error("Redis delete error:", error);
+    logError(error, { context: "Redis delete error", key });
   }
 }
 
 // Rate limiting helper
 export async function rateLimit(
-  ip: string,
+  identifier: string,
   limit = 10,
   windowInSeconds = 60
 ): Promise<{ success: boolean; remaining: number }> {
-  const key = `rate-limit:${ip}`;
+  const key = `rate-limit:${identifier}`;
 
   try {
     // Get current count
@@ -75,8 +85,8 @@ export async function rateLimit(
 
     return { success: true, remaining: limit - newCount };
   } catch (error) {
-    console.error("Rate limit error:", error);
-    // Allow the request if Redis fails
+    logError(error, { context: "Rate limit error", identifier });
+    // Allow the request if Redis fails (fail open for availability)
     return { success: true, remaining: 1 };
   }
 }
