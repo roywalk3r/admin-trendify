@@ -6,8 +6,14 @@ import { Button } from "./ui/button"
 import { ArrowRight } from "lucide-react"
 import { useApi } from "@/lib/hooks/use-api"
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n/I18nProvider"
+import { usePathname } from "next/navigation"
+import { addLocaleToPathname, getLocaleFromPathname } from "@/lib/i18n/config"
 
 export default function FeaturedProducts() {
+    const { t } = useI18n()
+    const pathname = usePathname() || "/"
+    const locale = getLocaleFromPathname(pathname)
     const { data, isLoading, error } = useApi<{
         products: Array<{
             id: string
@@ -52,10 +58,10 @@ export default function FeaturedProducts() {
             variants={containerVariants}
         >
             {isLoading && (
-                <div className="text-center py-10 text-muted-foreground">Loading featured products...</div>
+                <div className="text-center py-10 text-muted-foreground">{t("home.featured.title")}</div>
             )}
             {error && (
-                <div className="text-center py-10 text-red-500">Failed to load products: {error}</div>
+                <div className="text-center py-10 text-red-500">{String(error)}</div>
             )}
             {/* Section Header */}
             <motion.div className="text-center mb-12" variants={headerVariants}>
@@ -66,7 +72,7 @@ export default function FeaturedProducts() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5 }}
                 >
-                    discover our
+                    {t("home.featured.tagline")}
                 </motion.span>
                 <motion.h2
                     className="typography text-4xl md:text-5xl capitalize mb-4"
@@ -75,7 +81,7 @@ export default function FeaturedProducts() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                    Featured Products
+                    {t("home.featured.title")}
                 </motion.h2>
                 <motion.p
                     className="text-muted-foreground max-w-2xl mx-auto"
@@ -84,8 +90,7 @@ export default function FeaturedProducts() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: 0.2 }}
                 >
-                    Handpicked items that represent the best of fashion, quality, and style. Each piece is carefully selected to
-                    bring you the latest trends and timeless classics.
+                    {t("home.featured.description")}
                 </motion.p>
             </motion.div>
 
@@ -119,14 +124,14 @@ export default function FeaturedProducts() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.8 }}
             >
-                    <Link href="/products">
+                    <Link href={addLocaleToPathname("/products", locale)}>
                 <Button
                     variant="link"
                     size="lg"
                     className="group px-8 py-3 rounded-full border-2 border-ascent text-ascent hover:bg-ascent hover:text-white transition-all duration-300 bg-transparent"
                 >
                     <motion.span whileHover={{ x: -5 }} transition={{ duration: 0.2 }}>
-                        View All Products
+                        {t("home.featured.viewAll")}
                     </motion.span>
                     <motion.div whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
                         <ArrowRight className="ml-2 w-5 h-5" />

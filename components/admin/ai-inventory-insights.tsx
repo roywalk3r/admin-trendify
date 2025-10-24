@@ -18,11 +18,21 @@ import {
 import { toast } from "sonner";
 
 interface InventoryAnalysis {
-  restockingRecommendations: string;
-  categoryAnalysis: string;
-  seasonalOpportunities: string;
-  riskAssessment: string;
-  revenueOptimization: string;
+  // Allow flexible shapes coming from AI (string or structured JSON)
+  restockingRecommendations: string | Array<{ item: string; reason?: string; priority?: string }>;
+  categoryAnalysis:
+    | string
+    | Record<string, { performance?: string; insights?: string }>
+    | Array<{ category: string; performance?: string; insights?: string }>;
+  seasonalOpportunities:
+    | string
+    | { date?: string; analysis?: string; recommendations?: string[] };
+  riskAssessment:
+    | string
+    | { stockouts?: string; obsolescence?: string; seasonalMismatch?: string; dataGaps?: string };
+  revenueOptimization:
+    | string
+    | { strategies?: string[]; pricingStrategies?: string[]; notes?: string };
 }
 
 interface InventoryData {
@@ -72,6 +82,110 @@ export default function AIInventoryInsights() {
     if (lowerRisk.includes("high")) return "destructive";
     if (lowerRisk.includes("medium")) return "secondary";
     return "default";
+  };
+
+  // Normalizers and render helpers for AI output variations
+  const renderRestocking = (val: InventoryAnalysis["restockingRecommendations"]) => {
+    if (typeof val === "string") {
+      return <p className="text-sm text-muted-foreground leading-relaxed">{val}</p>;
+    }
+    if (Array.isArray(val)) {
+      return (
+        <div className="space-y-2">
+          {val.map((r, i) => (
+            <div key={i} className="p-2 bg-muted rounded-lg flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">{r.item}</p>
+                {r.reason && <p className="text-xs text-muted-foreground">{r.reason}</p>}
+              </div>
+              {r.priority && <Badge variant={r.priority.toLowerCase() === 'high' ? 'destructive' : r.priority.toLowerCase() === 'medium' ? 'secondary' : 'outline'}>{r.priority}</Badge>}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderCategoryAnalysis = (val: InventoryAnalysis["categoryAnalysis"]) => {
+    if (typeof val === "string") return <p className="text-sm text-muted-foreground leading-relaxed">{val}</p>;
+    const entries: Array<{ title: string; performance?: string; insights?: string }> = Array.isArray(val)
+      ? val.map(v => ({ title: v.category, performance: v.performance, insights: v.insights }))
+      : Object.entries(val || {}).map(([k, v]) => ({ title: k, performance: (v as any)?.performance, insights: (v as any)?.insights }));
+    return (
+      <div className="space-y-3">
+        {entries.map((e, i) => (
+          <div key={i} className="p-2 bg-muted rounded-lg">
+            <p className="text-sm font-semibold">{e.title}</p>
+            {e.performance && <p className="text-xs text-muted-foreground">Performance: {e.performance}</p>}
+            {e.insights && <p className="text-xs text-muted-foreground">Insights: {e.insights}</p>}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderSeasonal = (val: InventoryAnalysis["seasonalOpportunities"]) => {
+    if (typeof val === "string") return <p className="text-sm text-muted-foreground leading-relaxed">{val}</p>;
+    return (
+      <div className="space-y-2">
+        {(val.analysis || val.date) && (
+          <p className="text-sm text-muted-foreground">
+            {val.date ? `${val.date}: ` : ''}{val.analysis}
+          </p>
+        )}
+        {Array.isArray(val.recommendations) && val.recommendations.length > 0 && (
+          <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+            {val.recommendations.map((r, i) => <li key={i}>{r}</li>)}
+          </ul>
+        )}
+      </div>
+    );
+  };
+
+  const renderRisk = (val: InventoryAnalysis["riskAssessment"]) => {
+    if (typeof val === "string") return <p className="text-sm text-muted-foreground leading-relaxed">{val}</p>;
+    const parts = [
+      val.stockouts && { label: "Stockouts", text: val.stockouts },
+      val.obsolescence && { label: "Obsolescence", text: val.obsolescence },
+      val.seasonalMismatch && { label: "Seasonal Mismatch", text: val.seasonalMismatch },
+      val.dataGaps && { label: "Data Gaps", text: val.dataGaps },
+    ].filter(Boolean) as Array<{ label: string; text: string }>;
+    return (
+      <div className="space-y-2">
+        {parts.map((p, i) => (
+          <div key={i} className="p-2 bg-muted rounded-lg">
+            <p className="text-sm font-medium">{p.label}</p>
+            <p className="text-xs text-muted-foreground">{p.text}</p>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderRevenue = (val: InventoryAnalysis["revenueOptimization"]) => {
+    if (typeof val === "string") return <p className="text-sm text-muted-foreground leading-relaxed">{val}</p>;
+    return (
+      <div className="space-y-3">
+        {Array.isArray(val.strategies) && val.strategies.length > 0 && (
+          <div>
+            <p className="text-sm font-semibold mb-1">Strategies</p>
+            <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+              {val.strategies.map((s, i) => <li key={i}>{s}</li>)}
+            </ul>
+          </div>
+        )}
+        {Array.isArray(val.pricingStrategies) && val.pricingStrategies.length > 0 && (
+          <div>
+            <p className="text-sm font-semibold mb-1">Pricing Strategies</p>
+            <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+              {val.pricingStrategies.map((s, i) => <li key={i}>{s}</li>)}
+            </ul>
+          </div>
+        )}
+        {val.notes && <p className="text-xs text-muted-foreground">{val.notes}</p>}
+      </div>
+    );
   };
 
   return (
@@ -174,10 +288,8 @@ export default function AIInventoryInsights() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ScrollArea className="h-32">
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {analysis.restockingRecommendations}
-                      </p>
+                    <ScrollArea className="h-40">
+                      {renderRestocking(analysis.restockingRecommendations)}
                     </ScrollArea>
                   </CardContent>
                 </Card>
@@ -191,10 +303,8 @@ export default function AIInventoryInsights() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ScrollArea className="h-32">
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {analysis.categoryAnalysis}
-                      </p>
+                    <ScrollArea className="h-40">
+                      {renderCategoryAnalysis(analysis.categoryAnalysis)}
                     </ScrollArea>
                   </CardContent>
                 </Card>
@@ -208,10 +318,8 @@ export default function AIInventoryInsights() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ScrollArea className="h-32">
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {analysis.seasonalOpportunities}
-                      </p>
+                    <ScrollArea className="h-40">
+                      {renderSeasonal(analysis.seasonalOpportunities)}
                     </ScrollArea>
                   </CardContent>
                 </Card>
@@ -225,10 +333,8 @@ export default function AIInventoryInsights() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ScrollArea className="h-32">
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {analysis.revenueOptimization}
-                      </p>
+                    <ScrollArea className="h-40">
+                      {renderRevenue(analysis.revenueOptimization)}
                     </ScrollArea>
                   </CardContent>
                 </Card>

@@ -41,8 +41,20 @@ export function createApiResponse<T>(response: ApiResponse<T>): NextResponse {
 export { createApiResponse as apiResponse }
 
 export function handleApiError(error: unknown): NextResponse {
-  logError(error, { context: "API Error Handler" })
-  try { captureException(error, { scope: "api" }) } catch {}
+  // Safely log error - prevent logging failures from crashing the app
+  try {
+    logError(error, { context: "API Error Handler" })
+  } catch (logErr) {
+    console.error('[CRITICAL] Logging failed in handleApiError:', logErr)
+    console.error('[CRITICAL] Original error:', error)
+  }
+  
+  // Safely capture in Sentry
+  try {
+    captureException(error, { scope: "api" })
+  } catch (sentryErr) {
+    console.error('[WARN] Sentry capture failed:', sentryErr)
+  }
 
   // Handle Zod validation errors
   if (error instanceof ZodError) {

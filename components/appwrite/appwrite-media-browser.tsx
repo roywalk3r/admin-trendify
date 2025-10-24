@@ -3,11 +3,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -17,7 +16,7 @@ import {
   listFiles,
   deleteFile,
   extractFileIdFromUrl,
-} from "@/lib/appwrite/appwirte-utils";
+} from "@/lib/appwrite/appwrite-utils";
 import { getMediaFiles } from "@/lib/appwrite/utils";
 
 interface AppwriteMediaBrowserProps {

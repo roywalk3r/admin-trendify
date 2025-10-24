@@ -10,16 +10,11 @@ import { createApiResponse } from "@/lib/api-utils"
 export async function isAdmin() {
   try {
     const { userId } = await auth()
-
-    if (!userId) {
-      return false
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+    if (!userId) return false
+    const user = await prisma.user.findFirst({
+      where: { OR: [{ clerkId: userId }, { id: userId }] },
       select: { role: true },
     })
-
     return user?.role === "admin"
   } catch (error) {
     console.error("Error checking admin status:", error)
@@ -39,8 +34,8 @@ export async function adminAuthMiddleware(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+    const user = await prisma.user.findFirst({
+      where: { OR: [{ clerkId: userId }, { id: userId }] },
       select: { role: true },
     })
 

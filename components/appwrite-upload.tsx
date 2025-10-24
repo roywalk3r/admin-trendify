@@ -1,12 +1,10 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2, Upload } from "lucide-react"
 import { toast } from "sonner"
-import { uploadFile } from "@/lib/appwrite/appwirte-utils"
+import { uploadFile } from "@/lib/appwrite/appwrite-utils"
 
 interface AppwriteUploadProps {
   onUploadSuccess: (urls: string[]) => void

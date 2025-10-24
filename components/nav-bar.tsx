@@ -1,40 +1,45 @@
 "use client"
+
 import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Variants } from "framer-motion"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
-import {HeartIcon, SearchIcon, ShoppingBag, Menu, X, LockKeyhole, LayoutDashboard, User2Icon, User} from "lucide-react"
-import {SignedOut, SignedIn, SignInButton, UserButton} from "@clerk/nextjs"
+import { HeartIcon, SearchIcon, ShoppingBag, Menu, X, LockKeyhole, LayoutDashboard, User2Icon, User } from "lucide-react"
+import { SignedOut, SignedIn, SignInButton, UserButton } from "@clerk/nextjs"
 import { Button } from "./ui/button"
 import Link from "next/link"
+import LanguageSwitcher from "@/components/language-switcher"
 import SearchModal from "./search-modal"
 import CartSidebar from "./cart-sidebar"
 import WishlistSidebar from "./wishlist-sidebar"
 import { useCartStore } from "@/lib/store/cart-store"
-import {useApi} from "@/lib/hooks/use-api";
-import {useRouter} from "next/navigation"
+import { useApi } from "@/lib/hooks/use-api"
+import { useRouter, usePathname } from "next/navigation"
+import { useI18n } from "@/lib/i18n/I18nProvider"
+import { addLocaleToPathname, getLocaleFromPathname } from "@/lib/i18n/config"
 
 export default function NavBar() {
-    const [isScrolled, setIsScrolled] = useState(false)
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const [isSearchOpen, setIsSearchOpen] = useState(false)
-    const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
-    const [isCartOpen, setIsCartOpen] = useState(false)
-    const [isWishlistOpen, setIsWishlistOpen] = useState(false)
-    const [wishlistCount, setWishlistCount] = useState(0)
-const router = useRouter();
-    // Cart count from zustand store
-    const cartItems = useCartStore((s) => s.items)
-    const cartCount = useMemo(() => cartItems.reduce((n, it) => n + it.quantity, 0), [cartItems])
-
-    useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 10)
-        }
-        window.addEventListener("scroll", handleScroll)
-        return () => window.removeEventListener("scroll", handleScroll)
-    }, [])
+  const { t } = useI18n()
+  const router = useRouter()
+  const pathname = usePathname() || "/"
+  const locale = getLocaleFromPathname(pathname)
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
+  const [isCartOpen, setIsCartOpen] = useState(false)
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false)
+  const [wishlistCount, setWishlistCount] = useState(0)
+  const cartItems = useCartStore((s) => s.items)
+  const cartCount = useMemo(() => cartItems.reduce((n, it) => n + it.quantity, 0), [cartItems])
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10)
+    }
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
     // Fetch wishlist count and refresh on custom events
     useEffect(() => {
@@ -119,11 +124,11 @@ const router = useRouter();
     }
 
     const navItems = [
-        { name: "New Arrivals", href: "/new-arrivals" },
-        { name: "Men", href: "/men" },
-        { name: "Women", href: "/women" },
-        { name: "Accessories", href: "/accessories" },
-        { name: "Sale", href: "/sale" },
+        { name: t("nav.newArrivals"), href: "/new-arrivals" },
+        { name: t("nav.men"), href: "/men" },
+        { name: t("nav.women"), href: "/women" },
+        { name: t("nav.accessories"), href: "/accessories" },
+        { name: t("nav.sale"), href: "/sale" },
     ]
 
     return (
@@ -139,7 +144,7 @@ const router = useRouter();
                 variants={navVariants}
             >
                 {/* Logo */}
-                <Link href={"/"}>
+                <Link href={addLocaleToPathname("/", locale)}>
                     <motion.div className="flex gap-2 items-center" variants={itemVariants}>
                         <motion.div whileHover={{ rotate: 360 }} transition={{ duration: 0.6 }}>
                             <Image src={"/images/logo.svg"} className={"dark:invert"} width={24} height={24} alt={"Logo"} />
@@ -165,7 +170,7 @@ const router = useRouter();
                                 transition={{ delay: index * 0.1 + 0.3 }}
                                 whileHover={{ y: -2 }}
                             >
-                                <Link href={item.href}>
+                                <Link href={addLocaleToPathname(item.href, locale)}>
                                     <motion.span
                                         className={"typography text-sm font-medium hover:text-ascent transition-colors relative"}
                                         whileHover={{ scale: 1.05 }}
@@ -185,6 +190,7 @@ const router = useRouter();
 
                 {/* Desktop Actions */}
                 <motion.div className={"hidden md:flex gap-3 items-center"} variants={itemVariants}>
+                    <LanguageSwitcher />
                     {/* Search */}
                     <motion.div
                         className={"bg-[#F5F0F0] flex items-center rounded-3xl overflow-hidden"}
@@ -204,7 +210,7 @@ const router = useRouter();
                                 <motion.div variants={searchVariants} initial="hidden" animate="visible" exit="hidden">
                                     <Input
                                         type={"search"}
-                                        placeholder={"Search"}
+                                        placeholder={t("common.search")}
                                         className={
                                             "placeholder:text-ascent border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 w-48"
                                         }
@@ -249,7 +255,7 @@ const router = useRouter();
                                         <UserButton.Action
                                             label="Basic Profile"
                                             labelIcon={< User2Icon/>}
-                                            onClick={() => router.push("/profile")}
+                                            onClick={() => router.push(addLocaleToPathname("/profile", locale))}
                                          />
                                     </UserButton.MenuItems>
                                 </UserButton>
@@ -258,7 +264,7 @@ const router = useRouter();
                             <SignedOut>
                                 <SignInButton mode="modal">
                                     <Button variant={"outline"} className="bg-ascent text-ascent-foreground">
-                                        Sign in
+                                        {t("common.signIn")}
                                         <LockKeyhole className="w-5 h-5" />
                                     </Button>
                                 </SignInButton>
@@ -269,6 +275,7 @@ const router = useRouter();
 
                 {/* Mobile Actions */}
                 <motion.div className={"flex md:hidden gap-2 items-center"} variants={itemVariants}>
+                    <LanguageSwitcher />
                     <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
@@ -337,7 +344,7 @@ const router = useRouter();
                                         {navItems.map((item, index) => (
                                             <motion.li key={item.name} variants={mobileItemVariants} whileHover={{ x: 5 }}>
                                                 <Link
-                                                    href={item.href}
+                                                    href={addLocaleToPathname(item.href, locale)}
                                                     className="typography text-base font-medium hover:text-ascent transition-colors block py-2"
                                                     onClick={() => setIsMobileMenuOpen(false)}
                                                 >
@@ -361,7 +368,7 @@ const router = useRouter();
                                             }}
                                         >
                                             <HeartIcon className={"text-[#8A6163] w-4 h-4"} />
-                                            Wishlist
+                                            {t("common.wishlist")}
                                         </motion.button>
                                         <motion.button
                                             whileHover={{ scale: 1.1 }}
@@ -373,7 +380,7 @@ const router = useRouter();
                                             }}
                                         >
                                             <ShoppingBag className={"text-[#8A6163] w-4 h-4"} />
-                                            Cart
+                                            {t("common.cart")}
                                         </motion.button>
                                     </div>
                                     <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
@@ -383,7 +390,7 @@ const router = useRouter();
                                                     <UserButton.Action
                                                         label="Basic Profile"
                                                         labelIcon={< User2Icon/>}
-                                                        onClick={() => router.push("/profile")}
+                                                        onClick={() => router.push(addLocaleToPathname("/profile", locale))}
                                                     />
                                                 </UserButton.MenuItems>
                                             </UserButton>
@@ -397,7 +404,7 @@ const router = useRouter();
                                                     className="flex items-center gap-2 text-sm typography"
                                                 >
                                                     <User className={"text-[#8A6163] w-4 h-4"} />
-                                                    Sign In
+                                                    {t("common.signIn")}
                                                 </motion.button>
                                             </SignInButton>
                                         </SignedOut>
@@ -430,7 +437,7 @@ function AdminLink() {
 
     return (
         <Button variant="ghost" size="icon" className="ml-2" asChild>
-            <Link href="/admin">
+            <Link href={addLocaleToPathname("/admin", getLocaleFromPathname(typeof window !== 'undefined' ? window.location.pathname : '/'))}>
                 <LayoutDashboard className="h-5 w-5" />
                 <span className="sr-only">Admin Dashboard</span>
             </Link>

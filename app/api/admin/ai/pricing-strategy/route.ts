@@ -5,6 +5,14 @@ import prisma from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
+    // Ensure AI key is configured to avoid 500s with unclear errors
+    if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_AI_API_KEY) {
+      return createApiResponse({
+        error: "AI service not configured. Please set GEMINI_API_KEY or GOOGLE_AI_API_KEY in environment variables.",
+        status: 503,
+      });
+    }
+
     const body = await request.json();
     const { productId } = body;
 

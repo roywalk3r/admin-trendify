@@ -54,16 +54,23 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     if (!isOpen) fetchedRef.current = false
   }, [isOpen, setItems, cartItems.length])
 
-  const serverUpdateQuantity = async (id: string, qty: number) => {
+  const serverUpdateQuantity = async (id: string, qty: number, color?: string, size?: string) => {
     const prev = [...cartItems]
-    updateQuantity(id, qty)
+    updateQuantity(id, qty, color, size)
     try {
       const res = await fetch("/api/cart", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, quantity: qty }),
+        body: JSON.stringify({ id, quantity: qty, color, size }),
       })
-      if (!res.ok) throw new Error(`${res.status}`)
+      if (!res.ok) {
+        if (res.status === 401) {
+          // Keep local update for guests; inform user it's not synced
+          toast({ title: "Quantity updated locally", description: "Sign in to sync your cart across devices." })
+          return
+        }
+        throw new Error(`${res.status}`)
+      }
       const json = await res.json()
       const items = json?.data?.items || []
       if (Array.isArray(items)) setItems(items)
@@ -105,7 +112,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 
           {/* Sidebar */}
           <motion.div
-            className="fixed right-0 top-0 h-full w-full max-w-md bg-background shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-0 h-full w-full max-w-md bg-background shadow-2xl z-[60] flex flex-col"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -163,7 +170,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => serverUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                              onClick={() => serverUpdateQuantity(item.id, Math.max(1, item.quantity - 1), item.color, item.size)}
                               className="w-8 h-8 p-0"
                             >
                               <Minus className="w-3 h-3" />
@@ -172,7 +179,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => serverUpdateQuantity(item.id, item.quantity + 1)}
+                              onClick={() => serverUpdateQuantity(item.id, item.quantity + 1, item.color, item.size)}
                               className="w-8 h-8 p-0"
                             >
                               <Plus className="w-3 h-3" />

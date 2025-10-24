@@ -3,8 +3,10 @@ import { motion } from "framer-motion"
 import CategoryItem from "./category-item"
 import type { Variants } from "framer-motion"
 import { useApi } from "@/lib/hooks/use-api"
+import { useI18n } from "@/lib/i18n/I18nProvider"
 
 export default function Category() {
+    const { t } = useI18n()
     // Fetch categories from backend API. We avoid passing parentId due to API filtering semantics.
     const { data, isLoading, error } = useApi(`/api/categories?limit=16&sortBy=name&sortOrder=asc`)
     const categories = (data as Array<any>) || []
@@ -48,7 +50,7 @@ export default function Category() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5 }}
                 >
-                    explore
+                    {t("home.categories.tagline")}
                 </motion.span>
                 <motion.h1
                     className="typography text-3xl md:text-4xl capitalize"
@@ -57,13 +59,13 @@ export default function Category() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                    Categories
+                    {t("home.categories.title")}
                 </motion.h1>
             </motion.div>
 
             {/* Error state */}
             {error && (
-                <div className="text-sm text-red-500">Failed to load categories.</div>
+                <div className="text-sm text-red-500">{t("home.categories.error")}</div>
             )}
 
             {/* Grid */}

@@ -5,13 +5,15 @@ import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { computeDeliveryFee, type DeliverySelection } from "@/lib/shipping"
+import { usePaymentFee } from "@/lib/contexts/settings-context"
 
 type Props = {
   addressId?: string | null
   delivery?: DeliverySelection
+  shippingFee?: number
 }
 
-export default function CheckoutButton({ addressId: addressIdProp, delivery }: Props) {
+export default function CheckoutButton({ addressId: addressIdProp, delivery, shippingFee: shippingFeeProp }: Props) {
   // Split selectors to minimize re-renders
   const items = useCartStore((s) => s.items)
   const subtotal = useCartStore((s) => s.subtotal)
@@ -19,10 +21,13 @@ export default function CheckoutButton({ addressId: addressIdProp, delivery }: P
   const { user, isLoaded } = useUser()
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+  const paymentFee = usePaymentFee()
 
   // Memoize computed values
   const hasItems = useMemo(() => items.length > 0, [items.length])
   const totalAmount = useMemo(() => subtotal(), [subtotal])
+
+  // Gateway fee is computed via settings context (percentage + fixed)
 
   const onCheckout = async () => {
     try {
@@ -74,18 +79,36 @@ export default function CheckoutButton({ addressId: addressIdProp, delivery }: P
           }
         }
       }
-      const shippingFee = computeDeliveryFee(deliverySel.method, deliverySel.pickupCity)
+      const shippingFee = typeof shippingFeeProp === "number" ? shippingFeeProp : computeDeliveryFee(deliverySel.method, deliverySel.pickupCity)
+      const baseAmount = Number(totalAmount) + Number(shippingFee)
+      // Gross-up so customer pays the fee: G = (B + f) / (1 - r), fee = G - B
+      const r = Number(paymentFee.percentage) || 0
+      const f = Number(paymentFee.fixedFee) || 0
+      const grossTotal = r > 0 ? (baseAmount + f) / (1 - r) : baseAmount + f
+      const gatewayFee = Math.max(0, grossTotal - baseAmount)
+      const finalAmount = grossTotal
       setLoading(true)
 
       const res = await fetch("/api/paystack/initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // include shipping fee in amount (server will re-compute too)
-          amount: Number(totalAmount) + Number(shippingFee),
+          // include shipping + gateway fee in amount (server will re-compute shipping and we include fee breakdown)
+          amount: finalAmount,
           email: user.primaryEmailAddress.emailAddress,
           currency: "GHS",
-          metadata: { items, delivery: { ...deliverySel, fee: shippingFee } },
+          metadata: {
+            items,
+            delivery: { ...deliverySel, fee: shippingFee },
+            fees: {
+              gateway: gatewayFee,
+              gatewayBreakdown: {
+                percentage: paymentFee.percentage,
+                fixed: paymentFee.fixedFee,
+              },
+              baseAmount,
+            },
+          },
           addressId,
         }),
       })

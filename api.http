@@ -2,3 +2,37 @@
 GET http://localhost:3000/api/wishlist
 
 ###
+
+### AI Translation: translate existing key from en -> fr (sourceText inferred from en.json)
+POST http://localhost:3000/api/i18n/translate
+Content-Type: application/json
+
+{
+  "key": "product.addToCart",
+  "targetLang": "es",
+  "sourceLang": "en"
+}
+
+###
+
+### AI Translation: translate with explicit sourceText (bypasses en.json lookup)
+POST http://localhost:3000/api/i18n/translate
+Content-Type: application/json
+
+{
+  "key": "home.hero.slide1.title",
+  "sourceText": "Elevate Your Style",
+  "targetLang": "fr",
+  "sourceLang": "en"
+}
+
+###
+
+### AI Translation: error case (missing key)
+POST http://localhost:3000/api/i18n/translate
+Content-Type: application/json
+
+{
+  "key": "",
+  "targetLang": "fr"
+}

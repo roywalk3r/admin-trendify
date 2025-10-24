@@ -1,36 +1,85 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY!,
-});
+// Support both GEMINI_API_KEY and GOOGLE_AI_API_KEY environment variables
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
+
+if (!apiKey) {
+  console.warn("⚠️  Gemini API key not configured. AI features will not work. Set GEMINI_API_KEY or GOOGLE_AI_API_KEY in .env");
+}
+
+const ai = apiKey ? new GoogleGenAI({
+  apiKey,
+}) : null;
 
 export interface AIResponse {
   success: boolean;
   data?: any;
   error?: string;
   model?: string;
+  code?: number | string;
+  status?: string;
+  retryAfterMs?: number;
 }
 
 export class GeminiService {
-  private model = "gemini-2.0-flash-exp";
+  private model = process.env.GEMINI_MODEL || "gemini-2.0-flash-exp";
 
   async generateText(prompt: string): Promise<AIResponse> {
     try {
+      if (!ai) {
+        return {
+          success: false,
+          error: "AI service not configured. Please set GEMINI_API_KEY or GOOGLE_AI_API_KEY in environment variables.",
+        };
+      }
+
       const response = await ai.models.generateContent({
         model: this.model,
+        // The SDK accepts either a simple string or structured contents.
+        // Use a simple string to keep payload minimal.
         contents: prompt,
       });
 
       return {
         success: true,
-        data: response.text,
+        // In @google/genai >=1.0, response has a text() method. Fallback to property if present.
+        data: typeof (response as any)?.text === "function" ? (response as any).text() : (response as any)?.text,
         model: this.model,
       };
-    } catch (error) {
+    } catch (error: any) {
+      // Normalize ApiError from @google/genai to surface retry-after hints
+      const errObj = error?.error || error;
+      let retryAfterMs: number | undefined;
+      let status: string | undefined = errObj?.status;
+      let code: number | string | undefined = errObj?.code;
+
+      try {
+        const details: any[] = Array.isArray(errObj?.details) ? errObj.details : [];
+        for (const d of details) {
+          if (d?.["@type"]?.includes("RetryInfo") && typeof d?.retryDelay === "string") {
+            // retryDelay format: "51s" or "1.234s"
+            const m = d.retryDelay.match(/([0-9]+(?:\.[0-9]+)?)s/);
+            if (m) retryAfterMs = Math.ceil(parseFloat(m[1]) * 1000);
+          }
+        }
+      } catch {}
+
+      // Also parse Retry-After header if present
+      if (!retryAfterMs && typeof error?.response?.headers?.get === "function") {
+        const ra = error.response.headers.get("retry-after");
+        if (ra) {
+          const asInt = parseInt(ra, 10);
+          if (!Number.isNaN(asInt)) retryAfterMs = asInt * 1000;
+        }
+      }
+
       console.error("Gemini error:", error);
       return {
         success: false,
-        error: "Failed to generate AI response",
+        error: errObj?.message || error?.message || "Failed to generate AI response",
+        status,
+        code,
+        retryAfterMs,
       };
     }
   }

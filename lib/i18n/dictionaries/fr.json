@@ -1,0 +1,102 @@
+{
+  "common": {
+    "home": "Accueil",
+    "products": "Produits",
+    "cart": "Panier",
+    "wishlist": "Liste de souhaits",
+    "search": "Rechercher",
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "profile": "Profil",
+    "admin": "Tableau de bord Admin"
+  },
+  "nav": {
+    "newArrivals": "Nouveautés",
+    "men": "Hommes",
+    "women": "Femmes",
+    "accessories": "Accessoires",
+    "sale": "Soldes"
+  },
+  "footer": {
+    "about": "À propos",
+    "contact": "Contact",
+    "terms": "Conditions d'utilisation",
+    "privacy": "Politique de confidentialité",
+    "copyright": "Tous droits réservés"
+  },
+  "product": {
+    "addToCart": "Ajouter au panier",
+    "addToWishlist": "Ajouter à la liste de souhaits",
+    "outOfStock": "Rupture de stock",
+    "inStock": "En stock",
+    "price": "Prix",
+    "description": "Description",
+    "reviews": "Avis"
+  },
+  "checkout": {
+    "title": "Commander",
+    "deliveryMethod": "Méthode de livraison",
+    "pickup": "Retrait",
+    "door": "Livraison à domicile",
+    "shippingFee": "Frais de livraison",
+    "gatewayFee": "Frais du prestataire",
+    "estimatedTotal": "Total estimé",
+    "total": "Total",
+    "placeOrder": "Passer la commande",
+    "pickupAtPoint": "Retrait à notre point de collecte",
+    "pickupFreeNote": "Gratuit (0 frais de livraison)",
+    "doorToDoor": "Livraison à domicile",
+    "doorFeeNote": "Frais de livraison selon la ville",
+    "pickupCity": "Ville de retrait",
+    "city": "Ville",
+    "selectCity": "Sélectionner une ville",
+    "pickupLocation": "Point de retrait",
+    "selectLocation": "Sélectionner un point"
+  },
+  "home": {
+    "hero": {
+      "slide1": {
+        "title": "Élevez votre style",
+        "text": "Découvrez une mode premium qui révèle votre personnalité unique",
+        "cta": "Explorer la collection"
+      },
+      "slide2": {
+        "title": "Tendances du moment",
+        "text": "Restez en avance avec les dernières tendances et pièces exclusives",
+        "cta": "Acheter les tendances"
+      },
+      "slide3": {
+        "title": "Nouveautés",
+        "text": "Des styles fraîchement arrivés - soyez le premier à les porter",
+        "cta": "Voir les nouveautés"
+      }
+    },
+    "categories": {
+      "tagline": "explorer",
+      "title": "Catégories",
+      "error": "Échec du chargement des catégories."
+    },
+    "featured": {
+      "tagline": "découvrez nos",
+      "title": "Produits phares",
+      "description": "Des articles sélectionnés représentant le meilleur de la mode, de la qualité et du style. Chaque pièce est choisie avec soin pour vous offrir les dernières tendances et des classiques intemporels.",
+      "viewAll": "Voir tous les produits"
+    },
+    "testimonials": {
+      "tagline": "ce que disent nos clients",
+      "title": "Témoignages"
+    },
+    "brands": {
+      "title": "Plébiscité par les plus grandes marques",
+      "subtitle": "Nous collaborons avec les marques de mode les plus emblématiques au monde"
+    },
+    "newsletter": {
+      "title": "Restez informé",
+      "description": "Soyez le premier informé des nouveautés, offres exclusives et conseils mode. Rejoignez notre communauté et ne manquez aucune tendance.",
+      "placeholder": "Entrez votre adresse e-mail",
+      "subscribe": "S'abonner",
+      "subscribed": "Abonné(e) !",
+      "disclaimer": "Pas de spam, désinscription à tout moment. Nous respectons votre vie privée."
+    }
+  }
+}

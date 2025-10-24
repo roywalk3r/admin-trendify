@@ -3,6 +3,7 @@ import { motion } from "framer-motion"
 import type { Variants } from "framer-motion"
 import Image from "next/image"
 import { Star, Quote } from "lucide-react"
+import { useI18n } from "@/lib/i18n/I18nProvider"
 
 interface Testimonial {
     id: string
@@ -14,35 +15,57 @@ interface Testimonial {
 }
 
 export default function TestimonialsSection() {
-    const testimonials: Testimonial[] = [
-        {
-            id: "1",
-            name: "Sarah Johnson",
-            role: "Fashion Blogger",
-            avatar: "/images/avatar.png",
-            rating: 5,
-            content:
-                "Trendify has completely transformed my wardrobe! The quality is exceptional and the styles are always on-point. I get compliments every time I wear their pieces.",
-        },
-        {
-            id: "2",
-            name: "Michael Chen",
-            role: "Creative Director",
-            avatar: "/images/avatar.png",
-            rating: 5,
-            content:
-                "As someone who values both style and comfort, Trendify delivers on both fronts. Their customer service is outstanding and shipping is incredibly fast.",
-        },
-        {
-            id: "3",
-            name: "Emma Rodriguez",
-            role: "Lifestyle Influencer",
-            avatar: "/images/avatar.png",
-            rating: 5,
-            content:
-                "I've been shopping with Trendify for over a year now, and they never disappoint. The variety is amazing and the prices are very reasonable for the quality you get.",
-        },
-    ]
+    const { t, dict } = useI18n()
+
+    // Try to read translated testimonials from dictionary
+    const rawItems = (dict as any)?.home?.testimonials?.items
+    const dictItems: any[] = Array.isArray(rawItems)
+        ? rawItems
+        : rawItems && typeof rawItems === "object"
+        ? Object.keys(rawItems)
+              .sort((a, b) => Number(a) - Number(b))
+              .map((k) => rawItems[k])
+        : []
+
+    // Fallback to hardcoded English if not provided in dictionary
+    const testimonials: Testimonial[] = (dictItems.length
+        ? dictItems.map((item, idx) => ({
+              id: String(idx + 1),
+              name: String(item?.name ?? ""),
+              role: String(item?.role ?? ""),
+              avatar: "/images/avatar.png",
+              rating: 5,
+              content: String(item?.content ?? ""),
+          }))
+        : [
+              {
+                  id: "1",
+                  name: "Sarah Johnson",
+                  role: "Fashion Blogger",
+                  avatar: "/images/avatar.png",
+                  rating: 5,
+                  content:
+                      "Trendify has completely transformed my wardrobe! The quality is exceptional and the styles are always on-point. I get compliments every time I wear their pieces.",
+              },
+              {
+                  id: "2",
+                  name: "Michael Chen",
+                  role: "Creative Director",
+                  avatar: "/images/avatar.png",
+                  rating: 5,
+                  content:
+                      "As someone who values both style and comfort, Trendify delivers on both fronts. Their customer service is outstanding and shipping is incredibly fast.",
+              },
+              {
+                  id: "3",
+                  name: "Emma Rodriguez",
+                  role: "Lifestyle Influencer",
+                  avatar: "/images/avatar.png",
+                  rating: 5,
+                  content:
+                      "I've been shopping with Trendify for over a year now, and they never disappoint. The variety is amazing and the prices are very reasonable for the quality you get.",
+              },
+          ])
 
     const containerVariants: Variants = {
         hidden: { opacity: 0 },
@@ -90,7 +113,7 @@ export default function TestimonialsSection() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5 }}
                 >
-                    what our customers say
+                    {t("home.testimonials.tagline")}
                 </motion.span>
                 <motion.h2
                     className="typography text-4xl md:text-5xl capitalize mb-4"
@@ -99,7 +122,7 @@ export default function TestimonialsSection() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                    Testimonials
+                    {t("home.testimonials.title")}
                 </motion.h2>
             </motion.div>
 

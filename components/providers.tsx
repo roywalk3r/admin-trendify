@@ -4,6 +4,7 @@ import { ClerkProvider, useUser } from "@clerk/nextjs"
 import type React from "react"
 import { useEffect, useRef } from "react"
 import { useCartStore } from "@/lib/store/cart-store"
+import { SettingsProvider } from "@/lib/contexts/settings-context"
 
 function CartSync() {
   const { isSignedIn, user } = useUser()
@@ -83,8 +84,10 @@ function CartSync() {
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider afterSignOutUrl={"/"}>
-      <CartSync />
-      {children}
+      <SettingsProvider>
+        <CartSync />
+        {children}
+      </SettingsProvider>
     </ClerkProvider>
   )
 }

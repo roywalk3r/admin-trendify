@@ -19,6 +19,12 @@ import {
   Palette,
   Sparkles,
   History,
+  Tag,
+  RotateCcw,
+  ShoppingBag,
+  Bell,
+  MessageSquare,
+  RefreshCw,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -81,17 +87,28 @@ export function AdminSidebar() {
         { title: "All Products", href: "/admin/products" },
         { title: "Add Product", href: "/admin/products/new" },
         { title: "Categories", href: "/admin/categories" },
+        { title: "Low Stock", href: "/admin/products/low-stock" },
       ],
     },
     {
       title: "Orders",
       href: "/admin/orders",
       icon: ShoppingCart,
+      submenu: [
+        { title: "All Orders", href: "/admin/orders" },
+        { title: "Guest Orders", href: "/admin/guests" },
+        { title: "Returns", href: "/admin/returns" },
+        { title: "Refunds", href: "/admin/refunds" },
+      ],
     },
     {
       title: "Customers",
       href: "/admin/users",
       icon: Users,
+      submenu: [
+        { title: "All Customers", href: "/admin/users" },
+        { title: "Reviews", href: "/admin/reviews" },
+      ],
     },
     {
       title: "Media",
@@ -113,6 +130,16 @@ export function AdminSidebar() {
       ],
     },
     {
+      title: "Marketing",
+      href: "/admin/coupons",
+      icon: Tag,
+      submenu: [
+        { title: "Coupons", href: "/admin/coupons" },
+        { title: "Abandoned Carts", href: "/admin/abandoned-carts" },
+        { title: "Stock Alerts", href: "/admin/stock-alerts" },
+      ],
+    },
+    {
       title: "Audit Logs",
       href: "/admin/audit",
       icon: History,
@@ -121,6 +148,10 @@ export function AdminSidebar() {
       title: "Delivery",
       href: "/admin/delivery",
       icon: Settings,
+      submenu: [
+        { title: "Delivery Config", href: "/admin/delivery" },
+        { title: "Drivers", href: "/admin/drivers" },
+      ],
     },
     {
       title: "Settings",

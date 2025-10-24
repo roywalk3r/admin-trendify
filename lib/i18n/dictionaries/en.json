@@ -1,0 +1,150 @@
+{
+  "common": {
+    "home": "Home",
+    "products": "Products",
+    "cart": "Cart",
+    "wishlist": "Wishlist",
+    "search": "Search",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "profile": "Profile",
+    "admin": "Admin Dashboard"
+  },
+  "products": {
+    "loading": "Loading...",
+    "showingLabel": "Showing",
+    "of": "of",
+    "featured": "Featured",
+    "priceLow": "Price: Low to High",
+    "priceHigh": "Price: High to Low",
+    "nameAsc": "Name: A → Z",
+    "nameDesc": "Name: Z → A",
+    "loadMore": "Load More Products"
+  },
+  "nav": {
+    "newArrivals": "New Arrivals",
+    "men": "Men",
+    "women": "Women",
+    "accessories": "Accessories",
+    "sale": "Sale"
+  },
+  "footer": {
+    "about": "About Us",
+    "contact": "Contact",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "copyright": "All rights reserved"
+  },
+  "product": {
+    "addToCart": "Add to Cart",
+    "addToWishlist": "Add to Wishlist",
+    "outOfStock": "Out of Stock",
+    "inStock": "In Stock",
+    "available": "available",
+    "price": "Price",
+    "description": "Description",
+    "reviews": "Reviews",
+    "noRating": "No rating",
+    "newBadge": "NEW",
+    "addedToCart": "Added to cart",
+    "signInToSyncCart": "Sign in to sync your cart",
+    "itemKeptLocally": "Item kept locally.",
+    "failedToSyncCart": "Failed to sync cart",
+    "wishlistAdded": "Added to wishlist",
+    "wishlistRemoved": "Removed from wishlist",
+    "wishlistActionFailed": "Wishlist action failed",
+    "quantity": "Quantity",
+    "inWishlist": "In wishlist",
+    "wishlist": "Wishlist",
+    "adding": "Adding...",
+    "taxIncluded": "Tax included. Shipping calculated at checkout.",
+    "whyChoose": "Why Choose This Product",
+    "freeShippingOverPrefix": "Free shipping on orders over",
+    "yearWarranty": "1 year warranty included",
+    "returnPolicy30d": "30-day return policy",
+    "copiedLink": "Product link copied to clipboard"
+  },
+  "checkout": {
+    "title": "Checkout",
+    "deliveryMethod": "Delivery Method",
+    "pickup": "Pickup",
+    "door": "Door Delivery",
+    "shippingFee": "Shipping Fee",
+    "gatewayFee": "Gateway fee",
+    "estimatedTotal": "Estimated total",
+    "total": "Total",
+    "placeOrder": "Place Order",
+    "pickupAtPoint": "Pickup at our pickup point",
+    "pickupFreeNote": "Free (0 delivery fee)",
+    "doorToDoor": "Door-to-door delivery",
+    "doorFeeNote": "Delivery fee applies by city",
+    "pickupCity": "Pickup city",
+    "city": "City",
+    "selectCity": "Select city",
+    "pickupLocation": "Pickup location",
+    "selectLocation": "Select location"
+  },
+  "home": {
+    "hero": {
+      "slide1": {
+        "title": "Elevate Your Style",
+        "text": "Discover premium fashion that defines your unique personality",
+        "cta": "Explore Collection"
+      },
+      "slide2": {
+        "title": "Trending Now",
+        "text": "Stay ahead with the latest fashion trends and exclusive pieces",
+        "cta": "Shop Trends"
+      },
+      "slide3": {
+        "title": "New Arrivals",
+        "text": "Fresh styles just landed - be the first to wear them",
+        "cta": "See What's New"
+      }
+    },
+    "categories": {
+      "tagline": "explore",
+      "title": "Categories",
+      "error": "Failed to load categories."
+    },
+    "featured": {
+      "tagline": "discover our",
+      "title": "Featured Products",
+      "description": "Handpicked items that represent the best of fashion, quality, and style. Each piece is carefully selected to bring you the latest trends and timeless classics.",
+      "viewAll": "View All Products"
+    },
+    "testimonials": {
+      "tagline": "what our customers say",
+      "title": "Testimonials",
+      "items": [
+        {
+          "name": "Sarah Johnson",
+          "role": "Fashion Blogger",
+          "content": "Trendify has completely transformed my wardrobe! The quality is exceptional and the styles are always on-point. I get compliments every time I wear their pieces."
+        },
+        {
+          "name": "Michael Chen",
+          "role": "Creative Director",
+          "content": "As someone who values both style and comfort, Trendify delivers on both fronts. Their customer service is outstanding and shipping is incredibly fast."
+        },
+        {
+          "name": "Emma Rodriguez",
+          "role": "Lifestyle Influencer",
+          "content": "I've been shopping with Trendify for over a year now, and they never disappoint. The variety is amazing and the prices are very reasonable for the quality you get."
+        }
+      ]
+    },
+    "brands": {
+      "title": "Trusted by Leading Brands",
+      "subtitle": "We partner with the world's most iconic fashion brands"
+    },
+    "newsletter": {
+      "title": "Stay In The Loop",
+      "description": "Be the first to know about new arrivals, exclusive deals, and fashion tips. Join our community of style enthusiasts and never miss a trend.",
+      "placeholder": "Enter your email address",
+      "subscribe": "Subscribe",
+      "subscribed": "Subscribed!",
+      "disclaimer": "No spam, unsubscribe at any time. We respect your privacy."
+    }
+  }
+}

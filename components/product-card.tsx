@@ -9,6 +9,9 @@ import { Button } from "./ui/button"
 import { useCartStore } from "@/lib/store/cart-store"
 import { useToast } from "@/hooks/use-toast"
 import { useUser } from "@clerk/nextjs"
+import { useI18n } from "@/lib/i18n/I18nProvider"
+import { usePathname } from "next/navigation"
+import { addLocaleToPathname, getLocaleFromPathname } from "@/lib/i18n/config"
 
 interface ProductCardProps {
     id: string
@@ -35,6 +38,9 @@ export default function ProductCard({
                                         isSale,
                                         index = 0,
                                     }: ProductCardProps) {
+    const { t } = useI18n()
+    const pathname = usePathname() || "/"
+    const locale = getLocaleFromPathname(pathname)
     const [isWishlisted, setIsWishlisted] = useState(false)
     const [isWishlistLoading, setIsWishlistLoading] = useState(false)
     const [isHovered, setIsHovered] = useState(false)
@@ -107,18 +113,18 @@ export default function ProductCard({
                 })
                 if (!res.ok) throw new Error(`${res.status}`)
             }
-            toast({ title: "Added to cart", description: name })
+            toast({ title: t("product.addedToCart"), description: name })
         } catch (e: any) {
             // server may fail if unauthenticated; keep local cart but inform user
             const msg = String(e?.message || "")
             if (!isSignedIn || msg === "401") {
-                toast({ title: "Sign in to sync your cart", description: "Item kept locally.", variant: "destructive" })
+                toast({ title: t("product.signInToSyncCart"), description: t("product.itemKeptLocally"), variant: "destructive" })
             } else {
-                toast({ title: "Failed to sync cart", description: `Error ${msg}`, variant: "destructive" })
+                toast({ title: t("product.failedToSyncCart"), description: `Error ${msg}`, variant: "destructive" })
             }
         }
-    }
 
+    }
     const toggleWishlist = async () => {
         if (isWishlistLoading) return
         const next = !isWishlisted
@@ -131,20 +137,24 @@ export default function ProductCard({
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ productId: id }),
                 })
-                if (!res.ok) throw new Error(await res.text())
-                toast({ title: "Added to wishlist", description: name })
+                if (!res.ok) {
+                    throw new Error(await res.text())
+                }
+                toast({ title: t("product.wishlistAdded"), description: name })
                 // notify global listeners (e.g., header) to refresh count
                 window.dispatchEvent(new Event("wishlist:updated"))
             } else {
                 const res = await fetch(`/api/wishlist?productId=${encodeURIComponent(id)}`, { method: "DELETE" })
-                if (!res.ok) throw new Error(await res.text())
-                toast({ title: "Removed from wishlist", description: name })
+                if (!res.ok) {
+                    throw new Error(await res.text())
+                }
+                toast({ title: t("product.wishlistRemoved"), description: name })
                 window.dispatchEvent(new Event("wishlist:updated"))
             }
         } catch (e: any) {
             // revert on error
             setIsWishlisted(!next)
-            toast({ title: "Wishlist action failed", description: e?.message || "", variant: "destructive" })
+            toast({ title: t("product.wishlistActionFailed"), description: e?.message || "", variant: "destructive" })
         } finally {
             setIsWishlistLoading(false)
         }
@@ -154,9 +164,7 @@ export default function ProductCard({
         <motion.div
             className="group relative bg-card rounded-2xl border border-muted overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
             variants={cardVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
+             viewport={{ once: true }}
             animate={isHovered ? "hover" : "rest"}
             onHoverStart={() => setIsHovered(true)}
             onHoverEnd={() => setIsHovered(false)}
@@ -164,7 +172,7 @@ export default function ProductCard({
             {/* Product Image */}
             <div className="relative aspect-square overflow-hidden bg-gray-50">
                 <motion.div variants={imageVariants} className="w-full h-full">
-                    <Link href={`/products/${id}`} className="block w-full h-full">
+                    <Link href={addLocaleToPathname(`/products/${id}`, locale)} className="block w-full h-full">
                         <Image
                             src={imgSrc || "/placeholder.svg"}
                             alt={name}
@@ -184,7 +192,7 @@ export default function ProductCard({
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.2 }}
                         >
-                            NEW
+                            {t("product.newBadge")}
                         </motion.span>
                     )}
                     {isSale && discount > 0 && (
@@ -224,7 +232,7 @@ export default function ProductCard({
                         animate={isHovered ? { y: 0, opacity: 1 } : { y: 20, opacity: 0 }}
                         transition={{ delay: 0.1 }}
                     >
-                        <Link href={`/products/${id}`} className="p-3 bg-white rounded-full shadow-lg block">
+                        <Link href={addLocaleToPathname(`/products/${id}`, locale)} className="p-3 bg-white rounded-full shadow-lg block">
                             <Eye className="w-5 h-5 text-gray-700" />
                         </Link>
                     </motion.div>
@@ -244,7 +252,7 @@ export default function ProductCard({
 
             {/* Product Info */}
             <div className="p-4">
-                <Link href={`/products/${id}`}>
+                <Link href={addLocaleToPathname(`/products/${id}`, locale)}>
                     <motion.h3
                         className="font-semibold typography text-sm text-ascent mb-2 line-clamp-2 cursor-pointer hover:underline"
                         initial={{ opacity: 0 }}
@@ -298,7 +306,7 @@ export default function ProductCard({
                          motion-reduce:transition-none "
                             onClick={handleAddToCart}
                         >
-                            Add to Cart
+                            {t("product.addToCart")}
                         </Button>
                     </motion.div>
                 </motion.div>

@@ -2,8 +2,10 @@
 import { motion } from "framer-motion"
 import type { Variants } from "framer-motion"
 import Image from "next/image"
+import { useI18n } from "@/lib/i18n/I18nProvider"
 
 export default function BrandsSection() {
+    const { t } = useI18n()
     const brands = [
         { name: "Nike", logo: "/images/Nike.svg" },
         { name: "Adidas", logo: "/images/Adidas.svg" },
@@ -50,7 +52,7 @@ export default function BrandsSection() {
                         viewport={{ once: true }}
                         transition={{ duration: 0.5 }}
                     >
-                        Trusted by Leading Brands
+                        {t("home.brands.title")}
                     </motion.h2>
                     <motion.p
                         className="text-muted-foreground"
@@ -59,7 +61,7 @@ export default function BrandsSection() {
                         viewport={{ once: true }}
                         transition={{ duration: 0.5, delay: 0.1 }}
                     >
-                        We partner with the world's most iconic fashion brands
+                        {t("home.brands.subtitle")}
                     </motion.p>
                 </motion.div>
 

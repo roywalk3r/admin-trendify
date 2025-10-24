@@ -100,8 +100,14 @@ export async function POST(req: NextRequest) {
     
     // TODO: Integrate with shipping service for accurate calculation
     const shipping = 10 // Placeholder: flat rate
+    
+    // Payment gateway fee (Paystack: 1.5% + GHS 0.30 or 2.9% for international)
+    const GATEWAY_FEE_PERCENTAGE = 0.015 // 1.5%
+    const GATEWAY_FIXED_FEE = 0.30
+    const beforeGatewayFee = subtotal + tax + shipping
+    const gatewayFee = Math.round((beforeGatewayFee * GATEWAY_FEE_PERCENTAGE + GATEWAY_FIXED_FEE) * 100) / 100
 
-    const totalAmount = subtotal + tax + shipping
+    const totalAmount = beforeGatewayFee + gatewayFee
 
     // Generate unique session ID and order number
     const sessionId = nanoid(32)
@@ -140,6 +146,7 @@ export async function POST(req: NextRequest) {
       subtotal,
       tax,
       shipping,
+      gatewayFee,
       total: totalAmount,
     })
 
@@ -151,6 +158,7 @@ export async function POST(req: NextRequest) {
           subtotal,
           tax,
           shipping,
+          gatewayFee,
           total: totalAmount,
         },
         items: orderItems,

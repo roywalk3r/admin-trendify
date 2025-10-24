@@ -7,8 +7,10 @@ import type { Variants } from "framer-motion"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Mail, CheckCircle } from "lucide-react"
+import { useI18n } from "@/lib/i18n/I18nProvider"
 
 export default function NewsletterSection() {
+    const { t } = useI18n()
     const [email, setEmail] = useState("")
     const [isSubscribed, setIsSubscribed] = useState(false)
 
@@ -63,12 +65,11 @@ export default function NewsletterSection() {
                 </motion.div>
 
                 <motion.h2 className="typography text-3xl md:text-4xl lg:text-5xl mb-4" variants={itemVariants}>
-                    Stay In The Loop
+                    {t("home.newsletter.title")}
                 </motion.h2>
 
                 <motion.p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto" variants={itemVariants}>
-                    Be the first to know about new arrivals, exclusive deals, and fashion tips. Join our community of style
-                    enthusiasts and never miss a trend.
+                    {t("home.newsletter.description")}
                 </motion.p>
 
                 <motion.form
@@ -79,7 +80,7 @@ export default function NewsletterSection() {
                     <motion.div className="flex-1" whileFocus={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
                         <Input
                             type="email"
-                            placeholder="Enter your email address"
+                            placeholder={t("home.newsletter.placeholder")}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="h-12 px-4 rounded-full border-2 border-ascent/20 focus:border-ascent bg-white"
@@ -101,17 +102,17 @@ export default function NewsletterSection() {
                                     transition={{ duration: 0.3 }}
                                 >
                                     <CheckCircle className="w-5 h-5" />
-                                    Subscribed!
+                                    {t("home.newsletter.subscribed")}
                                 </motion.div>
                             ) : (
-                                "Subscribe"
+                                t("home.newsletter.subscribe")
                             )}
                         </Button>
                     </motion.div>
                 </motion.form>
 
                 <motion.p className="text-sm text-muted-foreground mt-4" variants={itemVariants}>
-                    No spam, unsubscribe at any time. We respect your privacy.
+                    {t("home.newsletter.disclaimer")}
                 </motion.p>
             </div>
         </motion.section>

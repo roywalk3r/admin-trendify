@@ -5,12 +5,18 @@ import prisma from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Gemini API key is configured
+    if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_AI_API_KEY) {
+      return createApiResponse({
+        error: "AI service not configured. Please set GEMINI_API_KEY or GOOGLE_AI_API_KEY in environment variables.",
+        status: 503,
+      });
+    }
+
     // Get inventory data from database
-    const lowStockItems = await prisma.product.findMany({
+    // First, get all products and filter in memory (Prisma doesn't support comparing two columns directly)
+    const allProducts = await prisma.product.findMany({
       where: {
-        stock: {
-          lte: prisma.product.fields.lowStockAlert,
-        },
         isActive: true,
         isDeleted: false,
       },
@@ -24,8 +30,12 @@ export async function POST(request: NextRequest) {
           },
         },
       },
-      take: 20,
     });
+
+    // Filter for low stock items (stock <= lowStockAlert)
+    const lowStockItems = allProducts
+      .filter(p => p.stock <= (p.lowStockAlert || 10))
+      .slice(0, 20);
 
     // Get top selling products (based on order items)
     const topSellingItems = await prisma.product.findMany({

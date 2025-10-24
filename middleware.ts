@@ -1,9 +1,8 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
+import { clerkMiddleware } from "@clerk/nextjs/server"
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 import arcjet, { createMiddleware, detectBot } from "@arcjet/next"
-
-const isProtectedRoute = createRouteMatcher(["/admin(.*)", "/api/admin(.*)"])
-
-// const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)", "/api/webhooks(.*)", "/api/products(.*), /api/reviews(.*)"])
+import { locales, defaultLocale, isValidLocale, getLocaleFromPathname, stripLocaleFromPathname } from "@/lib/i18n/config"
 
 // Initialize Arcjet
 const aj = arcjet({
@@ -23,15 +22,28 @@ const aj = arcjet({
   ],
 })
 
+function isProtectedPath(pathname: string): boolean {
+  const pathNoLocale = stripLocaleFromPathname(pathname)
+  return pathNoLocale.startsWith("/admin") || pathNoLocale.startsWith("/api/admin")
+}
+
 // Combine Clerk and Arcjet middleware
 const combinedMiddleware = createMiddleware(aj, async (req) => {
-  // Run Clerk middleware
+  const pathname = req.nextUrl.pathname
+
+  // Redirect root to default locale
+  if (pathname === "/") {
+    const url = req.nextUrl.clone()
+    url.pathname = `/${defaultLocale}`
+    return NextResponse.redirect(url)
+  }
+
+  // Run Clerk middleware with admin protection
   // @ts-ignore
   return clerkMiddleware(async (auth, req) => {
-    if (isProtectedRoute(req)) {
+    if (isProtectedPath(pathname)) {
       await auth.protect()
     }
-
   })(req)
 })
 

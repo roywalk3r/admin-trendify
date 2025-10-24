@@ -10,8 +10,10 @@ import { Autoplay, Pagination, Navigation } from "swiper/modules"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "./ui/button"
 import HeroItem from "./hero-item"
+import { useI18n } from "@/lib/i18n/I18nProvider"
 
 export default function Hero() {
+    const { t } = useI18n()
     return (
         <motion.div
             className="relative w-full max-w-7xl mx-auto p-8"
@@ -75,27 +77,27 @@ export default function Hero() {
                     <SwiperSlide>
                         <HeroItem
                             image={"/images/hero2.jpg"}
-                            title={"Elevate Your Style"}
-                            text={"Discover premium fashion that defines your unique personality"}
-                            cta={"Explore Collection"}
+                            title={t("home.hero.slide1.title")}
+                            text={t("home.hero.slide1.text")}
+                            cta={t("home.hero.slide1.cta")}
                             position={"items-left"}
                         />
                     </SwiperSlide>
                     <SwiperSlide>
                         <HeroItem
                             image={"/images/heroImg1.png"}
-                            title={"Trending Now"}
-                            text={"Stay ahead with the latest fashion trends and exclusive pieces"}
-                            cta={"Shop Trends"}
+                            title={t("home.hero.slide2.title")}
+                            text={t("home.hero.slide2.text")}
+                            cta={t("home.hero.slide2.cta")}
                             position="items-left"
                         />
                     </SwiperSlide>
                     <SwiperSlide>
                         <HeroItem
                             image={"/images/hero3.jpg"}
-                            title={"New Arrivals"}
-                            text={"Fresh styles just landed - be the first to wear them"}
-                            cta={"See What's New"}
+                            title={t("home.hero.slide3.title")}
+                            text={t("home.hero.slide3.text")}
+                            cta={t("home.hero.slide3.cta")}
                         />
                     </SwiperSlide>
                 </Swiper>

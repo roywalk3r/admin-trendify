@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
+import { withRateLimit } from "@/lib/rate-limit"
 import { logInfo } from "@/lib/logger"
 
 const cartItemSchema = z.object({
@@ -23,7 +24,7 @@ const syncCartSchema = z.object({
  * POST /api/cart/sync
  * Merge guest cart with user's authenticated cart when they sign in
  */
-export async function POST(req: NextRequest) {
+export const POST = withRateLimit(async (req: NextRequest) => {
   try {
     const { userId } = await auth()
 
@@ -195,13 +196,13 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     return handleApiError(error)
   }
-}
+}, { limit: 30, windowSeconds: 60 })
 
 /**
  * GET /api/cart/sync
  * Get user's cart (for syncing after login)
  */
-export async function GET(req: NextRequest) {
+export const GET = withRateLimit(async (req: NextRequest) => {
   try {
     const { userId } = await auth()
 
@@ -256,4 +257,4 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     return handleApiError(error)
   }
-}
+}, { limit: 60, windowSeconds: 60 })

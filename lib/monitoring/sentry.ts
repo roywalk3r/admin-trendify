@@ -32,10 +32,17 @@ export function captureException(err: unknown, context?: Record<string, any>) {
     try {
       sentry.captureException(err, { extra: context })
       return
-    } catch {}
+    } catch (sentryErr) {
+      // Don't use logError here to avoid circular calls
+      console.error('[WARN] Sentry captureException failed:', sentryErr)
+    }
   }
-  // Fallback to structured log
-  logError(err, { context: "captureException", ...context })
+  // Fallback to structured log (wrapped in try-catch to prevent cascading)
+  try {
+    logError(err, { context: "captureException", ...context })
+  } catch (logErr) {
+    console.error('[CRITICAL] Both Sentry and logging failed:', err)
+  }
 }
 
 export function captureMessage(message: string, context?: Record<string, any>) {

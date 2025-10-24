@@ -3,6 +3,7 @@ import { z } from "zod"
 import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
 import { logInfo } from "@/lib/logger"
+import { withRateLimit } from "@/lib/rate-limit"
 
 const stockAlertSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -11,7 +12,7 @@ const stockAlertSchema = z.object({
 })
 
 // Create stock alert
-export async function POST(req: NextRequest) {
+export const POST = withRateLimit(async (req: NextRequest) => {
   try {
     const body = await req.json()
     const { email, productId, variantId } = stockAlertSchema.parse(body)
@@ -74,10 +75,10 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     return handleApiError(error)
   }
-}
+}, { limit: 20, windowSeconds: 60 })
 
 // Delete stock alert (unsubscribe)
-export async function DELETE(req: NextRequest) {
+export const DELETE = withRateLimit(async (req: NextRequest) => {
   try {
     const url = new URL(req.url)
     const email = url.searchParams.get("email")
@@ -107,4 +108,4 @@ export async function DELETE(req: NextRequest) {
   } catch (error) {
     return handleApiError(error)
   }
-}
+}, { limit: 30, windowSeconds: 60 })

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { Loader2, Search, ImageIcon, Trash2 } from "lucide-react"
 import { AppwriteImg } from "./appwrite-img"
-import { listFiles, deleteFile, extractFileIdFromUrl } from "@/lib/appwrite/appwirte-utils"
+import { listFiles, deleteFile, extractFileIdFromUrl } from "@/lib/appwrite/appwrite-utils"
 
 interface AppwriteMediaBrowserProps {
   onSelect: (urls: string[]) => void

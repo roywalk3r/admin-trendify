@@ -10,6 +10,33 @@
 
 Trendify is a Next.js-based e-commerce platform with solid foundations but requires **critical improvements** before production deployment. This report identifies 47+ essential features, security enhancements, and architectural improvements needed for a production-ready e-commerce system.
 
+---
+
+## Status Update (Oct 22, 2025)
+
+The following items have been implemented in this codebase:
+
+- **Guest Checkout** implemented — `app/api/checkout/guest/route.ts`
+- **Abandoned Cart Recovery** implemented — `lib/jobs/abandoned-cart-recovery.ts`, `app/api/cron/abandoned-carts/route.ts`
+- **Stock Notifications** implemented — `app/api/stock-alerts/route.ts`
+- **Returns Management (API)** implemented — `app/api/returns/*`, `app/api/admin/returns/*`
+- **Cart Persistence (Guest → Auth merge)** implemented — `app/api/cart/sync/route.ts`, `components/providers.tsx`, `lib/store/cart-store.ts`
+- **SEO (sitemap + robots)** implemented — `app/sitemap.ts`, `app/robots.ts`
+- **Structured Logging (Pino)** implemented — `lib/logger.ts`
+- **Redis Rate Limiting** implemented — `lib/redis.ts`, `lib/api-utils.ts`
+- **Security Headers + CSP** added — `next.config.ts`, `next.config.mjs`
+- **CORS restricted to configured origin** — `next.config.ts`, `next.config.mjs`
+- **Sentry wrapper** integrated — `lib/monitoring/sentry.ts`, `instrumentation.ts`
+- **CI Workflow (GitHub Actions)** added — `.github/workflows/ci.yml`
+- **Operational docs** added — `docs/INCIDENT_RESPONSE.md`, `docs/DB_BACKUP_STRATEGY.md`, `docs/API_REFERENCE.md`
+- **Environment template** updated — `env.example.txt`
+- **Cookie consent + GA4 injection** — `components/cookie-consent.tsx`, `components/analytics.tsx`, wired in `app/layout.tsx`
+- **OpenAPI endpoint** — `app/api/openapi/route.ts`
+- **Webhook verification** — Paystack HMAC verified `app/api/webhooks/paystack/route.ts`; Clerk Svix using `CLERK_WEBHOOK_SECRET` `app/api/webhooks/clerk/route.ts`
+- **Reusable rate-limit wrapper** — `lib/rate-limit.ts` and applied to `app/api/stock-alerts/route.ts` and `app/api/cart/sync/route.ts`
+
+Remaining high-priority items are marked below in the checklists.
+
 ### Current State Assessment
 
 ✅ **Strengths:**
@@ -772,7 +799,7 @@ Current checkout requires authentication, which can reduce conversions by 20-30%
 3. Database backup automation
 4. Performance monitoring (APM)
 5. Log aggregation setup
-6. API documentation (Swagger)
+6. API documentation (Swagger) — baseline OpenAPI served at `/api/openapi`
 7. Incident response plan
 
 **Deliverables:**
@@ -881,23 +908,23 @@ Current checkout requires authentication, which can reduce conversions by 20-30%
 ## Immediate Action Items (This Week)
 
 ### Critical (Do First)
-- [ ] Remove `/app/test/page.tsx` and `/app/api/test/route.ts`
-- [ ] Fix CORS configuration in `next.config.ts` (currently allows all origins)
+- [x] Remove `/app/test/page.tsx` and `/app/api/test/route.ts`
+- [x] Fix CORS configuration in `next.config.ts` (restrict to app origin)
 - [ ] Audit `.env` file - ensure no secrets in git history
-- [ ] Set up error tracking (Sentry)
-- [ ] Implement comprehensive API rate limiting
-- [ ] Add security headers middleware
+- [~] Set up error tracking (Sentry) — wrapper added; enable by setting SENTRY vars
+- [x] Implement comprehensive API rate limiting (Redis-backed)
+- [x] Add security headers (CSP, HSTS, etc.)
 
 ### High Priority (This Week)
-- [ ] Set up CI/CD pipeline basics
-- [ ] Implement structured logging
-- [ ] Create database backup strategy
-- [ ] Write API documentation
+- [x] Set up CI/CD pipeline basics (lint, type-check, build)
+- [x] Implement structured logging (Pino)
+- [x] Create database backup strategy (`docs/DB_BACKUP_STRATEGY.md`)
+- [x] Write API documentation (`docs/API_REFERENCE.md`)
 - [ ] Set up staging environment
-- [ ] Create incident response plan
+- [x] Create incident response plan (`docs/INCIDENT_RESPONSE.md`)
 
 ### Code Quality (Ongoing)
-- [ ] Enable TypeScript strict mode
+- [x] Enable TypeScript strict mode
 - [ ] Remove all `any` types
 - [ ] Consolidate duplicate appwrite utilities
 - [ ] Add JSDoc comments to utilities

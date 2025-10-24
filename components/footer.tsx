@@ -3,8 +3,15 @@ import { motion } from "framer-motion"
 import type { Variants } from "framer-motion"
 import Image from "next/image"
 import { Facebook, Twitter, Instagram, Youtube, Mail, Phone, MapPin } from "lucide-react"
+import { useI18n } from "@/lib/i18n/I18nProvider"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { addLocaleToPathname, getLocaleFromPathname } from "@/lib/i18n/config"
 
 export default function Footer() {
+    const { t } = useI18n()
+    const pathname = usePathname() || "/"
+    const locale = getLocaleFromPathname(pathname)
     const footerVariants: Variants = {
         hidden: { opacity: 0 },
         visible: {
@@ -76,23 +83,28 @@ export default function Footer() {
 
                     {/* Quick Links */}
                     <motion.div variants={itemVariants}>
-                        <h4 className="typography text-lg mb-6">Quick Links</h4>
+                        <h4 className="typography text-lg mb-6">{t("nav.newArrivals")}</h4>
                         <ul className="space-y-3">
-                            {["New Arrivals", "Men's Fashion", "Women's Fashion", "Accessories", "Sale"].map((link, index) => (
+                            {[
+                                { label: t("nav.newArrivals"), href: "/new-arrivals" },
+                                { label: t("nav.men"), href: "/men" },
+                                { label: t("nav.women"), href: "/women" },
+                                { label: t("nav.accessories"), href: "/accessories" },
+                                { label: t("nav.sale"), href: "/sale" },
+                            ].map((item, index) => (
                                 <motion.li
-                                    key={link}
+                                    key={item.label}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.1 + 0.3 }}
                                 >
-                                    <motion.a
-                                        href="#"
+                                    <motion.div
                                         className="text-background/80 hover:text-background hover:text-ascent transition-colors duration-200"
                                         whileHover={{ x: 5 }}
                                         transition={{ duration: 0.2 }}
                                     >
-                                        {link}
-                                    </motion.a>
+                                        <Link href={addLocaleToPathname(item.href, locale)}>{item.label}</Link>
+                                    </motion.div>
                                 </motion.li>
                             ))}
                         </ul>
@@ -100,9 +112,9 @@ export default function Footer() {
 
                     {/* Customer Service */}
                     <motion.div variants={itemVariants}>
-                        <h4 className="typography text-lg mb-6">Customer Service</h4>
+                        <h4 className="typography text-lg mb-6">{t("footer.contact")}</h4>
                         <ul className="space-y-3">
-                            {["Contact Us", "Size Guide", "Shipping Info", "Returns", "FAQ"].map((link, index) => (
+                            {[t("footer.contact"), "Size Guide", "Shipping Info", "Returns", "FAQ"].map((link, index) => (
                                 <motion.li
                                     key={link}
                                     initial={{ opacity: 0, x: -10 }}
@@ -153,7 +165,7 @@ export default function Footer() {
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.8 }}
                     >
-                        © 2024 Trendify. All rights reserved.
+                        © {new Date().getFullYear()} Trendify. {t("footer.copyright")}
                     </motion.p>
                     <motion.div
                         className="flex gap-6 text-sm"
@@ -161,20 +173,16 @@ export default function Footer() {
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.9 }}
                     >
-                        <motion.a
-                            href="#"
-                            className="text-background/60 hover:text-background transition-colors duration-200"
-                            whileHover={{ y: -2 }}
-                        >
-                            Privacy Policy
-                        </motion.a>
-                        <motion.a
-                            href="#"
-                            className="text-background/60 hover:text-background transition-colors duration-200"
-                            whileHover={{ y: -2 }}
-                        >
-                            Terms of Service
-                        </motion.a>
+                        <motion.div whileHover={{ y: -2 }}>
+                            <Link href={addLocaleToPathname("/privacy-policy", locale)} className="text-background/60 hover:text-background transition-colors duration-200">
+                                {t("footer.privacy")}
+                            </Link>
+                        </motion.div>
+                        <motion.div whileHover={{ y: -2 }}>
+                            <Link href={addLocaleToPathname("/terms-of-service", locale)} className="text-background/60 hover:text-background transition-colors duration-200">
+                                {t("footer.terms")}
+                            </Link>
+                        </motion.div>
                     </motion.div>
                 </motion.div>
             </div>

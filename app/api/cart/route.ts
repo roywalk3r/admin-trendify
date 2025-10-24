@@ -29,6 +29,8 @@ const addItemSchema = z.object({
 const updateQtySchema = z.object({
   id: z.string().min(1),
   quantity: z.coerce.number().int().positive(),
+  color: z.string().optional(),
+  size: z.string().optional(),
 })
 
 async function getOrCreateCart(userId: string) {
@@ -133,15 +135,31 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { id, quantity } = updateQtySchema.parse(body)
+    const { id, quantity, color, size } = updateQtySchema.parse(body)
 
     const cart = await prisma.cart.findUnique({ where: { userId } })
     if (!cart) return createApiResponse({ error: "Cart not found", status: 404 })
 
-    const item = await prisma.cartItem.findFirst({ where: { cartId: cart.id, productId: id } })
-    if (!item) return createApiResponse({ error: "Item not found", status: 404 })
-
-    await prisma.cartItem.update({ where: { id: item.id }, data: { quantity } })
+    let item = await prisma.cartItem.findFirst({ where: { cartId: cart.id, productId: id, color: color ?? null, size: size ?? null } })
+    if (!item) {
+      // Create missing cart item using product snapshot so PATCH can recover from desync
+      const product = await prisma.product.findUnique({ where: { id } })
+      if (!product) return createApiResponse({ error: "Product not found", status: 404 })
+      item = await prisma.cartItem.create({
+        data: {
+          cartId: cart.id,
+          productId: id,
+          quantity: quantity,
+          unitPrice: product.price.toString(),
+          name: product.name,
+          image: (product.images && product.images.length > 0 ? product.images[0] : "/placeholder.svg"),
+          color: color ?? null,
+          size: size ?? null,
+        },
+      })
+    } else {
+      await prisma.cartItem.update({ where: { id: item.id }, data: { quantity } })
+    }
 
     const refreshed = await prisma.cart.findUnique({ where: { id: cart.id }, include: { items: true } })
     const items = (refreshed?.items ?? []).map((i) => ({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { paystackVerify, isPaystackTxSuccess, type PaystackTransaction } from "@/lib/paystack"
+import { sendOrderConfirmationEmail } from "@/lib/email"
 // Shipping validation now uses DeliveryCity/PickupLocation from DB
 import prisma from "@/lib/prisma"
 
@@ -94,7 +95,8 @@ export async function GET(req: NextRequest) {
     }
     const tax = 0
     const discount = 0
-    const totalAmount = subtotal + tax + shipping - discount
+    // Note: We'll add gatewayFee and final shipping later once we compute shipping for door deliveries
+    let totalAmount = subtotal + tax + shipping - discount + gatewayFee
 
     // Create Order + OrderItems + Payment within a transaction
     const order = await prisma.$transaction(async (txdb) => {
@@ -196,6 +198,9 @@ export async function GET(req: NextRequest) {
           shipping = Number(process.env.DEFAULT_DOOR_FEE || 35)
         }
       }
+      // Recalculate order total with final shipping and gateway fee, then persist
+      totalAmount = subtotal + tax + shipping - discount + gatewayFee
+      await txdb.order.update({ where: { id: order.id }, data: { shipping: shipping, totalAmount: totalAmount } })
 
       if (snapshot && snapshot.fullName && snapshot.street) {
         await txdb.shippingAddress.create({
@@ -214,6 +219,29 @@ export async function GET(req: NextRequest) {
       where: { id: order.id },
       include: { payment: true, orderItems: true },
     })
+
+    // Send order confirmation email (best-effort)
+    try {
+      const userEmail = email || tx?.customer?.email
+      if (fullOrder && userEmail && isSuccessful) {
+        await sendOrderConfirmationEmail(userEmail, {
+          orderNumber: fullOrder.orderNumber,
+          customerName: dbUser?.name || userEmail.split("@")[0] || "Customer",
+          items: (fullOrder.orderItems || []).map((it: any) => ({
+            name: it.productName,
+            quantity: it.quantity,
+            price: Number(it.unitPrice),
+            image: (it.productData as any)?.image,
+          })),
+          subtotal: Number(fullOrder.subtotal),
+          tax: Number(fullOrder.tax),
+          shipping: Number(fullOrder.shipping),
+          total: Number(fullOrder.totalAmount),
+        })
+      }
+    } catch (e) {
+      console.warn("[email] order confirmation send failed", e)
+    }
 
     return NextResponse.json({ data: { ...res.data, order: fullOrder } })
   } catch (e: any) {

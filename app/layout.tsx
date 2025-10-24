@@ -2,10 +2,13 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Poppins } from "next/font/google"
 import { Inter, Bruno_Ace } from "next/font/google"
-import AppShell from "@/components/app-shell"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 import Providers from "@/components/providers"
+import { CookieConsentBanner } from "@/components/cookie-consent"
+import { Analytics } from "@/components/analytics"
+import { LocaleProvider } from "@/components/locale-provider"
+import * as Sentry from '@sentry/nextjs';
 
 const poppins = Poppins({
     subsets: ["latin"],
@@ -25,9 +28,16 @@ const bruno = Bruno_Ace({
     display: "swap",
 })
 
-export const metadata: Metadata = {
-    title: "Trendify",
-    description: "Your one stop shop for all things fashion",
+
+// Add or edit your "generateMetadata" to include the Sentry trace data:
+export function generateMetadata(): Metadata {
+    return {
+        title: "Trendify",
+        description: "Your one stop shop for all things fashion",
+        other: {
+            ...Sentry.getTraceData()
+        }
+    };
 }
 
 export default function RootLayout({
@@ -35,15 +45,20 @@ export default function RootLayout({
                                    }: Readonly<{
     children: React.ReactNode
 }>) {
+    // Note: lang is set via middleware redirects and rewrites to locale-prefixed paths
+    // The actual locale is in the URL path (e.g., /en/... or /fr/...)
     return (
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
         <body className={`${poppins.className}   ${inter.variable} ${bruno.variable} antialiased`}>
-        <Providers>
-          <AppShell>
+        <LocaleProvider>
+          <Providers>
+            {/* Consent and analytics */}
+            <CookieConsentBanner />
+            <Analytics />
             {children}
-          </AppShell>
-          <Toaster />
-        </Providers>
+            <Toaster />
+          </Providers>
+        </LocaleProvider>
         </body>
         </html>
     )

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ShoppingCart, Heart, Star, Share2, Truck, Shield, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -8,9 +8,11 @@ import { Separator } from "@/components/ui/separator"
 import { AppwriteGallery } from "@/components/appwrite/appwrite-gallery"
 import { useProductView } from "@/hooks/use-product-view"
 import { useCartStore } from "@/lib/store/cart-store"
-import { useSettings } from "@/contexts/settings-context"
+import { useSettings } from "@/lib/contexts/settings-context"
 import { toast } from "sonner"
 import type { Product } from "@/types/product"
+import { useUser } from "@clerk/nextjs"
+import { useI18n } from "@/lib/i18n/I18nProvider"
 
 interface ProductDetailProps {
   product: Product & {
@@ -25,14 +27,68 @@ interface ProductDetailProps {
 }
 
 export function ProductDetail({ product }: ProductDetailProps) {
+  const { t } = useI18n()
   const [quantity, setQuantity] = useState(1)
   const { addItem } = useCartStore()
-  const { settings } = useSettings()
+  const settings = useSettings()
+  const [wishlistLoading, setWishlistLoading] = useState(false)
+  const [inWishlist, setInWishlist] = useState<boolean | null>(null)
+  const { isSignedIn } = useUser()
 
   // Track product view
   useProductView(product.id)
 
-  const handleAddToCart = () => {
+  // On mount, check if this product is in wishlist (if user is signed in)
+  // Non-blocking: ignore errors/401
+  useEffect(() => {
+    let mounted = true
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/wishlist?productId=${encodeURIComponent(product.id)}`, { cache: "no-store" })
+        if (!res.ok) return
+        const json = await res.json()
+        if (mounted) setInWishlist(Boolean(json?.data?.inWishlist))
+      } catch {}
+    }
+    void check()
+    return () => {
+      mounted = false
+    }
+  }, [product.id])
+
+  // Toggle wishlist (optimistic). Mirrors ProductCard behavior
+  const toggleWishlist = async () => {
+    if (wishlistLoading) return
+    const current = Boolean(inWishlist)
+    const next = !current
+    setInWishlist(next)
+    setWishlistLoading(true)
+    try {
+      if (next) {
+        const res = await fetch("/api/wishlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: product.id }),
+        })
+        if (!res.ok) throw new Error(await res.text())
+        toast.success(t("product.wishlistAdded"), { description: product.name })
+        window.dispatchEvent(new Event("wishlist:updated"))
+      } else {
+        const res = await fetch(`/api/wishlist?productId=${encodeURIComponent(product.id)}`, { method: "DELETE" })
+        if (!res.ok) throw new Error(await res.text())
+        toast.success(t("product.wishlistRemoved"), { description: product.name })
+        window.dispatchEvent(new Event("wishlist:updated"))
+      }
+    } catch (e: any) {
+      setInWishlist(current)
+      toast.error(t("product.wishlistActionFailed"), { description: String(e?.message || "") })
+    } finally {
+      setWishlistLoading(false)
+    }
+  }
+
+  const handleAddToCart = async () => {
+    // Optimistic local add
     addItem({
       id: product.id,
       name: product.name,
@@ -41,9 +97,32 @@ export function ProductDetail({ product }: ProductDetailProps) {
       image: product.images[0] || "/placeholder.svg",
     })
 
-    toast.success(`${product.name} added to cart`, {
-      description: `${quantity} item${quantity > 1 ? "s" : ""} added to your cart`,
-    })
+    try {
+      if (isSignedIn) {
+        const res = await fetch("/api/cart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: product.id,
+            name: product.name,
+            price: Number(product.price),
+            quantity,
+            image: product.images[0] || "/placeholder.svg",
+          }),
+        })
+        if (!res.ok) throw new Error(`${res.status}`)
+      }
+      toast.success(t("product.addedToCart"), {
+        description: `${product.name}`,
+      })
+    } catch (e: any) {
+      const msg = String(e?.message || "")
+      if (!isSignedIn || msg === "401") {
+        toast.error(t("product.signInToSyncCart"), { description: t("product.itemKeptLocally") })
+      } else {
+        toast.error(t("product.failedToSyncCart"), { description: `Error ${msg}` })
+      }
+    }
   }
 
   const handleShare = async () => {
@@ -57,11 +136,11 @@ export function ProductDetail({ product }: ProductDetailProps) {
       } catch (error) {
         // Fallback to clipboard
         navigator.clipboard.writeText(window.location.href)
-        toast.success("Product link copied to clipboard")
+        toast.success(t("product.copiedLink"))
       }
     } else {
       navigator.clipboard.writeText(window.location.href)
-      toast.success("Product link copied to clipboard")
+      toast.success(t("product.copiedLink"))
     }
   }
 
@@ -132,8 +211,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 ))}
               </div>
               <span className="text-sm text-muted-foreground">
-              {product.averageRating ? product.averageRating.toFixed(1) : "No rating"}({product.reviewCount || 0}{" "}
-                reviews)
+              {product.averageRating ? product.averageRating.toFixed(1) : t("product.noRating")} ({product.reviewCount || 0} {t("product.reviews")})
             </span>
             </div>
           </div>
@@ -142,13 +220,13 @@ export function ProductDetail({ product }: ProductDetailProps) {
           <div className="space-y-2">
             <div className="flex items-center gap-3">
             <span className="text-3xl font-bold">
-              {settings?.currency || "$"}
+              {settings?.currencySymbol || "$"}
               {Number(product.price).toFixed(2)}
             </span>
               {hasDiscount && (
                   <>
                 <span className="text-lg text-muted-foreground line-through">
-                  {settings?.currency || "$"}
+                  {settings?.currencySymbol || "$"}
                   {Number(product.comparePrice).toFixed(2)}
                 </span>
                     <Badge variant="destructive" className="text-xs">
@@ -158,26 +236,26 @@ export function ProductDetail({ product }: ProductDetailProps) {
               )}
             </div>
             {settings?.taxRate && (
-                <p className="text-sm text-muted-foreground">Tax included. Shipping calculated at checkout.</p>
+                <p className="text-sm text-muted-foreground">{t("product.taxIncluded")}</p>
             )}
           </div>
 
           {/* Stock Status */}
           <div className="space-y-2">
             {isOutOfStock ? (
-                <Badge variant="destructive">Out of Stock</Badge>
+                <Badge variant="destructive">{t("product.outOfStock")}</Badge>
             ) : isLowStock ? (
-                <Badge variant="secondary">Only {product.stock} left in stock</Badge>
+                <Badge variant="secondary">{t("product.inStock")} ({product.stock} {t("product.available")})</Badge>
             ) : (
                 <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  In Stock ({product.stock} available)
+                  {t("product.inStock")} ({product.stock} {t("product.available")})
                 </Badge>
             )}
           </div>
 
           {/* Description */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Description</h3>
+            <h3 className="font-semibold text-lg">{t("product.description")}</h3>
             <p className="text-muted-foreground leading-relaxed">{product.description}</p>
           </div>
 
@@ -186,7 +264,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
           {/* Quantity Selection */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="font-medium">Quantity</label>
+              <label className="font-medium">{t("product.quantity")}</label>
               <div className="flex items-center gap-3">
                 <div className="flex items-center border rounded-lg">
                   <Button
@@ -209,7 +287,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                     +
                   </Button>
                 </div>
-                <span className="text-sm text-muted-foreground">{product.stock} available</span>
+                <span className="text-sm text-muted-foreground">{product.stock} {t("product.available")}</span>
               </div>
             </div>
 
@@ -222,12 +300,20 @@ export function ProductDetail({ product }: ProductDetailProps) {
                   size="lg"
               >
                 <ShoppingCart className="mr-2 h-5 w-5" />
-                {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+                {isOutOfStock ? t("product.outOfStock") : t("product.addToCart")}
               </Button>
 
-              <Button variant="outline" size="lg" className="h-12 bg-transparent">
-                <Heart className="mr-2 h-4 w-4" />
-                Wishlist
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-12 bg-transparent"
+                onClick={toggleWishlist}
+                disabled={wishlistLoading}
+                aria-pressed={inWishlist === true}
+                title={inWishlist ? t("product.inWishlist") : t("product.addToWishlist")}
+              >
+                <Heart className={`mr-2 h-4 w-4 ${inWishlist ? "fill-current" : ""}`} />
+                {inWishlist ? t("product.inWishlist") : wishlistLoading ? t("product.adding") : t("product.wishlist")}
               </Button>
             </div>
           </div>
@@ -236,19 +322,19 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
           {/* Features */}
           <div className="space-y-4">
-            <h3 className="font-semibold">Why Choose This Product</h3>
+            <h3 className="font-semibold">{t("product.whyChoose")}</h3>
             <div className="grid gap-3">
               <div className="flex items-center gap-3 text-sm">
                 <Truck className="h-4 w-4 text-blue-600" />
-                <span>Free shipping on orders over {settings?.currency || "$"}50</span>
+                <span>{t("product.freeShippingOverPrefix")} {settings?.currencySymbol || "$"}{settings?.freeShippingThreshold || 50}</span>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Shield className="h-4 w-4 text-green-600" />
-                <span>1 year warranty included</span>
+                <span>{t("product.yearWarranty")}</span>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <RotateCcw className="h-4 w-4 text-orange-600" />
-                <span>30-day return policy</span>
+                <span>{t("product.returnPolicy30d")}</span>
               </div>
             </div>
           </div>

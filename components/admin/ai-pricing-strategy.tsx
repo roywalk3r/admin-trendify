@@ -62,7 +62,9 @@ export default function AIPricingStrategy() {
       const data = await response.json();
       
       if (response.ok) {
-        setProducts(data.data || []);
+        // API returns { products: [...] }
+        const items = Array.isArray(data?.products) ? data.products : Array.isArray(data?.data) ? data.data : [];
+        setProducts(items);
       } else {
         toast.error("Failed to fetch products");
       }

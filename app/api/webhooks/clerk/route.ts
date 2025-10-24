@@ -3,10 +3,10 @@ import { headers } from "next/headers"
 import type { WebhookEvent } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/prisma"
 export async function POST(req: Request) {
-  const SIGNING_SECRET = process.env.SIGNING_SECRET
+  const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SECRET
 
   if (!SIGNING_SECRET) {
-    throw new Error("Error: Please add SIGNING_SECRET from Clerk Dashboard to .env")
+    throw new Error("Error: Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env")
   }
 
   // Create new Svix instance with secret

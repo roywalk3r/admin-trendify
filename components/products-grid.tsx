@@ -5,9 +5,16 @@ import { motion } from "framer-motion"
 import ProductCard from "./product-card"
 import { Button } from "./ui/button"
 import { Grid, List } from "lucide-react"
+import { useI18n } from "@/lib/i18n/I18nProvider"
 // Fetch from API: /api/products
 
-export default function ProductsGrid() {
+type ProductsGridProps = {
+  categorySlug?: string
+  categoryId?: string
+}
+
+export default function ProductsGrid({ categorySlug, categoryId }: ProductsGridProps = {}) {
+  const { t } = useI18n()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -52,12 +59,14 @@ export default function ProductsGrid() {
       // include URL-driven filters
       const minPrice = searchParams.get("minPrice")
       const maxPrice = searchParams.get("maxPrice")
-      const categories = searchParams.get("categories") || searchParams.get("category")
+      const categories = categorySlug || searchParams.get("categories") || searchParams.get("category")
       const sizes = searchParams.get("sizes")
       const colors = searchParams.get("colors")
       if (minPrice) params.set("minPrice", minPrice)
       if (maxPrice) params.set("maxPrice", maxPrice)
-      if (categories) params.set("categories", categories)
+      // Prefer explicit filter via props
+      if (categoryId) params.set("categoryId", categoryId)
+      else if (categories) params.set("category", categories)
       if (sizes) params.set("sizes", sizes)
       if (colors) params.set("colors", colors)
       const res = await fetch(`/api/products?${params.toString()}`, { cache: "no-store" })
@@ -89,7 +98,7 @@ export default function ProductsGrid() {
   useEffect(() => {
     setItems([])
     fetchProducts(1, false)
-  }, [sortBy, searchParams])
+  }, [sortBy, searchParams, categorySlug, categoryId])
 
   // sync sort with URL on mount and when URL changes externally
   useEffect(() => {
@@ -134,7 +143,7 @@ export default function ProductsGrid() {
       <div className="flex items-center justify-between mb-6 p-4 bg-card rounded-2xl border">
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">
-            {loading ? "Loading..." : `Showing ${items.length} of ${total} products`}
+            {loading ? t("products.loading") : `${t("products.showingLabel")} ${items.length} ${t("products.of")} ${total} ${t("common.products")}`}
           </span>
           {error && <span className="text-sm text-destructive">{error}</span>}
         </div>
@@ -146,11 +155,11 @@ export default function ProductsGrid() {
             onChange={(e) => onSortChange(e.target.value as any)}
             className="px-3 py-2 border rounded-lg text-sm"
           >
-            <option value="featured">Featured</option>
-            <option value="price-low">Price: Low to High</option>
-            <option value="price-high">Price: High to Low</option>
-            <option value="name-asc">Name: A → Z</option>
-            <option value="name-desc">Name: Z → A</option>
+            <option value="featured">{t("products.featured")}</option>
+            <option value="price-low">{t("products.priceLow")}</option>
+            <option value="price-high">{t("products.priceHigh")}</option>
+            <option value="name-asc">{t("products.nameAsc")}</option>
+            <option value="name-desc">{t("products.nameDesc")}</option>
           </select>
 
           {/* View Mode Toggle */}
@@ -195,7 +204,7 @@ export default function ProductsGrid() {
             disabled={loading}
             onClick={() => fetchProducts(page + 1, true)}
           >
-            {loading ? "Loading..." : "Load More Products"}
+            {loading ? t("products.loading") : t("products.loadMore")}
           </Button>
         )}
       </div>
