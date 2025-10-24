@@ -11,9 +11,11 @@ type Props = {
   addressId?: string | null
   delivery?: DeliverySelection
   shippingFee?: number
+  couponCode?: string
+  discount?: number
 }
 
-export default function CheckoutButton({ addressId: addressIdProp, delivery, shippingFee: shippingFeeProp }: Props) {
+export default function CheckoutButton({ addressId: addressIdProp, delivery, shippingFee: shippingFeeProp, couponCode, discount }: Props) {
   // Split selectors to minimize re-renders
   const items = useCartStore((s) => s.items)
   const subtotal = useCartStore((s) => s.subtotal)
@@ -80,7 +82,7 @@ export default function CheckoutButton({ addressId: addressIdProp, delivery, shi
         }
       }
       const shippingFee = typeof shippingFeeProp === "number" ? shippingFeeProp : computeDeliveryFee(deliverySel.method, deliverySel.pickupCity)
-      const baseAmount = Number(totalAmount) + Number(shippingFee)
+      const baseAmount = Number(totalAmount) + Number(shippingFee) - Number(discount || 0)
       // Gross-up so customer pays the fee: G = (B + f) / (1 - r), fee = G - B
       const r = Number(paymentFee.percentage) || 0
       const f = Number(paymentFee.fixedFee) || 0
@@ -89,41 +91,47 @@ export default function CheckoutButton({ addressId: addressIdProp, delivery, shi
       const finalAmount = grossTotal
       setLoading(true)
 
-      const res = await fetch("/api/paystack/initialize", {
+      // Step 1: Create order on server (atomic: stock, coupon, totals)
+      const orderRes = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // include shipping + gateway fee in amount (server will re-compute shipping and we include fee breakdown)
-          amount: finalAmount,
-          email: user.primaryEmailAddress.emailAddress,
-          currency: "GHS",
-          metadata: {
-            items,
-            delivery: { ...deliverySel, fee: shippingFee },
-            fees: {
-              gateway: gatewayFee,
-              gatewayBreakdown: {
-                percentage: paymentFee.percentage,
-                fixed: paymentFee.fixedFee,
-              },
-              baseAmount,
-            },
-          },
+          userId: user.id || user.externalId || undefined,
+          items: items.map((it) => ({ productId: it.id, quantity: it.quantity })),
           addressId,
+          shipping: shippingFee,
+          tax: 0,
+          paymentMethod: "paystack",
+          couponCode: couponCode || undefined,
         }),
       })
-      if (!res.ok) {
-        let msg = String(res.status)
-        try {
-          const j = await res.json()
-          msg = j?.error || msg
-        } catch {}
+      if (!orderRes.ok) {
+        let msg = String(orderRes.status)
+        try { const j = await orderRes.json(); msg = j?.message || j?.error || msg } catch {}
         throw new Error(msg)
       }
-      const json = await res.json()
-      const url: string | undefined = json?.data?.authorization_url
+      const orderJson = await orderRes.json()
+      const orderId: string | undefined = orderJson?.order?.id
+      if (!orderId) throw new Error("Order creation failed")
+
+      // Step 2: Initialize Paystack for this order
+      const initRes = await fetch("/api/payments/paystack/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          email: user.primaryEmailAddress.emailAddress,
+          callbackUrl: undefined,
+        }),
+      })
+      if (!initRes.ok) {
+        let msg = String(initRes.status)
+        try { const j = await initRes.json(); msg = j?.error || msg } catch {}
+        throw new Error(msg)
+      }
+      const initJson = await initRes.json()
+      const url: string | undefined = initJson?.data?.authorization_url
       if (!url) throw new Error("No authorization url")
-      // Redirect to Paystack checkout
       window.location.href = url
     } catch (e: any) {
       toast({ title: "Checkout failed", description: e?.message || "", variant: "destructive" })

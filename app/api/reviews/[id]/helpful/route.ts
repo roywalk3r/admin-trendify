@@ -7,7 +7,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     const { id } = await context.params
 
     const rateKey = `helpful:${id}:${req.headers.get("x-forwarded-for")}`
-    const limited = checkRateLimit(rateKey, 5, 60_000)
+    const limited = await checkRateLimit(rateKey, 5, 60_000)
     if (limited) {
       return createApiResponse({ error: "Too many requests", status: 429 })
     }

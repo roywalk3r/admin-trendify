@@ -107,7 +107,7 @@ export const defaultSettings: Settings = {
     storeEmail: "contact@example.com",
     storePhone: "+1 (555) 123-4567",
     storeAddress: "",
-    currencyCode: "USD",
+    currencyCode: "GHS",
     enableTaxCalculation: true,
     taxRate: 10,
     enableFreeShipping: false,

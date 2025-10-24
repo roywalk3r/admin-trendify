@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
 // POST /api/reviews - Create or update user's single review for a product
 export async function POST(req: NextRequest) {
   try {
-    const rateLimited = checkRateLimit("reviews-post:" + req.headers.get("x-forwarded-for"), 10, 60_000)
+    const rateLimited = await checkRateLimit("reviews-post:" + req.headers.get("x-forwarded-for"), 10, 60_000)
     if (rateLimited) {
       return createApiResponse({ error: "Too many requests", status: 429 })
     }

@@ -14,14 +14,32 @@ export default function NewsletterSection() {
     const [email, setEmail] = useState("")
     const [isSubscribed, setIsSubscribed] = useState(false)
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (email) {
-            setIsSubscribed(true)
-            setTimeout(() => {
-                setIsSubscribed(false)
-                setEmail("")
-            }, 3000)
+        if (!email) return
+
+        try {
+            const response = await fetch('/api/newsletter', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email }),
+            })
+
+            const data = await response.json()
+
+            if (response.ok) {
+                setIsSubscribed(true)
+                setTimeout(() => {
+                    setIsSubscribed(false)
+                    setEmail("")
+                }, 3000)
+            } else {
+                alert(data.error || 'Failed to subscribe. Please try again.')
+            }
+        } catch (error) {
+            alert('Failed to subscribe. Please try again.')
         }
     }
 

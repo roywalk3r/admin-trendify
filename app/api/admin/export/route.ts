@@ -1,10 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-export const dynamic = "force-dynamic"
 import { auth } from "@clerk/nextjs/server"
-import { apiError } from "@/lib/api-utils"
-import { DataExporter } from "@/lib/data-export"
 
+import { apiError } from "@/lib/api-utils"
+
+import { DataExporter } from "@/lib/data-export"
 export async function GET(request: NextRequest) {
   try {
     const { userId } = await auth()

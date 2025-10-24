@@ -21,7 +21,7 @@ export async function GET(
     const cachedProduct = await getCache(cacheKey)
 
     if (cachedProduct) {
-      return NextResponse.json(createApiResponse( cachedProduct))
+      return NextResponse.json(createApiResponse({ data: cachedProduct }))
     }
 
     // If not in cache, fetch from database
@@ -61,7 +61,7 @@ export async function GET(
     // Cache the product for future requests (5 minutes TTL)
     await setCache(cacheKey, product, 300)
 
-    return NextResponse.json(createApiResponse(product))
+    return NextResponse.json(createApiResponse({ data: product }))
   } catch (error) {
     return handleApiError(error)
   }
@@ -94,7 +94,7 @@ export async function PUT(
     const cacheKey = `product:${id}`
     await setCache(cacheKey, updatedProduct, 300)
 
-    return NextResponse.json(createApiResponse(updatedProduct))
+    return NextResponse.json(createApiResponse({ data: updatedProduct }))
   } catch (error) {
     return handleApiError(error)
   }

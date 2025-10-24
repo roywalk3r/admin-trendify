@@ -33,7 +33,6 @@ export async function GET(_req: NextRequest) {
         const parsed = safeJsonParse(row.value)
         if (parsed) {
           // Merge to preserve defaults for missing fields
-          // @ts-expect-error dynamic merge
           formatted[key] = { ...formatted[key], ...parsed }
         }
       }

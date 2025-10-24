@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import { Loader2, ArrowLeft } from "lucide-react"
+import { Loader2, ArrowLeft, Truck, Mail } from "lucide-react"
 
 interface OrderItem {
   id: string
@@ -63,6 +66,8 @@ export default function OrderDetailsPage() {
   const [updating, setUpdating] = useState(false)
   const [status, setStatus] = useState("")
   const [paymentStatus, setPaymentStatus] = useState("")
+  const [trackingNumber, setTrackingNumber] = useState("")
+  const [notes, setNotes] = useState("")
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -100,14 +105,15 @@ export default function OrderDetailsPage() {
 
     setUpdating(true)
     try {
-      const response = await fetch(`/api/admin/orders/${id}`, {
+      const response = await fetch(`/api/orders/${id}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           status,
-          paymentStatus,
+          trackingNumber: trackingNumber || undefined,
+          notes: notes || undefined,
         }),
       })
 
@@ -353,14 +359,18 @@ export default function OrderDetailsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Update Order Status</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="h-5 w-5" />
+                Update Order Status
+              </CardTitle>
+              <CardDescription>Update order status and send notification to customer</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Order Status</label>
+                  <Label htmlFor="status">Order Status</Label>
                   <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger>
+                    <SelectTrigger id="status">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -374,25 +384,30 @@ export default function OrderDetailsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Payment Status</label>
-                  <Select value={paymentStatus} onValueChange={setPaymentStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select payment status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unpaid">Unpaid</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
-                      <SelectItem value="refunded">Refunded</SelectItem>
-                      <SelectItem value="partially_refunded">Partially Refunded</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="tracking">Tracking Number (Optional)</Label>
+                  <Input
+                    id="tracking"
+                    placeholder="Enter tracking number"
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Admin Notes (Optional)</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Add notes about this status update..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                  />
                 </div>
 
                 <Button
                   className="w-full"
                   onClick={updateOrderStatus}
-                  disabled={updating || (status === order.status && paymentStatus === order.paymentStatus)}
+                  disabled={updating || status === order.status}
                 >
                   {updating ? (
                     <>
@@ -400,9 +415,18 @@ export default function OrderDetailsPage() {
                       Updating...
                     </>
                   ) : (
-                    "Update Order Status"
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Update Status & Notify Customer
+                    </>
                   )}
                 </Button>
+                
+                {status !== order.status && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Customer will receive an email notification
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

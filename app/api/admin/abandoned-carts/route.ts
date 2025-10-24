@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server"
+
 import prisma from "@/lib/prisma"
+
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
+
 import { adminAuthMiddleware } from "@/lib/admin-auth"
 
 export async function GET(req: NextRequest) {

@@ -1,8 +1,14 @@
+export const dynamic = "force-dynamic"
 import { NextResponse, type NextRequest } from "next/server"
+
 import prisma from "@/lib/prisma"
+
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
+
 import { adminAuthMiddleware } from "@/lib/admin-auth"
+
 import { z } from "zod"
+
 import { auth } from "@clerk/nextjs/server"
 
 // Order update validation schema

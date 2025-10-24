@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const tx: PaystackTransaction = res.data!
     const payStatus: string = tx.status
     const isSuccessful = isPaystackTxSuccess(tx)
-    const currency = (tx.currency || "NGN").toString().toUpperCase()
+    const currency = (tx.currency || process.env.PAYSTACK_CURRENCY || process.env.NEXT_PUBLIC_CURRENCY || "GHS").toString().toUpperCase()
     const amountMajor = (tx.amount ?? tx.requested_amount ?? 0) / 100 // Paystack returns minor unit
     const gatewayFee = (tx.fees ?? 0) / 100
     const userIdFromMeta: string | undefined = tx?.metadata?.userId

@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma"
 // Shipping helpers now sourced from DB (DeliveryCity/PickupLocation)
 
 const bodySchema = z.object({
-  amount: z.coerce.number().positive(), // in major unit (e.g., NGN)
+  amount: z.coerce.number().positive(), // in major unit (e.g., GHS)
   email: z.string().email(),
   // Ignore client-provided currency to avoid merchant mismatch; server decides
   currency: z.string().optional(),

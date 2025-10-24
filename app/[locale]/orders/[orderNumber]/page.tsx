@@ -57,7 +57,40 @@ export default function OrderDetailsPage() {
   if (!order) return null
 
   return (
-    <div className="container mx-auto max-w-3xl py-10 space-y-6">
+    <>
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .print-area, .print-area * {
+            visibility: visible;
+          }
+          .print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .print-area img {
+            max-width: 40px !important;
+            max-height: 40px !important;
+          }
+          .print-area {
+            font-size: 12px;
+          }
+          .print-area h1 {
+            font-size: 18px;
+          }
+          .print-area .text-2xl {
+            font-size: 18px;
+          }
+        }
+      `}</style>
+      <div className="container mx-auto max-w-3xl py-10 space-y-6 print-area">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Order #{order.orderNumber}</h1>
         <Badge variant="secondary">{order.status}</Badge>
@@ -107,10 +140,11 @@ export default function OrderDetailsPage() {
         <div className="flex justify-between border-t pt-2 font-medium"><span>Total</span><span>{formatMoney(Number(order.totalAmount), order?.payment?.currency || "USD")}</span></div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 no-print">
         <Button onClick={reorder} className="bg-ascent text-ascent-foreground hover:bg-ascent/90">Order again</Button>
         <Button variant="secondary" onClick={() => window.print()}>Print</Button>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

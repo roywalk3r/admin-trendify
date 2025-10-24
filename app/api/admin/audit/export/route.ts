@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server"
-import prisma from "@/lib/prisma"
-import { isAdmin } from "@/lib/admin-auth"
 
-export const dynamic = "force-dynamic"
+import prisma from "@/lib/prisma"
+
+import { isAdmin } from "@/lib/admin-auth"
 
 function csvEscape(value: any): string {
   if (value === null || value === undefined) return ""

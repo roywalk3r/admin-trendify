@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       return createApiResponse({ status: 500, error: "Missing PAYSTACK_SECRET_KEY env" });
     }
 
-    const currency = (process.env.PAYSTACK_CURRENCY || "GHC").toUpperCase();
+    const currency = (process.env.PAYSTACK_CURRENCY || process.env.NEXT_PUBLIC_CURRENCY || "GHS").toUpperCase();
 
     const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) {
@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
         amount: amountKobo,
         currency,
         reference,
-        callback_url: callbackUrl,
-        metadata: { orderId: order.id },
+        callback_url: callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/checkout/confirm?orderId=${encodeURIComponent(order.id)}`,
+        metadata: { orderId: order.id, reference },
       }),
     });
 

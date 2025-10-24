@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import type { Product } from "@/types/product"
 import { useUser } from "@clerk/nextjs"
 import { useI18n } from "@/lib/i18n/I18nProvider"
+import StockBadge from "@/components/product/stock-badge"
 
 interface ProductDetailProps {
   product: Product & {
@@ -242,15 +243,12 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
           {/* Stock Status */}
           <div className="space-y-2">
-            {isOutOfStock ? (
-                <Badge variant="destructive">{t("product.outOfStock")}</Badge>
-            ) : isLowStock ? (
-                <Badge variant="secondary">{t("product.inStock")} ({product.stock} {t("product.available")})</Badge>
-            ) : (
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  {t("product.inStock")} ({product.stock} {t("product.available")})
-                </Badge>
-            )}
+            <StockBadge
+              stock={product.stock}
+              lowStockThreshold={product.lowStockThreshold!}
+              productId={product.id}
+              productName={product.name}
+            />
           </div>
 
           {/* Description */}

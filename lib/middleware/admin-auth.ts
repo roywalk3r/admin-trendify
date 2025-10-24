@@ -44,7 +44,7 @@ export async function requireAdmin() {
     }
   }
 
-  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
+  if (user.role !== "admin" && user.role !== "staff") {
     logWarn("Unauthorized admin access attempt", {
       userId: user.id,
       email: user.email,
@@ -89,7 +89,7 @@ export async function requireSuperAdmin() {
     select: { id: true, role: true, email: true },
   })
 
-  if (!user || user.role !== "SUPER_ADMIN") {
+  if (!user || user.role !== "admin") {
     logWarn("Unauthorized super admin access attempt", {
       userId: user?.id,
       email: user?.email,

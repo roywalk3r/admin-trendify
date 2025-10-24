@@ -38,6 +38,16 @@ const combinedMiddleware = createMiddleware(aj, async (req) => {
     return NextResponse.redirect(url)
   }
 
+  // If path is missing a locale prefix, redirect to default locale with same path
+  const segments = pathname.split("/").filter(Boolean)
+  const first = segments[0]
+  const hasLocale = first && isValidLocale(first)
+  if (!hasLocale && !pathname.startsWith("/api") && !pathname.startsWith("/trpc")) {
+    const url = req.nextUrl.clone()
+    url.pathname = `/${defaultLocale}${pathname}`
+    return NextResponse.redirect(url)
+  }
+
   // Run Clerk middleware with admin protection
   // @ts-ignore
   return clerkMiddleware(async (auth, req) => {

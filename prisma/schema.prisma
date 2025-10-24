@@ -337,6 +337,8 @@ model Coupon {
   endDate     DateTime   @map("end_date")
   usageLimit  Int?       @map("usage_limit")
   usageCount  Int        @default(0) @map("usage_count")
+  description String?    @db.VarChar(255)
+  perUserLimit Int?      @map("per_user_limit")
   isActive    Boolean    @default(true) @map("is_active")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
@@ -435,12 +437,11 @@ model AnalyticsEvent {
   @@index([createdAt])
   @@map("analytics_events")
 }
-
 model Payment {
   id            String        @id @default(cuid())
   orderId       String        @unique @map("order_id")
   amount        Decimal       @db.Decimal(12, 2)
-  currency      String        @default("USD") @db.VarChar(3)
+  currency      String        @default("GHS") @db.VarChar(3) // Ghanaian Cedi
   method        PaymentMethod
   status        PaymentStatus @default(unpaid)
   transactionId String?       @map("transaction_id") @db.VarChar(255) // External payment ID
@@ -707,4 +708,20 @@ model TranslationCache {
   @@unique([locale, key])
   @@index([locale])
   @@map("translation_cache")
+}
+
+/// Newsletter subscriptions
+model NewsletterSubscription {
+  id             String    @id @default(cuid())
+  email          String    @unique @db.VarChar(255)
+  name           String?   @db.VarChar(100)
+  isActive       Boolean   @default(true) @map("is_active")
+  subscribedAt   DateTime  @default(now()) @map("subscribed_at")
+  unsubscribedAt DateTime? @map("unsubscribed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@index([isActive])
+  @@map("newsletter_subscriptions")
 }

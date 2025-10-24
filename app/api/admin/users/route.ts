@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 import type { NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"

@@ -146,7 +146,6 @@ export async function POST(req: NextRequest) {
       subtotal,
       tax,
       shipping,
-      gatewayFee,
       total: totalAmount,
     })
 

@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       create: {
         orderId,
         amount: order.totalAmount,
-        currency: (process.env.PAYSTACK_CURRENCY || "NGN").toUpperCase(),
+        currency: (process.env.PAYSTACK_CURRENCY || process.env.NEXT_PUBLIC_CURRENCY || "GHS").toUpperCase(),
         method: "paystack",
         status: "unpaid",
       },

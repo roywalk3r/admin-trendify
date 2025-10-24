@@ -1,10 +1,12 @@
 import type { NextRequest } from "next/server"
-import prisma from "@/lib/prisma"
-import { auth } from "@clerk/nextjs/server"
-import { apiResponse, apiError } from "@/lib/api-utils"
-import {isAdmin} from "@/lib/admin-auth";
 
-export const dynamic = "force-dynamic"
+import prisma from "@/lib/prisma"
+
+import { auth } from "@clerk/nextjs/server"
+
+import { apiResponse, apiError } from "@/lib/api-utils"
+
+import {isAdmin} from "@/lib/admin-auth";
 export async function GET(request: NextRequest) {
   try {
     const admin = await isAdmin()

@@ -265,8 +265,8 @@ export default function AIInventoryInsights() {
                         <BarChart3 className="h-5 w-5 text-blue-600" />
                         <div>
                           <p className="text-sm font-medium">Risk Level</p>
-                          <Badge variant={getRiskColor(analysis.riskAssessment)}>
-                            {analysis.riskAssessment.split(' ')[0]}
+                          <Badge variant={getRiskColor(typeof analysis.riskAssessment === 'string' ? analysis.riskAssessment : 'Medium')}>
+                            {typeof analysis.riskAssessment === 'string' ? analysis.riskAssessment.split(' ')[0] : 'Medium'}
                           </Badge>
                         </div>
                       </div>
