@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import Link from "next/link"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import CategoryProducts from "@/components/category-products"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 
@@ -13,7 +13,7 @@ async function getCategoryBySlug(slug: string) {
   try {
     const category = await prisma.category.findUnique({
       where: { slug },
-      select: { id: true, name: true, slug: true, image: true, description: true }
+      select: { id: true, name: true, slug: true, image: true, description: true },
     })
     return category
   } catch (e) {
@@ -66,3 +66,4 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     </div>
   )
 }
+

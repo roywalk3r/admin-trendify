@@ -140,3 +140,10 @@ pnpm db:studio      # View translation cache in database
 ---
 
 **Need help?** Check the console logs in your terminal and browser DevTools for detailed error messages.
+PGSSLMODE=disable \
+psql \
+-h 127.0.0.1 \
+-p 5433 \
+-d postgres \
+-f ./db/tese_aerk_comm_projectmail811_9e43_h_aivencloud_com-2025_10_25_07_33_14-dump.sql
+

@@ -5,7 +5,14 @@
 import { logInfo, logError } from "@/lib/logger"
 
 // Email configuration
-const FROM_EMAIL = process.env.FROM_EMAIL || "testpjmail@gmail.com"
+function deriveFromEmail() {
+  const envFrom = process.env.FROM_EMAIL?.trim()
+  if (envFrom) return envFrom
+  // Safe fallback for development only. Must use verified sender in production.
+  if (process.env.NODE_ENV !== "production") return "onboarding@resend.dev"
+  return undefined
+}
+const FROM_EMAIL = deriveFromEmail()
 const APP_NAME = "Trendify"
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
@@ -31,6 +38,17 @@ async function sendEmail({
     return { success: false, message: "Email service not configured" }
   }
 
+  // In production, a verified sender must be configured
+  if (!FROM_EMAIL) {
+    if (process.env.NODE_ENV === "production") {
+      logError("Email sending aborted: FROM_EMAIL missing in production", { to, subject })
+      return { success: false, message: "Sender email not configured" }
+    } else {
+      // Should not happen due to deriveFromEmail(), but keep as safeguard
+      logInfo("Using Resend onboarding sender in development", { to, subject })
+    }
+  }
+
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -39,7 +57,7 @@ async function sendEmail({
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: FROM_EMAIL,
+        from: `${APP_NAME} <${FROM_EMAIL}>`,
         to: [to],
         subject,
         html,
