@@ -23,6 +23,14 @@ function buildCSP() {
   const analyticsDomains = [
     "https://vitals.vercel-insights.com",
   ]
+  const sentryDomains = [
+    "https://*.ingest.de.sentry.io",
+    "https://*.ingest.sentry.io",
+  ]
+  const googleAnalyticsDomains = [
+    "https://www.googletagmanager.com",
+    "https://www.google-analytics.com",
+  ]
 
   const self = "'self'"
   const unsafeInline = "'unsafe-inline'" // for Next.js style-injection; reduce if using CSP-nonce
@@ -35,8 +43,9 @@ function buildCSP() {
     `img-src ${self} data: blob: https:`,
     `font-src ${self} https://fonts.gstatic.com data:`,
     `style-src ${self} ${unsafeInline} https://fonts.googleapis.com`,
-    `script-src ${self} ${unsafeInline} ${unsafeEval} ${clerkDomains.join(" ")} ${paymentDomains.join(" ")}`,
-    `connect-src ${self} ${appUrl} ${clerkDomains.join(" ")} ${appwriteDomains.join(" ")} ${paymentDomains.join(" ")} ${analyticsDomains.join(" ")}`,
+    `script-src ${self} ${unsafeInline} ${unsafeEval} ${clerkDomains.join(" ")} ${paymentDomains.join(" ")} ${googleAnalyticsDomains.join(" ")}`,
+    `worker-src ${self} blob:`,
+    `connect-src ${self} ${appUrl} ${clerkDomains.join(" ")} ${appwriteDomains.join(" ")} ${paymentDomains.join(" ")} ${analyticsDomains.join(" ")} ${sentryDomains.join(" ")} ${googleAnalyticsDomains.join(" ")}`,
     `frame-src ${self} ${paymentDomains.join(" ")} ${clerkDomains.join(" ")}`,
     `form-action ${self}`,
     `object-src 'none'`,
