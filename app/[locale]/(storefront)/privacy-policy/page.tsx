@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Link from "next/link"
+import { addLocaleToPathname, Locale } from "@/lib/i18n/config"
 
 export const metadata = {
   title: "Privacy Policy | Trendify",
   description: "Learn how we collect, use, and protect your personal information.",
 }
 
-export default function PrivacyPolicyPage() {
+export default function PrivacyPolicyPage({ params }: { params: { locale: Locale } }) {
+  const locale = params.locale
   return (
     <div className="container max-w-4xl py-12">
       <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
@@ -132,7 +135,7 @@ export default function PrivacyPolicyPage() {
               We use cookies and similar technologies to enhance your experience. You can manage your cookie preferences through our cookie consent banner or your browser settings.
             </p>
             <p className="mt-4 text-muted-foreground">
-              See our <a href="/cookie-policy" className="text-primary underline">Cookie Policy</a> for more details.
+              See our <Link href={addLocaleToPathname("/cookie-policy", locale)} className="text-primary underline">Cookie Policy</Link> for more details.
             </p>
           </CardContent>
         </Card>
