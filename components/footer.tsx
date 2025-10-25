@@ -183,6 +183,11 @@ export default function Footer() {
                                 {t("footer.terms")}
                             </Link>
                         </motion.div>
+                        <motion.div whileHover={{ y: -2 }}>
+                            <Link href={addLocaleToPathname("/cookie-policy", locale)} className="text-background/60 hover:text-background transition-colors duration-200">
+                                {t("footer.cookies")}
+                            </Link>
+                        </motion.div>
                     </motion.div>
                 </motion.div>
             </div>

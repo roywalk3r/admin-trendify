@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Cookie, Settings, X } from "lucide-react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { addLocaleToPathname, getLocaleFromPathname } from "@/lib/i18n/config"
 
 const STORAGE_KEY = "cookie-consent"
 const PREFERENCES_KEY = "cookie-preferences"
@@ -19,6 +21,8 @@ interface CookiePreferences {
 }
 
 export function CookieConsentBanner() {
+  const pathname = usePathname() || "/"
+  const locale = getLocaleFromPathname(pathname)
   const [state, setState] = useState<ConsentState>("unknown")
   const [showCustomize, setShowCustomize] = useState(false)
   const [preferences, setPreferences] = useState<CookiePreferences>({
@@ -173,7 +177,7 @@ export function CookieConsentBanner() {
           <p className="text-sm text-muted-foreground">
             We use cookies to personalize content, analyze traffic, and improve your experience. 
             By clicking "Accept All", you consent to our use of cookies. {" "}
-            <Link href="/cookie-policy" className="text-primary underline">
+            <Link href={addLocaleToPathname("/cookie-policy", locale)} className="text-primary underline">
               Learn more
             </Link>
           </p>
