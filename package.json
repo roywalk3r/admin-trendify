@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate --no-engine",
     "build": "next build",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
@@ -31,6 +31,7 @@
     "@google/genai": "^1.14.0",
     "@hookform/resolvers": "latest",
     "@prisma/client": "latest",
+    "@prisma/extension-accelerate": "^2.0.2",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
     "@radix-ui/react-aspect-ratio": "latest",

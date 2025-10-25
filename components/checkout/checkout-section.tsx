@@ -84,12 +84,12 @@ export default function CheckoutSection() {
       
       <div className="rounded-md border p-4 space-y-3">
         <DeliveryOptions value={delivery} onChange={setDelivery} />
-        <div className="text-sm text-muted-foreground">{t("checkout.shippingFee")}: <span className="font-medium text-foreground">₦{shippingFee.toFixed(2)}</span></div>
+        <div className="text-sm text-muted-foreground">{t("checkout.shippingFee")}: <span className="font-medium text-foreground">{shippingFee.toFixed(2)}</span></div>
         {discount > 0 && (
           <div className="text-sm text-green-600">Discount: <span className="font-medium">-₦{discount.toFixed(2)}</span></div>
         )}
-        <div className="text-sm text-muted-foreground">{t("checkout.gatewayFee")}: <span className="font-medium text-foreground">₦{gatewayFee.toFixed(2)}</span></div>
-        <div className="flex justify-between text-sm pt-1 border-t mt-1"><span className="text-muted-foreground">{t("checkout.estimatedTotal")}</span><span className="font-medium text-foreground">₦{estimatedTotal.toFixed(2)}</span></div>
+        <div className="text-sm text-muted-foreground">{t("checkout.gatewayFee")}: <span className="font-medium text-foreground">{gatewayFee.toFixed(2)}</span></div>
+        <div className="flex justify-between text-sm pt-1 border-t mt-1"><span className="text-muted-foreground">{t("checkout.estimatedTotal")}</span><span className="font-medium text-foreground">{estimatedTotal.toFixed(2)}</span></div>
       </div>
       <CheckoutButton addressId={addressId || undefined} delivery={delivery} shippingFee={shippingFee} couponCode={couponCode} discount={discount} />
     </div>

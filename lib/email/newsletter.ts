@@ -5,7 +5,7 @@
 import { logInfo, logError } from "@/lib/logger"
 
 // Email configuration
-const FROM_EMAIL = process.env.FROM_EMAIL || "orders@yourdomain.com"
+const FROM_EMAIL = process.env.FROM_EMAIL || "testpjmail@gmail.com"
 const APP_NAME = "Trendify"
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
