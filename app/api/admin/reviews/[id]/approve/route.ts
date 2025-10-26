@@ -38,6 +38,13 @@ export async function POST(
       }
     })
 
+    // Log audit trail
+    const adminUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true, email: true }
+    })
+    await logReviewModeration(params.id, adminUser?.id, adminUser?.email, 'APPROVE', req)
+
     return createApiResponse({ 
       data: review, 
       status: 200,
@@ -83,6 +90,13 @@ export async function DELETE(
         product: { select: { id: true, name: true } }
       }
     })
+
+    // Log audit trail
+    const adminUser = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true, email: true }
+    })
+    await logReviewModeration(params.id, adminUser?.id, adminUser?.email, 'REJECT', req)
 
     return createApiResponse({ 
       data: { success: true, review }, 

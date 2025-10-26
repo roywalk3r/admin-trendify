@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, email, items, shippingAddress, addressId, paymentMethod, total, subtotal, tax, shipping, couponCode, delivery } = await request.json()
+    const { userId, email, items, shippingAddress, addressId, paymentMethod, total, subtotal, tax, shipping, couponCode, delivery, gatewayFee } = await request.json()
 
     // Validate required fields
     if ((!userId && !email) || !items || !Array.isArray(items) || items.length === 0) {
@@ -346,6 +346,7 @@ export async function POST(request: NextRequest) {
           amount: newOrder.totalAmount,
           status: "unpaid",
           currency: "NGN",
+          gatewayFee: gatewayFee ? Number(gatewayFee) : null,
         },
       })
 
