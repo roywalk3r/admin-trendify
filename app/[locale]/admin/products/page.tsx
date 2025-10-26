@@ -363,6 +363,9 @@ export default function ProductsPage() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+                <SelectItem value="out_of_stock">Out of Stock</SelectItem>
               </SelectContent>
             </Select>
 

@@ -7,7 +7,7 @@ import { z } from "zod"
 const querySchema = z.object({
   search: z.string().optional().default(""),
   category: z.string().optional().default("all"),
-  status: z.enum(["all", "active", "inactive"]).optional().default("all"),
+  status: z.enum(["all", "active", "inactive", "draft", "archived", "out_of_stock"]).optional().default("all"),
   featured: z.enum(["all", "true", "false"]).optional().default("all"),
   sortBy: z.enum(["name", "price", "stock", "createdAt", "category"]).optional().default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
@@ -24,7 +24,7 @@ const productSchema = z.object({
   images: z.array(z.string()).optional().default([]),
   isActive: z.boolean().optional().default(true),
   isFeatured: z.boolean().optional().default(false),
-  status: z.enum(["active", "inactive", "draft"]).optional().default("active"),
+  status: z.enum(["active", "inactive", "draft", "archived", "out_of_stock"]).optional().default("active"),
 })
 
 export async function GET(request: NextRequest) {
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (params.status !== "all") {
-      where.isActive = params.status === "active"
+      where.status = params.status
     }
 
     if (params.featured !== "all") {
