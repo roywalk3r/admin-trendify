@@ -33,8 +33,8 @@ export default function OrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState("");
-  const [paymentStatus, setPaymentStatus] = useState("");
+  const [status, setStatus] = useState("all");
+  const [paymentStatus, setPaymentStatus] = useState("all");
   const [customerEmail, setCustomerEmail] = useState("");
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
 
@@ -67,8 +67,8 @@ export default function OrdersPage() {
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
-    if (status) params.append("status", status);
-    if (paymentStatus) params.append("paymentStatus", paymentStatus);
+    if (status && status !== "all") params.append("status", status);
+    if (paymentStatus && paymentStatus !== "all") params.append("paymentStatus", paymentStatus);
     if (customerEmail) params.append("customerEmail", customerEmail);
 
     const queryString = params.toString();
@@ -78,12 +78,12 @@ export default function OrdersPage() {
   const applyFilters = () => {
     const queryString = buildQueryString();
     fetchOrders(queryString);
-    setHasActiveFilters(!!status || !!paymentStatus || !!customerEmail);
+    setHasActiveFilters((status && status !== "all") || (paymentStatus && paymentStatus !== "all") || !!customerEmail);
   };
 
   const resetFilters = () => {
-    setStatus("");
-    setPaymentStatus("");
+    setStatus("all");
+    setPaymentStatus("all");
     setCustomerEmail("");
     fetchOrders();
     setHasActiveFilters(false);
@@ -133,8 +133,8 @@ export default function OrdersPage() {
   };
 
   const activeFilterCount = [
-    status ? 1 : 0,
-    paymentStatus ? 1 : 0,
+    status && status !== "all" ? 1 : 0,
+    paymentStatus && paymentStatus !== "all" ? 1 : 0,
     customerEmail ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
@@ -166,7 +166,7 @@ export default function OrdersPage() {
                       <SelectValue placeholder="Any status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Any status</SelectItem>
+                      <SelectItem value="all">Any status</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="shipped">Shipped</SelectItem>
                       <SelectItem value="delivered">Delivered</SelectItem>
@@ -185,7 +185,7 @@ export default function OrdersPage() {
                       <SelectValue placeholder="Any payment status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="any">Any payment status</SelectItem>
+                      <SelectItem value="all">Any payment status</SelectItem>
                       <SelectItem value="unpaid">Unpaid</SelectItem>
                       <SelectItem value="paid">Paid</SelectItem>
                       <SelectItem value="refunded">Refunded</SelectItem>
@@ -216,25 +216,25 @@ export default function OrdersPage() {
 
       {hasActiveFilters && (
         <div className="mb-4 flex flex-wrap gap-2">
-          {status && (
+          {status && status !== "all" && (
             <Badge variant="outline" className="flex items-center gap-1">
               Status: {status}
               <X
                 className="h-3 w-3 cursor-pointer"
                 onClick={() => {
-                  setStatus("");
+                  setStatus("all");
                   applyFilters();
                 }}
               />
             </Badge>
           )}
-          {paymentStatus && (
+          {paymentStatus && paymentStatus !== "all" && (
             <Badge variant="outline" className="flex items-center gap-1">
               Payment: {paymentStatus}
               <X
                 className="h-3 w-3 cursor-pointer"
                 onClick={() => {
-                  setPaymentStatus("");
+                  setPaymentStatus("all");
                   applyFilters();
                 }}
               />
