@@ -9,7 +9,7 @@ import { Loader2, Plus, X, ImageIcon, Sparkles, Copy, RefreshCw } from "lucide-r
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 import {
   Card,
   CardContent,
@@ -368,10 +368,10 @@ export function ProductForm({
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea
+                        <RichTextEditor
+                          value={field.value || ""}
+                          onChange={(html) => field.onChange(html)}
                           placeholder="Enter product description"
-                          className="min-h-32"
-                          {...field}
                         />
                       </FormControl>
                       <FormMessage />

@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
 import { adminAuthMiddleware } from "@/lib/admin-auth"
-import { seoSchema, generalSchema, socialSchema, emailSchema, themeSchema, defaultSettings } from "./schema"
+import { seoSchema, generalSchema, socialSchema, emailSchema, themeSchema, flashSaleSchema, defaultSettings } from "./schema"
 
 // Helper function to safely parse JSON
 function safeJsonParse(value: any) {
@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
       social: { ...defaultSettings.social },
       email: { ...defaultSettings.email },
       theme: { ...defaultSettings.theme },
+      flashSale: { ...defaultSettings.flashSale },
     }
 
     try {
@@ -51,7 +52,8 @@ export async function GET(req: NextRequest) {
                 setting.key === "general" ||
                 setting.key === "social" ||
                 setting.key === "email" ||
-                setting.key === "theme")
+                setting.key === "theme" ||
+                setting.key === "flashSale")
             ) {
               // Ensure value is properly parsed
               const parsedValue = safeJsonParse(setting.value)
@@ -132,6 +134,9 @@ export async function POST(req: NextRequest) {
           break
         case "theme":
           validatedData = themeSchema.parse(data)
+          break
+        case "flashSale":
+          validatedData = flashSaleSchema.parse(data)
           break
         default:
           console.error(`Invalid settings type: ${type}`)

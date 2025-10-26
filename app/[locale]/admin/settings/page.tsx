@@ -20,12 +20,14 @@ import {
   socialSchema,
   emailSchema,
   themeSchema,
+  flashSaleSchema,
   defaultSettings,
   type SEOSettings,
   type GeneralSettings,
   type SocialSettings,
   type EmailSettings,
   type ThemeSettings,
+  type FlashSaleSettings,
 } from "@/app/api/admin/settings/schema"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -126,6 +128,12 @@ export default function SettingsPage() {
     defaultValues: castThemeSettings(defaultSettings.theme),
   })
 
+  // Flash sale form
+  const flashForm = useForm<FlashSaleSettings>({
+    resolver: zodResolver(flashSaleSchema) as any,
+    defaultValues: defaultSettings.flashSale as FlashSaleSettings,
+  })
+
   // Update settings mutation
   const { mutate: updateSettings, isLoading: isUpdating } = useApiMutation("/api/admin/settings", "POST", {
     onSuccess: () => {
@@ -176,6 +184,13 @@ export default function SettingsPage() {
           }))
         }
 
+        if ((data.data as any).flashSale) {
+          flashForm.reset({
+            ...defaultSettings.flashSale,
+            ...(data.data as any).flashSale,
+          } as FlashSaleSettings)
+        }
+
         // Clear any previous errors
         setError(null)
       } catch (e: any) {
@@ -221,6 +236,14 @@ export default function SettingsPage() {
   const onThemeSubmit = (data: ThemeSettings) => {
     updateSettings({
       type: "theme",
+      data,
+    })
+  }
+
+  // Update flash sale settings
+  const onFlashSubmit = (data: FlashSaleSettings) => {
+    updateSettings({
+      type: "flashSale",
       data,
     })
   }
@@ -274,12 +297,13 @@ export default function SettingsPage() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="seo">SEO</TabsTrigger>
             <TabsTrigger value="social">Social Media</TabsTrigger>
             <TabsTrigger value="email">Email</TabsTrigger>
             <TabsTrigger value="theme">Theme</TabsTrigger>
+            <TabsTrigger value="flashSale">Flash Sale</TabsTrigger>
           </TabsList>
 
           {/* General Settings Tab */}
@@ -561,6 +585,152 @@ export default function SettingsPage() {
                     </div>
                   </form>
                 </Form>
+            )}
+          </TabsContent>
+
+          {/* Flash Sale Settings Tab */}
+          <TabsContent value="flashSale" className="space-y-6">
+            {isLoading ? (
+              renderFormSkeleton()
+            ) : (
+              <Form {...flashForm}>
+                <form onSubmit={flashForm.handleSubmit(onFlashSubmit)} className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Flash Sale</CardTitle>
+                      <CardDescription>Configure homepage flash sale banner and countdown</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={flashForm.control}
+                        name="enabled"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">Enable Flash Sale</FormLabel>
+                              <FormDescription>Show Flash Sale section on the homepage</FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={flashForm.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Title</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Flash Sale" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={flashForm.control}
+                          name="subtitle"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Subtitle</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Limited time offers you can't miss" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={flashForm.control}
+                          name="bannerImage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Banner Image URL</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="https://..." />
+                              </FormControl>
+                              <FormDescription>Optional image for the flash sale banner</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={flashForm.control}
+                          name="endsAt"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ends At</FormLabel>
+                              <FormControl>
+                                <Input type="datetime-local" value={field.value || ""} onChange={field.onChange} />
+                              </FormControl>
+                              <FormDescription>When the flash sale should end (local time)</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={flashForm.control}
+                          name="discountPercent"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Discount Percent</FormLabel>
+                              <FormControl>
+                                <Input type="number" min={0} max={100} step={1} value={field.value as any} onChange={field.onChange} />
+                              </FormControl>
+                              <FormDescription>Displayed badge (does not auto-apply pricing)</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={flashForm.control}
+                          name="productIds"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Product IDs (comma-separated)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  value={Array.isArray(field.value) ? field.value.join(',') : ''}
+                                  onChange={(e) => field.onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                                  placeholder="prod_1, prod_2, prod_3"
+                                />
+                              </FormControl>
+                              <FormDescription>Optional: restrict flash sale to specific products</FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <div className="flex justify-end">
+                    <Button type="submit" disabled={isUpdating}>
+                      {isUpdating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Flash Sale
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
             )}
           </TabsContent>
 
@@ -1041,12 +1211,14 @@ export default function SettingsPage() {
           </TabsContent>
 
           {/* Theme Settings Tab */}
-          <TabsContent value="theme" className="space-y-6">
+          
+          {/* Flash Sale Settings Tab */}
+          <TabsContent value="flashSale" className="space-y-6">
             {isLoading ? (
                 renderFormSkeleton()
             ) : (
-                <Form {...themeForm}>
-                  <form onSubmit={themeForm.handleSubmit(onThemeSubmit)} className="space-y-6">
+                <Form {...flashSaleForm}>
+                  <form onSubmit={flashSaleForm.handleSubmit(onFlashSaleSubmit)} className="space-y-6">
                     <Card>
                       <CardHeader>
                         <CardTitle>Theme Settings</CardTitle>
