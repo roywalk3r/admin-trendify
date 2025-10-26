@@ -1,18 +1,29 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { Button } from "./ui/button"
 import { Slider } from "./ui/slider"
 import { Checkbox } from "./ui/checkbox"
 import { X } from "lucide-react"
 
+interface Category {
+  id: string
+  name: string
+  slug: string
+  _count?: { products: number }
+}
+
 export default function ProductFilters() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  
   const [priceRange, setPriceRange] = useState([0, 500])
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedSizes, setSelectedSizes] = useState<string[]>([])
   const [selectedColors, setSelectedColors] = useState<string[]>([])
-
-  const categories = ["T-Shirts", "Dresses", "Jeans", "Jackets", "Shoes", "Accessories", "Bags", "Jewelry"]
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
 
   const sizes = ["XS", "S", "M", "L", "XL", "XXL"]
   const colors = [
@@ -24,10 +35,78 @@ export default function ProductFilters() {
     { name: "Green", value: "#059669" },
   ]
 
-  const handleCategoryChange = (category: string) => {
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories')
+        const data = await response.json()
+        if (data.data && Array.isArray(data.data)) {
+          setCategories(data.data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchCategories()
+  }, [])
+
+  // Initialize filters from URL params
+  useEffect(() => {
+    const minPrice = searchParams.get('minPrice')
+    const maxPrice = searchParams.get('maxPrice')
+    const categories = searchParams.get('categories')
+    const sizes = searchParams.get('sizes')
+    const colors = searchParams.get('colors')
+
+    if (minPrice && maxPrice) {
+      setPriceRange([parseInt(minPrice), parseInt(maxPrice)])
+    }
+    if (categories) {
+      setSelectedCategories(categories.split(','))
+    }
+    if (sizes) {
+      setSelectedSizes(sizes.split(','))
+    }
+    if (colors) {
+      setSelectedColors(colors.split(','))
+    }
+  }, [])
+
+  const handleCategoryChange = (categorySlug: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category],
+      prev.includes(categorySlug) ? prev.filter((c) => c !== categorySlug) : [...prev, categorySlug],
     )
+  }
+
+  const applyFilters = () => {
+    const params = new URLSearchParams()
+    
+    // Price range
+    if (priceRange[0] > 0 || priceRange[1] < 500) {
+      params.set('minPrice', priceRange[0].toString())
+      params.set('maxPrice', priceRange[1].toString())
+    }
+    
+    // Categories
+    if (selectedCategories.length > 0) {
+      params.set('categories', selectedCategories.join(','))
+    }
+    
+    // Sizes
+    if (selectedSizes.length > 0) {
+      params.set('sizes', selectedSizes.join(','))
+    }
+    
+    // Colors
+    if (selectedColors.length > 0) {
+      params.set('colors', selectedColors.join(','))
+    }
+    
+    // Update URL with new params
+    router.push(`/products?${params.toString()}`)
   }
 
   const clearAllFilters = () => {
@@ -35,6 +114,7 @@ export default function ProductFilters() {
     setSelectedCategories([])
     setSelectedSizes([])
     setSelectedColors([])
+    router.push('/products')
   }
 
   return (
@@ -65,23 +145,30 @@ export default function ProductFilters() {
       {/* Categories */}
       <div className="mb-6">
         <h4 className="font-semibold mb-3">Categories</h4>
-        <div className="space-y-2">
-          {categories.map((category) => (
-            <div key={category} className="flex items-center space-x-2">
-              <Checkbox
-                id={category}
-                checked={selectedCategories.includes(category)}
-                onCheckedChange={() => handleCategoryChange(category)}
-              />
-              <label
-                htmlFor={category}
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                {category}
-              </label>
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        ) : (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {categories.map((category) => (
+              <div key={category.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={category.slug}
+                  checked={selectedCategories.includes(category.slug)}
+                  onCheckedChange={() => handleCategoryChange(category.slug)}
+                />
+                <label
+                  htmlFor={category.slug}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  {category.name}
+                  {category._count?.products !== undefined && (
+                    <span className="text-muted-foreground ml-1">({category._count.products})</span>
+                  )}
+                </label>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Sizes */}
@@ -126,7 +213,7 @@ export default function ProductFilters() {
       </div>
 
       {/* Apply Filters Button */}
-      <Button className="w-full">Apply Filters</Button>
+      <Button className="w-full" onClick={applyFilters}>Apply Filters</Button>
     </motion.div>
   )
 }
