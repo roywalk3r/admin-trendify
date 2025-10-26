@@ -50,7 +50,7 @@ export interface AppSettings {
 
 const defaultSettings: AppSettings = {
   storeName: "Trendify",
-  storeEmail: "support@trendify.com",
+  storeEmail: "testpjmail@gmail.com",
   currencyCode: "GHS",
   currencySymbol: "GH₵",
   taxRate: 0.10,
@@ -71,7 +71,7 @@ const defaultSettings: AppSettings = {
   twitterUrl: "",
   instagramUrl: "",
   linkedinUrl: "",
-  fromEmail: "noreply@trendify.com",
+  fromEmail: "noreply@testpjmail@gmail.com",
   fromName: "Trendify",
   enableWishlist: true,
   enableReviews: true,

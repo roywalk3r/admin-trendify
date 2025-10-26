@@ -16,7 +16,13 @@ export async function GET(req: NextRequest, { params }: { params: { orderNumber:
 
     const order = await prisma.order.findFirst({
       where: { orderNumber, userId: user.id },
-      include: { payment: true, orderItems: true, shippingAddress: true },
+      include: {
+        payment: true,
+        orderItems: { include: { product: { select: { images: true } } } },
+        shippingAddress: true,
+        driver: true,
+        coupon: true,
+      },
     })
 
     if (!order) return createApiResponse({ error: "Order not found", status: 404 })

@@ -5,7 +5,9 @@ import { z } from "zod"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Star } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Star, Loader2, ImagePlus } from "lucide-react"
+import { toast } from "sonner"
 
 const schema = z.object({
   rating: z.number().min(1).max(5),
@@ -63,38 +65,123 @@ export function ReviewForm({ productId, onSubmitted }: { productId: string; onSu
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <div className="mb-2 text-sm font-medium">Your rating</div>
-        <div className="flex gap-1">
+    <div className="space-y-6">
+      {/* Rating Selection */}
+      <div className="space-y-3">
+        <Label className="text-base font-semibold">Your Rating *</Label>
+        <div className="flex gap-2">
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               key={n}
               type="button"
-              className="p-1"
+              className="group p-2 rounded-lg hover:bg-muted/50 transition-all duration-200"
               onClick={() => setRating(n)}
               aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
             >
-              <Star className={`h-6 w-6 ${n <= rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+              <Star
+                className={`h-8 w-8 transition-all duration-200 ${
+                  n <= rating
+                    ? "fill-yellow-400 text-yellow-400 scale-110"
+                    : "text-muted-foreground group-hover:text-yellow-400/50 group-hover:scale-105"
+                }`}
+              />
             </button>
           ))}
         </div>
+        <p className="text-sm text-muted-foreground">
+          {rating === 0 && "Select a rating to continue"}
+          {rating === 1 && "Poor - Not satisfied"}
+          {rating === 2 && "Fair - Below expectations"}
+          {rating === 3 && "Good - Met expectations"}
+          {rating === 4 && "Very Good - Exceeded expectations"}
+          {rating === 5 && "Excellent - Highly recommend!"}
+        </p>
       </div>
-      <div>
-        <Input placeholder="Title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
-      </div>
-      <div>
-        <Textarea placeholder="Share your experience (optional)" value={comment} onChange={(e) => setComment(e.target.value)} />
-      </div>
-      <div>
+
+      {/* Review Title */}
+      <div className="space-y-2">
+        <Label htmlFor="title" className="text-base font-semibold">
+          Review Title <span className="text-muted-foreground font-normal">(Optional)</span>
+        </Label>
         <Input
-          placeholder="Image URLs separated by commas (optional)"
+          id="title"
+          placeholder="Summarize your experience..."
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          maxLength={255}
+          className="h-11"
+        />
+        <p className="text-xs text-muted-foreground">{title.length}/255 characters</p>
+      </div>
+
+      {/* Review Comment */}
+      <div className="space-y-2">
+        <Label htmlFor="comment" className="text-base font-semibold">
+          Your Review <span className="text-muted-foreground font-normal">(Optional)</span>
+        </Label>
+        <Textarea
+          id="comment"
+          placeholder="Share details about your experience with this product. What did you like or dislike? How does it perform?"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          className="min-h-[120px] resize-none"
+          maxLength={1000}
+        />
+        <p className="text-xs text-muted-foreground">{comment.length}/1000 characters</p>
+      </div>
+
+      {/* Image URLs */}
+      <div className="space-y-2">
+        <Label htmlFor="images" className="text-base font-semibold flex items-center gap-2">
+          <ImagePlus className="h-4 w-4" />
+          Add Photos <span className="text-muted-foreground font-normal">(Optional)</span>
+        </Label>
+        <Input
+          id="images"
+          placeholder="Enter image URLs separated by commas"
           value={imageUrls}
           onChange={(e) => setImageUrls(e.target.value)}
+          className="h-11"
         />
+        <p className="text-xs text-muted-foreground">
+          Add photos to help others see your experience
+        </p>
       </div>
-      {error && <div className="text-sm text-red-500">{error}</div>}
-      <Button onClick={submit} disabled={submitting || rating < 1}>{submitting ? "Submitting..." : "Submit Review"}</Button>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+          <p className="text-sm text-destructive font-medium">{error}</p>
+        </div>
+      )}
+
+      {/* Submit Button */}
+      <div className="flex gap-3 pt-4">
+        <Button
+          onClick={submit}
+          disabled={submitting || rating < 1}
+          size="lg"
+          className="flex-1 h-12 text-base font-semibold gap-2"
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            <>
+              <Star className="h-5 w-5" />
+              Submit Review
+            </>
+          )}
+        </Button>
+      </div>
+
+      {rating < 1 && (
+        <p className="text-sm text-muted-foreground text-center">
+          Please select a rating before submitting
+        </p>
+      )}
     </div>
   )
 }

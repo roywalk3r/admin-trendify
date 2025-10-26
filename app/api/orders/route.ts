@@ -1,7 +1,10 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { adminAuthMiddleware } from "@/lib/admin-auth"
 import { Decimal } from "@prisma/client/runtime/library"
+import { createApiResponse, handleApiError } from "@/lib/api-utils"
+import { sendOrderConfirmationEmail } from "@/lib/email"
+import crypto from "crypto"
 
 export async function GET(request: NextRequest) {
   try {
@@ -53,10 +56,10 @@ export async function GET(request: NextRequest) {
       })
 
       if (!order) {
-        return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 })
+        return createApiResponse({ status: 404, error: "Order not found" })
       }
 
-      return NextResponse.json({ success: true, order })
+      return createApiResponse({ status: 200, data: order })
     }
 
     // Build where clause for listing orders
@@ -99,37 +102,48 @@ export async function GET(request: NextRequest) {
       prisma.order.count({ where }),
     ])
 
-    return NextResponse.json({
-      success: true,
-      orders,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
+    return createApiResponse({
+      status: 200,
+      data: {
+        orders,
+        pagination: { total, page, limit, pages: Math.ceil(total / limit) },
       },
     })
   } catch (error) {
-    console.error("Error fetching orders:", error)
-    return NextResponse.json({ success: false, message: "Failed to fetch orders" }, { status: 500 })
+    return handleApiError(error)
   }
 }
 
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, items, shippingAddress, addressId, paymentMethod, total, subtotal, tax, shipping, couponCode } = await request.json()
+    const { userId, email, items, shippingAddress, addressId, paymentMethod, total, subtotal, tax, shipping, couponCode, delivery } = await request.json()
 
     // Validate required fields
-    if (!userId || !items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
+    if ((!userId && !email) || !items || !Array.isArray(items) || items.length === 0) {
+      return createApiResponse({ status: 400, error: "Missing required fields" })
+    }
+
+    // Support guest checkout: if userId is not provided, create or fetch a user by email
+    let effectiveUserId = userId as string | undefined
+    if (!effectiveUserId && email) {
+      const existing = await prisma.user.findFirst({ where: { email: String(email) } })
+      if (existing) {
+        effectiveUserId = existing.id
+      } else {
+        const nameFromEmail = String(email).split("@")[0] || "Guest"
+        const created = await prisma.user.create({
+          data: { email: String(email), name: nameFromEmail, role: "customer", isVerified: true },
+        })
+        effectiveUserId = created.id
+      }
     }
 
     // Resolve shipping address: either object provided or fetched via addressId
     let resolvedAddress: any = shippingAddress || null
     if (!resolvedAddress && addressId) {
       const addr = await prisma.address.findFirst({
-        where: { id: addressId, userId },
+        where: { id: addressId, userId: effectiveUserId },
       })
       if (addr) {
         resolvedAddress = {
@@ -144,8 +158,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!resolvedAddress || !resolvedAddress.fullName || !resolvedAddress.street || !resolvedAddress.city) {
-      return NextResponse.json({ success: false, message: "Valid shipping address is required" }, { status: 400 })
+    const isPickup = delivery?.method === "pickup"
+    if (!isPickup) {
+      if (!resolvedAddress || !resolvedAddress.fullName || !resolvedAddress.street || !resolvedAddress.city) {
+        return createApiResponse({ status: 400, error: "Valid shipping address is required" })
+      }
     }
 
     // Validate items and calculate subtotal
@@ -167,18 +184,15 @@ export async function POST(request: NextRequest) {
       })
 
       if (!product) {
-        return NextResponse.json({ success: false, message: `Product not found: ${item.productId}` }, { status: 400 })
+        return createApiResponse({ status: 400, error: `Product not found: ${item.productId}` })
       }
 
       if (!product.isActive) {
-        return NextResponse.json({ success: false, message: `Product no longer available: ${product.name}` }, { status: 400 })
+        return createApiResponse({ status: 400, error: `Product no longer available: ${product.name}` })
       }
 
       if (product.stock < item.quantity) {
-        return NextResponse.json(
-          { success: false, message: `Insufficient stock for ${product.name}. Available: ${product.stock}` },
-          { status: 400 }
-        )
+        return createApiResponse({ status: 400, error: `Insufficient stock for ${product.name}. Available: ${product.stock}` })
       }
 
       const unitPrice = Number(product.price as unknown as Decimal)
@@ -240,13 +254,47 @@ export async function POST(request: NextRequest) {
 
     const finalTotal = calculatedSubtotal + (tax || 0) + (shipping || 0) - discount
 
+    // Idempotency: compute a signature of this order request and reuse recent unpaid order if present
+    const sigPayload = {
+      userId: effectiveUserId,
+      items: validatedItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+      shipping: shipping || 0,
+      tax: tax || 0,
+      couponCode: couponCode || null,
+      delivery: delivery || null,
+      addressId: addressId || null,
+    }
+    const signature = crypto.createHash("sha256").update(JSON.stringify(sigPayload)).digest("hex")
+    const sigTag = `sig:${signature}`
+
+    // Try to find an existing pending/unpaid order with the same signature in the last 10 minutes
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
+    const existingSame = await prisma.order.findFirst({
+      where: {
+        userId: String(effectiveUserId),
+        status: "pending",
+        paymentStatus: "unpaid",
+        notes: sigTag,
+        createdAt: { gte: tenMinutesAgo },
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        orderItems: { include: { product: { select: { id: true, name: true, images: true, price: true } } } },
+        payment: true,
+        shippingAddress: true,
+      },
+    })
+    if (existingSame) {
+      return createApiResponse({ status: 200, data: { order: existingSame } })
+    }
+
     // Create order in transaction
     const order = await prisma.$transaction(async (tx) => {
       // Create order
       const newOrder = await tx.order.create({
         data: {
           orderNumber: `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
-          userId,
+          userId: String(effectiveUserId),
           status: "pending",
           paymentStatus: "unpaid",
           totalAmount: finalTotal,
@@ -255,6 +303,9 @@ export async function POST(request: NextRequest) {
           shipping: shipping || 0,
           discount,
           couponId,
+          estimatedDelivery: (() => { const d = new Date(); d.setDate(d.getDate() + 3); return d })(),
+          // Store signature tag in notes for idempotency lookup
+          notes: sigTag,
         },
       })
 
@@ -272,18 +323,20 @@ export async function POST(request: NextRequest) {
       })
 
       // Create shipping address
-      await tx.shippingAddress.create({
-        data: {
-          orderId: newOrder.id,
-          fullName: resolvedAddress.fullName,
-          street: resolvedAddress.street,
-          city: resolvedAddress.city,
-          state: resolvedAddress.state || "",
-          zipCode: resolvedAddress.zipCode || "",
-          country: resolvedAddress.country || "NG",
-          phone: resolvedAddress.phone || "",
-        },
-      })
+      if (resolvedAddress) {
+        await tx.shippingAddress.create({
+          data: {
+            orderId: newOrder.id,
+            fullName: resolvedAddress.fullName,
+            street: resolvedAddress.street,
+            city: resolvedAddress.city,
+            state: resolvedAddress.state || "",
+            zipCode: resolvedAddress.zipCode || "",
+            country: resolvedAddress.country || "NG",
+            phone: resolvedAddress.phone || "",
+          },
+        })
+      }
 
       // Create payment record with pending status
       await tx.payment.create({
@@ -351,45 +404,32 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Send order confirmation email (non-blocking)
-    if (completeOrder) {
+    // Send order confirmation email only when paid; for pending/unpaid, send after Paystack verification
+    if (completeOrder && completeOrder.paymentStatus === 'paid') {
       try {
-        const { sendOrderConfirmationEmail } = await import('@/lib/email/send-order-email')
-        await sendOrderConfirmationEmail(
-          completeOrder.user.email,
-          completeOrder.user.name,
-          {
-            orderNumber: completeOrder.orderNumber,
-            createdAt: completeOrder.createdAt,
-            subtotal: Number(completeOrder.subtotal),
-            tax: Number(completeOrder.tax),
-            shipping: Number(completeOrder.shipping),
-            discount: Number(completeOrder.discount),
-            totalAmount: Number(completeOrder.totalAmount),
-            orderItems: completeOrder.orderItems.map(item => ({
-              productName: item.productName,
-              quantity: item.quantity,
-              unitPrice: Number(item.unitPrice),
-              totalPrice: Number(item.totalPrice),
-            })),
-            shippingAddress: completeOrder.shippingAddress || undefined,
-            paymentStatus: completeOrder.paymentStatus,
-            status: completeOrder.status,
-          }
-        )
+        await sendOrderConfirmationEmail(completeOrder.user.email, {
+          orderNumber: completeOrder.orderNumber,
+          customerName: completeOrder.user.name || completeOrder.user.email.split("@")[0] || "Customer",
+          items: completeOrder.orderItems.map((item) => ({
+            name: item.productName,
+            quantity: item.quantity,
+            price: Number(item.unitPrice),
+            image: item.product?.images?.[0] || undefined,
+          })),
+          subtotal: Number(completeOrder.subtotal),
+          tax: Number(completeOrder.tax),
+          shipping: Number(completeOrder.shipping),
+          total: Number(completeOrder.totalAmount),
+          estimatedDelivery: completeOrder.estimatedDelivery ? new Date(completeOrder.estimatedDelivery).toLocaleDateString() : undefined,
+        })
       } catch (emailError) {
         // Log error but don't fail the order creation
         console.error('Failed to send order confirmation email:', emailError)
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Order created successfully",
-      order: completeOrder,
-    })
+    return createApiResponse({ status: 201, data: { order: completeOrder } })
   } catch (error) {
-    console.error("Error creating order:", error)
-    return NextResponse.json({ success: false, message: "Failed to create order" }, { status: 500 })
+    return handleApiError(error)
   }
 }

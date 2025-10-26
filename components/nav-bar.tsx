@@ -426,7 +426,6 @@ export default function NavBar() {
 function AdminLink() {
     const [isAdmin, setIsAdmin] = useState(false)
     const { data } = useApi<any>("/api/admin/check")
-    console.log(data, "Admin Chexc")
     useEffect(() => {
         if (data?.isAdmin) {
             setIsAdmin(true)

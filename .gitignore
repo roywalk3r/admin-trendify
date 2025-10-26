@@ -27,3 +27,13 @@ yarn-error.log*
 next-env.d.ts
 # Sentry Config File
 .env.sentry-build-plugin
+
+# test coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# test artifacts
+auth.json
+playwright-report/
+test-results/

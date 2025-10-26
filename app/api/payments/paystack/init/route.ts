@@ -8,10 +8,14 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { orderId, email, callbackUrl } = body as {
+    const { orderId, email, callbackUrl, delivery, addressId, shippingFee, items } = body as {
       orderId: string;
       email: string;
       callbackUrl?: string;
+      delivery?: { method?: string; pickupCity?: string | null; pickupLocation?: string | null };
+      addressId?: string | null;
+      shippingFee?: number;
+      items?: Array<{ id: string; name?: string; sku?: string | null; price: number; quantity: number; image?: string | null }>;
     };
 
     if (!orderId || !email) {
@@ -66,8 +70,29 @@ export async function POST(req: NextRequest) {
         amount: amountKobo,
         currency,
         reference,
-        callback_url: callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/checkout/confirm?orderId=${encodeURIComponent(order.id)}`,
-        metadata: { orderId: order.id, reference },
+        callback_url: callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/checkout/confirm`,
+        metadata: {
+          orderId: order.id,
+          reference,
+          // include delivery details so /api/paystack/verify can validate pickup
+          delivery: delivery ? {
+            method: (delivery.method || "pickup").toString(),
+            pickupCity: delivery.pickupCity ?? null,
+            pickupLocation: delivery.pickupLocation ?? null,
+          } : undefined,
+          addressId: addressId || undefined,
+          shippingFee: typeof shippingFee === "number" ? shippingFee : undefined,
+          email,
+          // include a trimmed snapshot of items for verification/receipt
+          items: Array.isArray(items) ? items.map((it) => ({
+            id: String(it.id),
+            name: it.name,
+            sku: it.sku ?? null,
+            price: Number(it.price),
+            quantity: Number(it.quantity),
+            image: it.image || null,
+          })) : undefined,
+        },
       }),
     });
 

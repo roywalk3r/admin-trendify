@@ -97,7 +97,8 @@ export default function DeliveryOptions({ value, onChange, className }: Props) {
         <div>
           <Label>{value.method === "pickup" ? t("checkout.pickupCity") : t("checkout.city")}</Label>
           <Select
-            value={value.pickupCity || undefined}
+            // keep Select controlled for lifetime; use empty string when not selected yet
+            value={(value.pickupCity as string) || ""}
             onValueChange={(city) => {
               const locs = (options.find((o) => o.name === city)?.locations || []).map((l) => l.name)
               onChange({ method: value.method, pickupCity: city, pickupLocation: value.method === "pickup" ? (locs[0] || null) : null })
@@ -115,7 +116,8 @@ export default function DeliveryOptions({ value, onChange, className }: Props) {
           <div>
             <Label>{t("checkout.pickupLocation")}</Label>
             <Select
-              value={value.pickupLocation || undefined}
+              // keep controlled with empty string fallback
+              value={(value.pickupLocation as string) || ""}
               onValueChange={(loc) => onChange({ ...value, pickupLocation: loc })}
             >
               <SelectTrigger className="w-full"><SelectValue placeholder={t("checkout.selectLocation")} /></SelectTrigger>

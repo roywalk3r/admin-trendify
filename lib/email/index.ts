@@ -11,8 +11,11 @@
 import { logInfo, logError } from "@/lib/logger"
 
 // Email configuration
-const FROM_EMAIL = process.env.FROM_EMAIL || "orders@yourdomain.com"
-const APP_NAME = "Trendify"
+// Sender strategy:
+// - In production: require FROM_EMAIL (verified domain). If missing, skip send to avoid Resend 403.
+// - In non-production: fallback to onboarding@resend.dev for testing.
+const RAW_FROM_EMAIL = process.env.FROM_EMAIL || ""
+const APP_NAME = process.env.APP_NAME || "Trendify"
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
 // Check if Resend is configured
@@ -42,6 +45,17 @@ async function sendEmail({
   }
 
   try {
+    // Resolve sender per environment
+    const isProd = process.env.NODE_ENV === "production"
+    const senderEmail = RAW_FROM_EMAIL || (!isProd ? "onboarding@resend.dev" : "")
+    if (!senderEmail) {
+      // In production without a verified FROM_EMAIL, do not attempt to send
+      const msg = "FROM_EMAIL is required in production for Resend. Email not sent."
+      logError(new Error(msg), { context: "Email sending", to, subject })
+      return { success: false, error: msg }
+    }
+    const fromHeader = `${APP_NAME} <${senderEmail}>`
+
     // Using fetch instead of Resend SDK to avoid additional dependency
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -50,7 +64,7 @@ async function sendEmail({
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: FROM_EMAIL,
+        from: fromHeader,
         to: [to],
         subject,
         html,
@@ -59,8 +73,10 @@ async function sendEmail({
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(`Resend API error: ${JSON.stringify(error)}`)
+      const error = await response.json().catch(() => ({}))
+      // Log and return gracefully (don’t throw) so order creation flows don’t fail
+      logError(new Error("Resend API error"), { context: "Email sending", to, subject, error })
+      return { success: false, error }
     }
 
     const data = await response.json()
@@ -91,6 +107,7 @@ export async function sendOrderConfirmationEmail(
     tax: number
     shipping: number
     total: number
+    estimatedDelivery?: string
   }
 ) {
   const subject = `Order Confirmation - ${orderData.orderNumber}`
@@ -170,6 +187,11 @@ export async function sendOrderConfirmationEmail(
                   <span>Shipping:</span>
                   <span>$${orderData.shipping.toFixed(2)}</span>
                 </div>
+                ${orderData.estimatedDelivery ? `
+                <div class="total-row">
+                  <span>Estimated Delivery:</span>
+                  <span>${orderData.estimatedDelivery}</span>
+                </div>` : ''}
                 <div class="total-row final">
                   <span>Total:</span>
                   <span>$${orderData.total.toFixed(2)}</span>
@@ -377,13 +399,16 @@ export async function sendShippingNotificationEmail(
     trackingNumber?: string
     carrier?: string
     estimatedDelivery?: string
+    driverName?: string
+    driverPhone?: string
+    driverEmail?: string
   }
 ) {
   const subject = `Your order ${orderData.orderNumber} has shipped! 📦`
   
   const html = `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
       <head>
         <meta charset="utf-8">
         <style>
@@ -417,6 +442,15 @@ export async function sendShippingNotificationEmail(
               
               <div style="text-align: center;">
                 <a href="${APP_URL}/orders/${orderData.orderNumber}/track" class="button">Track Your Package</a>
+              </div>
+            ` : ''}
+
+            ${orderData.driverName || orderData.driverPhone || orderData.driverEmail ? `
+              <div class="tracking-box">
+                <div style="font-size: 14px; color: #666; margin-bottom: 10px;">Assigned Driver</div>
+                ${orderData.driverName ? `<div><strong>Name:</strong> ${orderData.driverName}</div>` : ''}
+                ${orderData.driverPhone ? `<div><strong>Phone:</strong> ${orderData.driverPhone}</div>` : ''}
+                ${orderData.driverEmail ? `<div><strong>Email:</strong> ${orderData.driverEmail}</div>` : ''}
               </div>
             ` : ''}
             

@@ -1,34 +1,27 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@clerk/nextjs/server"
+import { createApiResponse, handleApiError } from "@/lib/api-utils"
+import { sendOrderConfirmationEmail } from "@/lib/email"
 
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth()
     if (!userId) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      )
+      return createApiResponse({ status: 401, error: "Unauthorized" })
     }
 
     const { reference, orderId } = await request.json()
 
     if (!reference || !orderId) {
-      return NextResponse.json(
-        { success: false, message: "Reference and orderId are required" },
-        { status: 400 }
-      )
+      return createApiResponse({ status: 400, error: "Reference and orderId are required" })
     }
 
     // Verify payment with Paystack
     const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY
     if (!paystackSecretKey) {
       console.error("Paystack secret key not configured")
-      return NextResponse.json(
-        { success: false, message: "Payment gateway not configured" },
-        { status: 500 }
-      )
+      return createApiResponse({ status: 500, error: "Payment gateway not configured" })
     }
 
     const verifyResponse = await fetch(
@@ -45,10 +38,7 @@ export async function POST(request: NextRequest) {
     const verifyData = await verifyResponse.json()
 
     if (!verifyData.status || verifyData.data.status !== "success") {
-      return NextResponse.json(
-        { success: false, message: "Payment verification failed" },
-        { status: 400 }
-      )
+      return createApiResponse({ status: 400, error: "Payment verification failed" })
     }
 
     // Check if order exists and belongs to user
@@ -69,10 +59,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!order) {
-      return NextResponse.json(
-        { success: false, message: "Order not found" },
-        { status: 404 }
-      )
+      return createApiResponse({ status: 404, error: "Order not found" })
     }
 
     // Update payment and order status
@@ -140,49 +127,38 @@ export async function POST(request: NextRequest) {
     // Send order confirmation email after payment verification (non-blocking)
     if (updatedOrder) {
       try {
-        const { sendOrderConfirmationEmail } = await import('@/lib/email/send-order-email')
-        await sendOrderConfirmationEmail(
-          updatedOrder.user.email,
-          updatedOrder.user.name,
-          {
-            orderNumber: updatedOrder.orderNumber,
-            createdAt: updatedOrder.createdAt,
-            subtotal: Number(updatedOrder.subtotal),
-            tax: Number(updatedOrder.tax),
-            shipping: Number(updatedOrder.shipping),
-            discount: Number(updatedOrder.discount),
-            totalAmount: Number(updatedOrder.totalAmount),
-            orderItems: updatedOrder.orderItems.map(item => ({
-              productName: item.productName,
-              quantity: item.quantity,
-              unitPrice: Number(item.unitPrice),
-              totalPrice: Number(item.totalPrice),
-            })),
-            shippingAddress: updatedOrder.shippingAddress || undefined,
-            paymentStatus: 'paid',
-            status: 'processing',
-          }
-        )
+        await sendOrderConfirmationEmail(updatedOrder.user.email, {
+          orderNumber: updatedOrder.orderNumber,
+          customerName: updatedOrder.user.name || updatedOrder.user.email.split("@")[0] || "Customer",
+          items: updatedOrder.orderItems.map((item) => ({
+            name: item.productName,
+            quantity: item.quantity,
+            price: Number(item.unitPrice),
+          })),
+          subtotal: Number(updatedOrder.subtotal),
+          tax: Number(updatedOrder.tax),
+          shipping: Number(updatedOrder.shipping),
+          total: Number(updatedOrder.totalAmount),
+          estimatedDelivery: updatedOrder.estimatedDelivery ? new Date(updatedOrder.estimatedDelivery).toLocaleDateString() : undefined,
+        })
       } catch (emailError) {
         console.error('Failed to send order confirmation email:', emailError)
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Payment verified successfully",
-      order: {
-        id: order.id,
-        orderNumber: order.orderNumber,
-        status: "processing",
-        paymentStatus: "paid",
+    return createApiResponse({
+      status: 200,
+      data: {
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: "processing",
+          paymentStatus: "paid",
+        },
       },
     })
   } catch (error) {
     console.error("Error verifying payment:", error)
-    return NextResponse.json(
-      { success: false, message: "Failed to verify payment" },
-      { status: 500 }
-    )
+    return handleApiError(error)
   }
 }

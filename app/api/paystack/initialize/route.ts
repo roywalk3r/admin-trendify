@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 import { paystackInitialize } from "@/lib/paystack"
 import prisma from "@/lib/prisma"
+import { createApiResponse, handleApiError } from "@/lib/api-utils"
 // Shipping helpers now sourced from DB (DeliveryCity/PickupLocation)
 
 const bodySchema = z.object({
@@ -17,10 +18,10 @@ const bodySchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth()
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!userId) return createApiResponse({ status: 401, error: "Unauthorized" })
 
     const parsed = bodySchema.safeParse(await req.json())
-    if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+    if (!parsed.success) return createApiResponse({ status: 400, error: parsed.error.flatten() as any })
 
     const { amount, email, metadata, addressId } = parsed.data
 
@@ -31,27 +32,27 @@ export async function POST(req: NextRequest) {
       const cityName = String(delivery?.pickupCity || "").trim()
       const locName = String(delivery?.pickupLocation || "").trim()
       if (!cityName || !locName) {
-        return NextResponse.json({ error: "Invalid pickup selection" }, { status: 400 })
+        return createApiResponse({ status: 400, error: "Invalid pickup selection" })
       }
       const city = await prisma.deliveryCity.findFirst({
         where: { name: { equals: cityName, mode: "insensitive" }, isActive: true },
         include: { pickupLocations: { where: { isActive: true } } },
       })
       if (!city || !city.pickupLocations.some((p) => p.name.toLowerCase() === locName.toLowerCase())) {
-        return NextResponse.json({ error: "Invalid pickup selection" }, { status: 400 })
+        return createApiResponse({ status: 400, error: "Invalid pickup selection" })
       }
     }
     // If delivery is door-to-door, require an address that belongs to the user
     let address: any = null
     if (method === "door") {
-      if (!addressId) return NextResponse.json({ error: "addressId is required for door delivery" }, { status: 400 })
+      if (!addressId) return createApiResponse({ status: 400, error: "addressId is required for door delivery" })
       address = await prisma.address.findFirst({ where: { id: addressId, userId } })
-      if (!address) return NextResponse.json({ error: "Invalid address", details: "Address not found for user" }, { status: 400 })
+      if (!address) return createApiResponse({ status: 400, error: "Invalid address" })
     }
 
     const secretKey = process.env.PAYSTACK_SECRET_KEY
     const publicUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"
-    if (!secretKey) return NextResponse.json({ error: "PAYSTACK_SECRET_KEY not set" }, { status: 500 })
+    if (!secretKey) return createApiResponse({ status: 500, error: "PAYSTACK_SECRET_KEY not set" })
 
     // Decide currency on server based on merchant setup. Prefer env.
     const serverCurrency = (process.env.PAYSTACK_CURRENCY || process.env.NEXT_PUBLIC_CURRENCY || "GHS").toUpperCase()
@@ -112,16 +113,17 @@ export async function POST(req: NextRequest) {
     const init = await paystackInitialize(secretKey, initPayload)
 
     if (!init.status || !init.data) {
-      return NextResponse.json({ error: init.message || "Failed to initialize payment" }, { status: 400 })
+      return createApiResponse({ status: 400, error: init.message || "Failed to initialize payment" })
     }
 
-    return NextResponse.json({
+    return createApiResponse({
+      status: 200,
       data: {
         authorization_url: init.data.authorization_url,
         reference: init.data.reference,
       },
     })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Internal Server Error" }, { status: 500 })
+    return handleApiError(e)
   }
 }

@@ -107,12 +107,38 @@ export default function OrderDetailsPage() {
         </div>
       </div>
 
+      {/* Shipment / Tracking */}
+      <div className="rounded border p-4 space-y-2">
+        <p className="text-sm text-muted-foreground">Shipment</p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Tracking number</p>
+            <p className="font-medium">{order.trackingNumber || "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Estimated delivery</p>
+            <p className="font-medium">{order.estimatedDelivery ? new Date(order.estimatedDelivery).toLocaleDateString() : "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Driver</p>
+            {order.driver ? (
+              <div className="text-sm">
+                <p className="font-medium leading-tight">{order.driver.name}</p>
+                <p className="text-muted-foreground">{order.driver.phone}{order.driver.email ? ` · ${order.driver.email}` : ""}</p>
+              </div>
+            ) : (
+              <p className="font-medium">{order.status === "shipped" ? "Driver assigned soon" : "Preparing shipment"}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="rounded border">
         {order.orderItems?.map((it: any) => (
           <div key={it.id} className="flex items-center gap-3 p-3 border-b last:border-b-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            {it?.productData?.image ? (
-              <img src={it.productData.image} alt={it.productName} className="h-12 w-12 rounded object-cover ring-1 ring-border" />
+            {it?.productData?.image || (it as any)?.product?.images?.[0] ? (
+              <img src={(it as any)?.product?.images?.[0] || it.productData.image} alt={it.productName} className="h-12 w-12 rounded object-cover ring-1 ring-border" />
             ) : (
               <div className="h-12 w-12 rounded bg-muted" />
             )}

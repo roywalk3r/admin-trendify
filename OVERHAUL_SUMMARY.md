@@ -116,13 +116,13 @@ POST /api/payments/verify
 │ Status: PENDING             │
 │                             │
 │ Items Ordered:              │
-│ - Product A × 2   ₦20,000  │
-│ - Product B × 1   ₦15,000  │
+│ - Product A × 2   ₵20,000  │
+│ - Product B × 1   ₵15,000  │
 │                             │
-│ Subtotal:     ₦35,000       │
-│ Shipping:     ₦2,000        │
+│ Subtotal:     ₵35,000       │
+│ Shipping:     ₵2,000        │
 │ ────────────────────────    │
-│ Total:        ₦37,000       │
+│ Total:        ₵37,000       │
 │                             │
 │ [Track Your Order]          │
 └─────────────────────────────┘

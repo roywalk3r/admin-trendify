@@ -134,83 +134,103 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   return (
-      <div className="min-h-screen bg-background">
-        <div className="border-b border-muted bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-          <div className="container mx-auto px-4 py-4">
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+        {/* Enhanced sticky header with glass morphism */}
+        <div className="border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 shadow-sm">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
                 <Link href="/products">
-                  <Button variant="ghost" size="sm" className="gap-2">
+                  <Button variant="ghost" size="sm" className="gap-2 hover:gap-3 transition-all">
                     <ArrowLeft className="w-4 h-4" />
-                    Back to Products
+                    <span className="hidden sm:inline">Back to Products</span>
+                    <span className="sm:hidden">Back</span>
                   </Button>
                 </Link>
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem>
-                      <BreadcrumbLink href="/">Home</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                      <BreadcrumbLink href="/products">Products</BreadcrumbLink>
-                    </BreadcrumbItem>
-                    {product.category && (
-                        <>
-                          <BreadcrumbSeparator />
-                          <BreadcrumbItem>
-                            <BreadcrumbLink href={`/categories/${product.category.slug}`}>
-                              {product.category.name}
-                            </BreadcrumbLink>
-                          </BreadcrumbItem>
-                        </>
-                    )}
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                      <BreadcrumbPage className="text-accent">{product.name}</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
+                <div className="hidden md:block">
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem>
+                        <BreadcrumbLink href="/" className="hover:text-primary transition-colors">Home</BreadcrumbLink>
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        <BreadcrumbLink href="/products" className="hover:text-primary transition-colors">Products</BreadcrumbLink>
+                      </BreadcrumbItem>
+                      {product.category && (
+                          <>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                              <BreadcrumbLink href={`/categories/${product.category.slug}`} className="hover:text-primary transition-colors">
+                                {product.category.name}
+                              </BreadcrumbLink>
+                            </BreadcrumbItem>
+                          </>
+                      )}
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage className="text-primary font-medium">{product.name}</BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
         <SettingsProvider>
-          <main className="container mx-auto px-4 py-12">
-            <ProductDetail product={productWithRating as any} />
-
-          {(product.weight || product.dimensions || product.sku) && (
-            <div className="mt-12 border-t pt-8">
-              <h2 className="text-2xl font-bold mb-6">Specifications</h2>
-              <div className="grid md:grid-cols-2 gap-6">
-                {product.weight && (
-                  <div className="flex justify-between py-2 border-b">
-                    <span className="font-medium">Weight</span>
-                    <span>{Number(product.weight)}g</span>
-                  </div>
-                )}
-                {product.dimensions && (
-                  <div className="flex justify-between py-2 border-b">
-                    <span className="font-medium">Dimensions</span>
-                    <span>{typeof product.dimensions === "string" ? product.dimensions : JSON.stringify(product.dimensions)}</span>
-                  </div>
-                )}
-                {product.sku && (
-                  <div className="flex justify-between py-2 border-b">
-                    <span className="font-medium">SKU</span>
-                    <span>{product.sku}</span>
-                  </div>
-                )}
-              </div>
+          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+            {/* Main product section */}
+            <div className="bg-background rounded-2xl shadow-lg border border-border/50 p-6 lg:p-10 mb-8">
+              <ProductDetail product={productWithRating as any} />
             </div>
-          )}
 
-            <div className="mt-12 border-t pt-8">
-              <h2 className="text-2xl font-bold mb-6">Customer Reviews</h2>
+            {/* Specifications section */}
+            {(product.weight || product.dimensions || product.sku) && (
+              <div className="bg-background rounded-2xl shadow-lg border border-border/50 p-6 lg:p-10 mb-8">
+                <h2 className="text-2xl lg:text-3xl font-bold mb-6 flex items-center gap-2">
+                  <span className="w-1 h-8 bg-primary rounded-full"></span>
+                  Technical Specifications
+                </h2>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {product.weight && (
+                    <div className="bg-muted/30 rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                      <span className="text-sm text-muted-foreground block mb-1">Weight</span>
+                      <span className="font-semibold text-lg">{Number(product.weight)}g</span>
+                    </div>
+                  )}
+                  {product.dimensions && (
+                    <div className="bg-muted/30 rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                      <span className="text-sm text-muted-foreground block mb-1">Dimensions</span>
+                      <span className="font-semibold text-lg">{typeof product.dimensions === "string" ? product.dimensions : JSON.stringify(product.dimensions)}</span>
+                    </div>
+                  )}
+                  {product.sku && (
+                    <div className="bg-muted/30 rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                      <span className="text-sm text-muted-foreground block mb-1">SKU</span>
+                      <span className="font-semibold text-lg">{product.sku}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Reviews section */}
+            <div className="bg-background rounded-2xl shadow-lg border border-border/50 p-6 lg:p-10 mb-8">
+              <h2 className="text-2xl lg:text-3xl font-bold mb-8 flex items-center gap-2">
+                <span className="w-1 h-8 bg-primary rounded-full"></span>
+                Customer Reviews & Ratings
+              </h2>
               <ReviewList productId={product.id} currentUserId={userId ?? undefined} />
             </div>
 
-            <div className="mt-12 border-t pt-8">
-              <h2 className="text-2xl font-bold mb-6">Related Products</h2>
+            {/* Related products section */}
+            <div className="bg-background rounded-2xl shadow-lg border border-border/50 p-6 lg:p-10">
+              <h2 className="text-2xl lg:text-3xl font-bold mb-8 flex items-center gap-2">
+                <span className="w-1 h-8 bg-primary rounded-full"></span>
+                You May Also Like
+              </h2>
               <RelatedProducts productId={product.id} categoryId={product.categoryId} />
             </div>
           </main>

@@ -65,13 +65,21 @@ async function sendEmail({
       }),
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
-      throw new Error(data.message || "Failed to send email")
+      // Surface Resend error details for debugging
+      logError("Resend API error", {
+        to,
+        subject,
+        status: response.status,
+        statusText: response.statusText,
+        data,
+      })
+      return { success: false, error: { status: response.status, data } }
     }
 
-    logInfo("Email sent successfully", { to, subject, id: data.id })
+    logInfo("Email sent successfully", { to, subject, id: (data as any)?.id })
     return { success: true, data }
   } catch (error) {
     logError("Email sending failed", { to, subject, error })
@@ -152,5 +160,22 @@ export async function sendNewsletterWelcomeEmail(to: string, name: string) {
     </html>
   `
 
-  return sendEmail({ to, subject, html })
+  const text = [
+    `Welcome to ${APP_NAME}!`,
+    ``,
+    `Hi ${name},`,
+    `Thanks for subscribing to our newsletter.`,
+    `Here's what you can expect:`,
+    `- Exclusive deals and early access to sales`,
+    `- New arrivals and trending fashion updates`,
+    `- Style tips and fashion inspiration`,
+    `- Special subscriber-only promotions`,
+    ``,
+    `Start shopping: ${APP_URL}/products`,
+    ``,
+    `You're receiving this email because you subscribed to our newsletter.`,
+    `Unsubscribe: ${APP_URL}/api/newsletter?email=${encodeURIComponent(to)}&action=unsubscribe`,
+  ].join("\n")
+
+  return sendEmail({ to, subject, html, text })
 }

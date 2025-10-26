@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ShoppingCart, Heart, Star, Share2, Truck, Shield, RotateCcw } from "lucide-react"
+import { ShoppingCart, Heart, Star, Share2, Truck, Shield, RotateCcw, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -165,16 +165,18 @@ export function ProductDetail({ product }: ProductDetailProps) {
       : 0
 
   return (
-      <div className="grid lg:grid-cols-2 gap-12">
+      <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Product Images */}
-        <div className="space-y-4">
-          <AppwriteGallery images={product.images} productName={product.name} />
+        <div className="space-y-6">
+          <div className="rounded-2xl overflow-hidden border border-border/50 shadow-lg">
+            <AppwriteGallery images={product.images} productName={product.name} />
+          </div>
 
           {/* Product Tags */}
           {product.tags && product.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {product.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
+                    <Badge key={tag} variant="secondary" className="text-xs px-3 py-1 rounded-full hover:bg-primary/10 hover:text-primary transition-colors">
                       {tag}
                     </Badge>
                 ))}
@@ -186,59 +188,79 @@ export function ProductDetail({ product }: ProductDetailProps) {
         <div className="space-y-6">
           {/* Header */}
           <div className="space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold leading-tight">{product.name}</h1>
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-3 flex-1">
+                <h1 className="text-3xl lg:text-4xl font-black leading-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text">
+                  {product.name}
+                </h1>
                 {product.category && (
-                    <Badge variant="outline" className="w-fit">
+                    <Badge variant="outline" className="w-fit text-xs px-3 py-1 rounded-full border-primary/30 text-primary font-semibold">
                       {product.category.name}
                     </Badge>
                 )}
               </div>
-              <Button variant="ghost" size="icon" onClick={handleShare}>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleShare}
+                className="shrink-0 rounded-full hover:bg-primary/10 hover:border-primary transition-all"
+              >
                 <Share2 className="h-4 w-4" />
               </Button>
             </div>
 
             {/* Rating */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center">
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                        key={star}
-                        className="h-4 w-4"
-                        fill={star <= Math.round(product.averageRating || 0) ? "currentColor" : "none"}
-                    />
-                ))}
+            <div className="bg-muted/30 rounded-xl p-4 border border-border/50">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                          key={star}
+                          className="h-5 w-5 transition-transform hover:scale-110"
+                          fill={star <= Math.round(product.averageRating || 0) ? "#facc15" : "none"}
+                          stroke={star <= Math.round(product.averageRating || 0) ? "#facc15" : "currentColor"}
+                      />
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold">
+                    {product.averageRating ? product.averageRating.toFixed(1) : "0.0"}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    ({product.reviewCount || 0} {t("product.reviews")})
+                  </span>
+                </div>
               </div>
-              <span className="text-sm text-muted-foreground">
-              {product.averageRating ? product.averageRating.toFixed(1) : t("product.noRating")} ({product.reviewCount || 0} {t("product.reviews")})
-            </span>
             </div>
           </div>
 
           {/* Pricing */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-            <span className="text-3xl font-bold">
-              {settings?.currencySymbol || "$"}
-              {Number(product.price).toFixed(2)}
-            </span>
-              {hasDiscount && (
-                  <>
-                <span className="text-lg text-muted-foreground line-through">
+          <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl p-6 border border-primary/20">
+            <div className="space-y-3">
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <span className="text-4xl lg:text-5xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                   {settings?.currencySymbol || "$"}
-                  {Number(product.comparePrice).toFixed(2)}
+                  {Number(product.price).toFixed(2)}
                 </span>
-                    <Badge variant="destructive" className="text-xs">
-                      {discountPercentage}% OFF
-                    </Badge>
-                  </>
+                {hasDiscount && (
+                    <>
+                      <span className="text-xl text-muted-foreground line-through font-medium">
+                        {settings?.currencySymbol || "$"}
+                        {Number(product.comparePrice).toFixed(2)}
+                      </span>
+                      <Badge variant="destructive" className="text-sm px-3 py-1 rounded-full animate-pulse">
+                        {discountPercentage}% OFF
+                      </Badge>
+                    </>
+                )}
+              </div>
+              {settings?.taxRate && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <CheckCircle className="h-4 w-4" />
+                    {t("product.taxIncluded")}
+                  </p>
               )}
             </div>
-            {settings?.taxRate && (
-                <p className="text-sm text-muted-foreground">{t("product.taxIncluded")}</p>
-            )}
           </div>
 
           {/* Stock Status */}
@@ -253,39 +275,50 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
           {/* Description */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-lg">{t("product.description")}</h3>
-            <p className="text-muted-foreground leading-relaxed">{product.description}</p>
+            <h3 className="font-bold text-xl flex items-center gap-2">
+              <span className="w-1 h-6 bg-primary rounded-full"></span>
+              {t("product.description")}
+            </h3>
+            <p className="text-muted-foreground leading-relaxed text-base">{product.description}</p>
           </div>
 
-          <Separator />
+          <Separator className="my-6" />
 
           {/* Quantity Selection */}
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="font-medium">{t("product.quantity")}</label>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center border rounded-lg">
+            <div className="space-y-3">
+              <label className="font-semibold text-base flex items-center gap-2">
+                <span className="w-1 h-5 bg-primary rounded-full"></span>
+                {t("product.quantity")}
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center border-2 border-border rounded-xl overflow-hidden shadow-sm">
                   <Button
                       variant="ghost"
                       size="icon"
                       onClick={decreaseQuantity}
                       disabled={quantity <= 1}
-                      className="h-10 w-10"
+                      className="h-12 w-12 hover:bg-primary/10 hover:text-primary transition-all rounded-none"
                   >
-                    -
+                    <span className="text-xl font-bold">−</span>
                   </Button>
-                  <span className="w-12 text-center font-medium">{quantity}</span>
+                  <span className="w-16 text-center font-bold text-lg">{quantity}</span>
                   <Button
                       variant="ghost"
                       size="icon"
                       onClick={increaseQuantity}
                       disabled={product.stock <= quantity}
-                      className="h-10 w-10"
+                      className="h-12 w-12 hover:bg-primary/10 hover:text-primary transition-all rounded-none"
                   >
-                    +
+                    <span className="text-xl font-bold">+</span>
                   </Button>
                 </div>
-                <span className="text-sm text-muted-foreground">{product.stock} {t("product.available")}</span>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{product.stock} {t("product.available")}</span>
+                  {product.stock <= quantity && product.stock > 0 && (
+                    <span className="text-xs text-amber-600">Maximum reached</span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -294,7 +327,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
               <Button
                   onClick={handleAddToCart}
                   disabled={isOutOfStock}
-                  className="flex-1 h-12 text-base font-medium"
+                  className="flex-1 h-14 text-base font-bold shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]"
                   size="lg"
               >
                 <ShoppingCart className="mr-2 h-5 w-5" />
@@ -304,35 +337,48 @@ export function ProductDetail({ product }: ProductDetailProps) {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-12 bg-transparent"
+                className={`h-14 border-2 transition-all hover:scale-[1.02] ${
+                  inWishlist ? "bg-red-50 dark:bg-red-950/20 border-red-500 text-red-600" : "hover:bg-primary/5 hover:border-primary"
+                }`}
                 onClick={toggleWishlist}
                 disabled={wishlistLoading}
                 aria-pressed={inWishlist === true}
                 title={inWishlist ? t("product.inWishlist") : t("product.addToWishlist")}
               >
-                <Heart className={`mr-2 h-4 w-4 ${inWishlist ? "fill-current" : ""}`} />
-                {inWishlist ? t("product.inWishlist") : wishlistLoading ? t("product.adding") : t("product.wishlist")}
+                <Heart className={`mr-2 h-5 w-5 transition-all ${inWishlist ? "fill-current scale-110" : ""}`} />
+                <span className="font-bold">
+                  {inWishlist ? t("product.inWishlist") : wishlistLoading ? t("product.adding") : t("product.wishlist")}
+                </span>
               </Button>
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-6" />
 
           {/* Features */}
           <div className="space-y-4">
-            <h3 className="font-semibold">{t("product.whyChoose")}</h3>
+            <h3 className="font-bold text-xl flex items-center gap-2">
+              <span className="w-1 h-6 bg-primary rounded-full"></span>
+              {t("product.whyChoose")}
+            </h3>
             <div className="grid gap-3">
-              <div className="flex items-center gap-3 text-sm">
-                <Truck className="h-4 w-4 text-blue-600" />
-                <span>{t("product.freeShippingOverPrefix")} {settings?.currencySymbol || "$"}{settings?.freeShippingThreshold || 50}</span>
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 group hover:shadow-md transition-all">
+                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 group-hover:scale-110 transition-transform">
+                  <Truck className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span className="font-medium">{t("product.freeShippingOverPrefix")} {settings?.currencySymbol || "$"}{settings?.freeShippingThreshold || 50}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Shield className="h-4 w-4 text-green-600" />
-                <span>{t("product.yearWarranty")}</span>
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 group hover:shadow-md transition-all">
+                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30 group-hover:scale-110 transition-transform">
+                  <Shield className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <span className="font-medium">{t("product.yearWarranty")}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <RotateCcw className="h-4 w-4 text-orange-600" />
-                <span>{t("product.returnPolicy30d")}</span>
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 group hover:shadow-md transition-all">
+                <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30 group-hover:scale-110 transition-transform">
+                  <RotateCcw className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <span className="font-medium">{t("product.returnPolicy30d")}</span>
               </div>
             </div>
           </div>

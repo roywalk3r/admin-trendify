@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { paystackVerify, isPaystackTxSuccess, type PaystackTransaction } from "@/lib/paystack"
 import { sendOrderConfirmationEmail } from "@/lib/email"
 // Shipping validation now uses DeliveryCity/PickupLocation from DB
 import prisma from "@/lib/prisma"
+import { createApiResponse, handleApiError } from "@/lib/api-utils"
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,15 +13,15 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url)
     const reference = url.searchParams.get("reference")
 
-    if (!reference) return NextResponse.json({ error: "reference is required" }, { status: 400 })
+    if (!reference) return createApiResponse({ error: "reference is required", status: 400 })
 
     const secretKey = process.env.PAYSTACK_SECRET_KEY
-    if (!secretKey) return NextResponse.json({ error: "PAYSTACK_SECRET_KEY not set" }, { status: 500 })
+    if (!secretKey) return createApiResponse({ error: "PAYSTACK_SECRET_KEY not set", status: 500 })
 
     const res = await paystackVerify(secretKey, reference)
 
     if (!res.status || !res.data) {
-      return NextResponse.json({ error: res.message || "Verification failed" }, { status: 400 })
+      return createApiResponse({ error: res.message || "Verification failed", status: 400 })
     }
 
     // Persist to DB (idempotent): create Order + Payment if not exists
@@ -39,212 +40,119 @@ export async function GET(req: NextRequest) {
       const cityName = String(deliveryMeta?.pickupCity || "").trim()
       const locName = String(deliveryMeta?.pickupLocation || "").trim()
       if (!cityName || !locName) {
-        return NextResponse.json({ error: "Invalid pickup selection" }, { status: 400 })
+        return createApiResponse({ error: "Invalid pickup selection", status: 400 })
       }
       const city = await prisma.deliveryCity.findFirst({
         where: { name: { equals: cityName, mode: "insensitive" }, isActive: true },
         include: { pickupLocations: { where: { isActive: true } } },
       })
       if (!city || !city.pickupLocations.some((p) => p.name.toLowerCase() === locName.toLowerCase())) {
-        return NextResponse.json({ error: "Invalid pickup selection" }, { status: 400 })
+        return createApiResponse({ error: "Invalid pickup selection", status: 400 })
       }
     }
     const email: string | undefined = tx?.customer?.email || tx?.metadata?.email
     const items: Array<any> = Array.isArray(tx?.metadata?.items) ? tx.metadata.items : []
 
-    // If we already have an order for this reference, return it
-    const existingOrder = await prisma.order.findFirst({ where: { orderNumber: reference }, include: { payment: true, orderItems: true } })
+    // If we already have an order for this reference, ensure items exist and return it
+    const existingOrder = await prisma.order.findFirst({ where: { orderNumber: reference }, include: { payment: true, orderItems: { include: { product: { select: { images: true } } } }, user: true } })
     if (existingOrder) {
-      return NextResponse.json({ data: { ...tx, order: existingOrder } })
-    }
-
-    // Ensure user exists (prefer direct id from metadata, fallback to email)
-    let dbUser = null as any
-    if (userIdFromMeta) {
-      dbUser = await prisma.user.findFirst({ where: { id: userIdFromMeta } })
-    }
-    if (!dbUser && email) {
-      dbUser = await prisma.user.findFirst({ where: { email } })
-    }
-    if (!dbUser) {
-      // Create minimal user using email if available
-      const fallbackEmail = email || `guest-${reference}@example.local`
-      const nameFromEmail = fallbackEmail.split("@")[0]
-      dbUser = await prisma.user.create({
-        data: {
-          id: userIdFromMeta || undefined,
-          email: fallbackEmail,
-          name: nameFromEmail || "Guest",
-          role: "customer",
-          isVerified: true,
-        },
-      })
-    }
-
-    // Compute totals from items (fallbacks to transaction amount if mismatch)
-    const computedSubtotal = items.reduce((sum, it) => {
-      const p = typeof it.price === "string" ? parseFloat(it.price) : Number(it.price || 0)
-      const q = typeof it.quantity === "string" ? parseInt(it.quantity) : Number(it.quantity || 0)
-      return sum + (isFinite(p) ? p : 0) * (isFinite(q) ? q : 0)
-    }, 0)
-    const subtotal = Number.isFinite(computedSubtotal) && computedSubtotal > 0 ? computedSubtotal : amountMajor
-    // Compute shipping from DB: pickup = 0; door uses address city
-    let shipping = 0
-    if (deliveryMethod === "door") {
-      // We'll use the address city after we resolve finalAddress/snapshot below; temporarily 0
-    }
-    const tax = 0
-    const discount = 0
-    // Note: We'll add gatewayFee and final shipping later once we compute shipping for door deliveries
-    let totalAmount = subtotal + tax + shipping - discount + gatewayFee
-
-    // Create Order + OrderItems + Payment within a transaction
-    const order = await prisma.$transaction(async (txdb) => {
-      const order = await txdb.order.create({
-        data: {
-          orderNumber: reference,
-          userId: dbUser.id,
-          status: isSuccessful ? "processing" : "pending",
-          paymentStatus: isSuccessful ? "paid" : "unpaid",
-          subtotal: subtotal,
-          tax: tax,
-          shipping: shipping,
-          discount: discount,
-          totalAmount: totalAmount,
-        },
-      })
-
-      if (items.length > 0) {
-        // Only create OrderItems for products that actually exist to satisfy FK constraints
-        const ids = items.map((it) => String(it.id)).filter(Boolean)
-        const existing = await txdb.product.findMany({ where: { id: { in: ids } }, select: { id: true } })
-        const existingSet = new Set(existing.map((p) => p.id))
-        const validItems = items.filter((it) => existingSet.has(String(it.id)))
-
-        if (validItems.length > 0) {
-          const orderItemsData = validItems.map((it) => {
-            const p = typeof it.price === "string" ? parseFloat(it.price) : Number(it.price || 0)
-            const q = typeof it.quantity === "string" ? parseInt(it.quantity) : Number(it.quantity || 0)
-            const total = (isFinite(p) ? p : 0) * (isFinite(q) ? q : 0)
-            return {
-              orderId: order.id,
-              productId: String(it.id),
-              variantId: undefined,
-              quantity: isFinite(q) && q > 0 ? q : 1,
-              unitPrice: isFinite(p) && p > 0 ? p : 0,
-              totalPrice: total,
-              productName: it.name || "Item",
-              productSku: it.sku || null,
-              productData: it,
+      try {
+        if ((existingOrder.orderItems?.length || 0) === 0 && items.length > 0) {
+          const ids = items.map((it) => String(it.id)).filter(Boolean)
+          const existing = await prisma.product.findMany({ where: { id: { in: ids } }, select: { id: true } })
+          const existingSet = new Set(existing.map((p) => p.id))
+          const validItems = items.filter((it) => existingSet.has(String(it.id)))
+          if (validItems.length > 0) {
+            const orderItemsData = validItems.map((it) => {
+              const p = typeof it.price === "string" ? parseFloat(it.price) : Number(it.price || 0)
+              const q = typeof it.quantity === "string" ? parseInt(it.quantity) : Number(it.quantity || 0)
+              const total = (isFinite(p) ? p : 0) * (isFinite(q) ? q : 0)
+              return {
+                orderId: existingOrder.id,
+                productId: String(it.id),
+                variantId: undefined,
+                quantity: isFinite(q) && q > 0 ? q : 1,
+                unitPrice: isFinite(p) && p > 0 ? p : 0,
+                totalPrice: total,
+                productName: it.name || "Item",
+                productSku: it.sku || null,
+                productData: it,
+              }
+            })
+            await prisma.orderItem.createMany({ data: orderItemsData })
             }
-          })
-          await txdb.orderItem.createMany({ data: orderItemsData })
-        } else {
-          // Attach a note if no items could be persisted due to FK
-          await txdb.order.update({ where: { id: order.id }, data: { notes: `Order created without items: products not found for reference ${reference}` } })
-        }
+          }
+        } catch {}
+        const refreshed = await prisma.order.findUnique({ where: { id: existingOrder.id }, include: { payment: true, orderItems: { include: { product: { select: { images: true } } } }, user: true } })
+        return createApiResponse({ data: { ...tx, order: refreshed || existingOrder }, status: 200 })
       }
 
-      await txdb.payment.create({
-        data: {
+    // No existing order by reference; use metadata.orderId to locate and update order
+    const orderIdMeta: string | undefined = (tx?.metadata as any)?.orderId
+    if (!orderIdMeta) {
+      return createApiResponse({ status: 400, error: "Missing orderId in transaction metadata" })
+    }
+
+    const order = await prisma.order.findUnique({ where: { id: orderIdMeta }, include: { payment: true, orderItems: { include: { product: { select: { images: true } } } }, user: true } })
+    if (!order) {
+      return createApiResponse({ status: 404, error: "Order not found" })
+    }
+
+    // Mark payment and order as paid when Paystack reports success
+    if (isSuccessful) {
+      await prisma.payment.upsert({
+        where: { orderId: order.id },
+        update: {
+          status: "paid",
+          amount: Number(order.totalAmount),
+          currency,
+          transactionId: tx.reference || tx.id?.toString?.() || undefined,
+          metadata: {
+            ...(order.payment?.metadata as any || {}),
+            verify: tx,
+          },
+        },
+        create: {
           orderId: order.id,
-          amount: totalAmount,
-          currency: currency,
           method: "paystack",
-          status: isSuccessful ? "paid" : "failed",
-          transactionId: String(tx.id || reference),
-          gatewayFee: gatewayFee || null,
-          metadata: { ...tx, delivery: deliveryMeta },
-          paidAt: isSuccessful ? new Date(tx.paid_at || tx.paidAt || Date.now()) : null,
-          failedAt: !isSuccessful ? new Date() : null,
-          failureReason: !isSuccessful ? tx.gateway_response || tx.message || null : null,
+          status: "paid",
+          amount: Number(order.totalAmount),
+          currency,
+          transactionId: tx.reference || tx.id?.toString?.() || undefined,
+          metadata: { verify: tx },
         },
       })
 
-      // Attach shipping address from metadata only for door delivery
-      let finalAddress: any = null
-      if (deliveryMethod === "door" && addressIdFromMeta) {
-        finalAddress = await txdb.address.findFirst({ where: { id: addressIdFromMeta, userId: dbUser.id } })
-      }
-      const snapshot = finalAddress
-        ? {
-            fullName: finalAddress.fullName,
-            street: finalAddress.street,
-            city: finalAddress.city,
-            state: finalAddress.state,
-            zipCode: finalAddress.zipCode,
-            country: finalAddress.country,
-            phone: finalAddress.phone,
-          }
-        : deliveryMethod === "door" && addressSnapshot && typeof addressSnapshot === "object"
-        ? {
-            fullName: String(addressSnapshot.fullName || ""),
-            street: String(addressSnapshot.street || ""),
-            city: String(addressSnapshot.city || ""),
-            state: String(addressSnapshot.state || ""),
-            zipCode: String(addressSnapshot.zipCode || ""),
-            country: String(addressSnapshot.country || ""),
-            phone: String(addressSnapshot.phone || ""),
-          }
-        : null
+      const updated = await prisma.order.update({
+        where: { id: order.id },
+        data: { paymentStatus: "paid", status: order.status === "pending" ? "processing" : order.status },
+        include: { payment: true, orderItems: { include: { product: { select: { images: true } } } }, user: true },
+      })
 
-      // Now that we know the city for door delivery, compute shipping from DeliveryCity
-      if (deliveryMethod === "door") {
-        const cityName = String(finalAddress?.city || snapshot?.city || "").trim()
-        if (cityName) {
-          const city = await txdb.deliveryCity.findFirst({ where: { name: { equals: cityName, mode: "insensitive" }, isActive: true } })
-          shipping = city ? Number(city.doorFee) : Number(process.env.DEFAULT_DOOR_FEE || 35)
-        } else {
-          shipping = Number(process.env.DEFAULT_DOOR_FEE || 35)
+      // Send confirmation email after payment
+      try {
+        if (email) {
+          await sendOrderConfirmationEmail(email, {
+            orderNumber: updated.orderNumber,
+            customerName: updated.user?.name || (email?.split("@")[0] || "Customer"),
+            items: updated.orderItems.map((it) => ({ name: it.productName, quantity: it.quantity, price: Number(it.unitPrice), image: (it as any)?.product?.images?.[0] })),
+            subtotal: Number(updated.subtotal),
+            tax: Number(updated.tax),
+            shipping: Number(updated.shipping),
+            total: Number(updated.totalAmount),
+            estimatedDelivery: updated.estimatedDelivery ? new Date(updated.estimatedDelivery).toLocaleDateString() : undefined,
+          })
         }
-      }
-      // Recalculate order total with final shipping and gateway fee, then persist
-      totalAmount = subtotal + tax + shipping - discount + gatewayFee
-      await txdb.order.update({ where: { id: order.id }, data: { shipping: shipping, totalAmount: totalAmount } })
-
-      if (snapshot && snapshot.fullName && snapshot.street) {
-        await txdb.shippingAddress.create({
-          data: {
-            orderId: order.id,
-            ...snapshot,
-          },
-        })
+      } catch (e) {
+        console.warn("[email] order confirmation send failed", e)
       }
 
-      return order
-    })
-
-    // Load order with relations for receipt rendering
-    const fullOrder = await prisma.order.findUnique({
-      where: { id: order.id },
-      include: { payment: true, orderItems: true },
-    })
-
-    // Send order confirmation email (best-effort)
-    try {
-      const userEmail = email || tx?.customer?.email
-      if (fullOrder && userEmail && isSuccessful) {
-        await sendOrderConfirmationEmail(userEmail, {
-          orderNumber: fullOrder.orderNumber,
-          customerName: dbUser?.name || userEmail.split("@")[0] || "Customer",
-          items: (fullOrder.orderItems || []).map((it: any) => ({
-            name: it.productName,
-            quantity: it.quantity,
-            price: Number(it.unitPrice),
-            image: (it.productData as any)?.image,
-          })),
-          subtotal: Number(fullOrder.subtotal),
-          tax: Number(fullOrder.tax),
-          shipping: Number(fullOrder.shipping),
-          total: Number(fullOrder.totalAmount),
-        })
-      }
-    } catch (e) {
-      console.warn("[email] order confirmation send failed", e)
+      return createApiResponse({ status: 200, data: { ...res.data, order: updated } })
     }
 
-    return NextResponse.json({ data: { ...res.data, order: fullOrder } })
+    // Not successful
+    return createApiResponse({ status: 200, data: { ...res.data, order } })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Internal Server Error" }, { status: 500 })
+    return handleApiError(e)
   }
 }

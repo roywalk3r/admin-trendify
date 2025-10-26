@@ -1,20 +1,21 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import prisma from "@/lib/prisma"
+import { createApiResponse, handleApiError } from "@/lib/api-utils"
 
 // GET: list addresses for current user
 export async function GET() {
   try {
     const { userId } = await auth()
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!userId) return createApiResponse({ status: 401, error: "Unauthorized" })
 
     const user = await prisma.user.findFirst({ where: { id: userId } })
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!user) return createApiResponse({ status: 404, error: "User not found" })
 
     const addresses = await prisma.address.findMany({ where: { userId: user.id }, orderBy: { isDefault: "desc" } })
-    return NextResponse.json({ data: addresses })
+    return createApiResponse({ status: 200, data: addresses })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Internal Server Error" }, { status: 500 })
+    return handleApiError(e)
   }
 }
 
@@ -22,16 +23,16 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth()
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!userId) return createApiResponse({ status: 401, error: "Unauthorized" })
 
     const user = await prisma.user.findFirst({ where: { id: userId } })
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!user) return createApiResponse({ status: 404, error: "User not found" })
 
     const body = await req.json()
     const { fullName, street, city, state, zipCode, country, phone, isDefault } = body || {}
 
     if (!fullName || !street || !city || !state || !zipCode || !country || !phone) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+      return createApiResponse({ status: 400, error: "Missing required fields" })
     }
 
     const created = await prisma.$transaction(async (tx) => {
@@ -43,8 +44,8 @@ export async function POST(req: NextRequest) {
       })
     })
 
-    return NextResponse.json({ data: created })
+    return createApiResponse({ status: 201, data: created })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Internal Server Error" }, { status: 500 })
+    return handleApiError(e)
   }
 }
