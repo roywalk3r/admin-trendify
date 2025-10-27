@@ -13,18 +13,25 @@ const updateSchema = z.object({
   vehicleNo: z.string().min(2).optional(),
   isActive: z.boolean().optional(),
   rating: z.number().min(0).max(5).optional().nullable(),
+  serviceCityIds: z.array(z.string()).optional(),
 })
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const driver = await prisma.driver.findUnique({ 
+    // Fetch driver core data first (avoid relying on relation include that may be missing in generated client)
+    const driver = await prisma.driver.findUnique({
       where: { id: params.id },
-      include: {
-        _count: { select: { orders: true } }
-      }
+      include: { _count: { select: { orders: true } } },
     })
     if (!driver) return createApiResponse({ status: 404, error: "Not found" })
-    return createApiResponse({ data: driver, status: 200 })
+
+    // Fetch service areas via join model
+    const serviceCities = await prisma.driverServiceCity.findMany({
+      where: { driverId: params.id },
+      include: { city: true },
+    })
+
+    return createApiResponse({ data: { ...driver, serviceCities }, status: 200 })
   } catch (error) {
     return handleApiError(error)
   }
@@ -38,13 +45,54 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const body = await req.json()
     const payload = updateSchema.parse(body)
 
-    const updated = await prisma.driver.update({
-      where: { id: params.id },
-      data: payload,
-    })
+    const { serviceCityIds, ...driverData } = payload as any
+
+    // 1) Validate serviceCityIds first (outside transaction)
+    let uniqIds: string[] = []
+    if (serviceCityIds) {
+      uniqIds = Array.from(new Set(serviceCityIds))
+      if (uniqIds.length > 0) {
+        const found = await prisma.deliveryCity.findMany({
+          where: { id: { in: uniqIds } },
+          select: { id: true },
+        })
+        const foundSet = new Set(found.map((c) => c.id))
+        const missing = uniqIds.filter((id) => !foundSet.has(id))
+        if (missing.length > 0) {
+          throw new Error(`Invalid serviceCityIds: ${missing.join(", ")}`)
+        }
+      }
+    }
+
+    // 2) Build transactional writes as an array of operations
+    const ops: any[] = []
+    const updateDriverOp = prisma.driver.update({ where: { id: params.id }, data: driverData })
+    ops.push(updateDriverOp)
+
+    if (serviceCityIds) {
+      // Remove links not in new set
+      ops.push(
+        prisma.driverServiceCity.deleteMany({ where: { driverId: params.id, cityId: { notIn: uniqIds } } })
+      )
+      if (uniqIds.length > 0) {
+        // Fetch existing within the transaction by adding a findMany as part of the ops is not supported directly;
+        // so we fetched existing outside? To keep atomicity, we can recompute creates after update via connectOrCreate alternative.
+        // Instead, issue createMany with skipDuplicates to avoid unique conflicts.
+        const toCreate = uniqIds.map((cityId) => ({ driverId: params.id, cityId }))
+        ops.push(
+          prisma.driverServiceCity.createMany({ data: toCreate, skipDuplicates: true as any })
+        )
+      }
+    }
+
+    const [updated] = await prisma.$transaction(ops)
 
     return createApiResponse({ data: updated, status: 200 })
-  } catch (error) {
+  } catch (error: any) {
+    // Surface validation error for missing/invalid city IDs as 400
+    if (typeof error?.message === "string" && error.message.startsWith("Invalid serviceCityIds:")) {
+      return createApiResponse({ status: 400, error: error.message })
+    }
     return handleApiError(error)
   }
 }

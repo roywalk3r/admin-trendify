@@ -169,6 +169,7 @@ export default function OrderDetailsPage() {
       <div className="flex gap-2 no-print">
         <Button onClick={reorder} className="bg-ascent text-ascent-foreground hover:bg-ascent/90">Order again</Button>
         <Button variant="secondary" onClick={() => window.print()}>Print</Button>
+          <Button variant="secondary" onClick={() => router.replace(`${window.location.href}/track`)}>Track Order</Button>
       </div>
       </div>
     </>

@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import type { Product } from "@/types/product"
 import { useUser } from "@clerk/nextjs"
 import { useI18n } from "@/lib/i18n/I18nProvider"
+import SafeHtml from "@/components/safe-html"
 import StockBadge from "@/components/product/stock-badge"
 
 interface ProductDetailProps {
@@ -279,7 +280,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
               <span className="w-1 h-6 bg-primary rounded-full"></span>
               {t("product.description")}
             </h3>
-            <p className="text-muted-foreground leading-relaxed text-base">{product.description}</p>
+            <SafeHtml html={product.description} className="prose prose-sm max-w-none text-muted-foreground" />
           </div>
 
           <Separator className="my-6" />

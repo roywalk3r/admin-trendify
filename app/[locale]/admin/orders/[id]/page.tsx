@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import { Loader2, ArrowLeft, Truck, Mail } from "lucide-react"
+import { Loader2, ArrowLeft, Truck, Mail, User2 } from "lucide-react"
 
 interface OrderItem {
   id: string
@@ -56,6 +56,7 @@ interface Order {
   orderItems: OrderItem[]
   user?: User
   shippingAddress?: ShippingAddress
+  driver?: { id: string; name: string; phone: string | null }
 }
 
 export default function OrderDetailsPage() {
@@ -68,6 +69,9 @@ export default function OrderDetailsPage() {
   const [paymentStatus, setPaymentStatus] = useState("")
   const [trackingNumber, setTrackingNumber] = useState("")
   const [notes, setNotes] = useState("")
+  const [drivers, setDrivers] = useState<Array<{ id: string; name: string; phone?: string | null }>>([])
+  const [assigning, setAssigning] = useState(false)
+  const [selectedDriverId, setSelectedDriverId] = useState<string>("")
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -100,12 +104,26 @@ export default function OrderDetailsPage() {
     }
   }, [id])
 
+  useEffect(() => {
+    // Load active drivers for manual assignment
+    const loadDrivers = async () => {
+      try {
+        const res = await fetch(`/api/admin/drivers?active=true&limit=100`)
+        const json = await res.json()
+        if (res.ok) {
+          setDrivers(json.data?.drivers || [])
+        }
+      } catch {}
+    }
+    loadDrivers()
+  }, [])
+
   const updateOrderStatus = async () => {
     if (!order) return
 
     setUpdating(true)
     try {
-      const response = await fetch(`/api/orders/${id}/status`, {
+      const response = await fetch(`/api/admin/orders/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -120,11 +138,13 @@ export default function OrderDetailsPage() {
       const data = await response.json()
       if (response.ok && (data.success || data.data)) {
         toast.success("Order status updated successfully")
-        // Update the local order state with the new status
+        const updated = (data.data || data.order) as any
         setOrder((prev) => ({
           ...(prev as Order),
-          status,
-          paymentStatus,
+          ...(updated ? {
+            status: updated.status ?? status,
+            paymentStatus: updated.paymentStatus ?? paymentStatus,
+          } : { status, paymentStatus }),
         }))
       } else {
         toast.error(data.error || data.message || "Failed to update order status")
@@ -332,6 +352,69 @@ export default function OrderDetailsPage() {
                   <h3 className="font-semibold text-sm text-muted-foreground">Customer ID</h3>
                   <p className="text-sm text-muted-foreground">{order.userId}</p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User2 className="h-5 w-5" />
+                Driver Assignment
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="text-sm text-muted-foreground">
+                  {order.driver ? (
+                    <div>
+                      Assigned to: <span className="font-medium text-foreground">{order.driver.name}</span>{order.driver.phone ? ` · ${order.driver.phone}` : ""}
+                    </div>
+                  ) : (
+                    <div>No driver assigned</div>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="driver">Assign Driver</Label>
+                  <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+                    <SelectTrigger id="driver"><SelectValue placeholder="Select a driver" /></SelectTrigger>
+                    <SelectContent>
+                      {drivers.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}{d.phone ? ` · ${d.phone}` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={!selectedDriverId || assigning}
+                  onClick={async () => {
+                    if (!selectedDriverId) return
+                    setAssigning(true)
+                    try {
+                      const resp = await fetch(`/api/admin/orders/${id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ driverId: selectedDriverId }),
+                      })
+                      const data = await resp.json()
+                      if (resp.ok && (data.data || data.order)) {
+                        const updated = data.data || data.order
+                        toast.success("Driver assigned")
+                        setOrder((prev) => ({ ...(prev as Order), driver: updated.driver }))
+                      } else {
+                        toast.error(data.error || "Failed to assign driver")
+                      }
+                    } catch (e) {
+                      toast.error("Failed to assign driver")
+                    } finally {
+                      setAssigning(false)
+                    }
+                  }}
+                >
+                  {assigning ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Assigning...</>) : "Assign Driver"}
+                </Button>
+                <p className="text-xs text-muted-foreground">Respects service area and daily capacity limits.</p>
               </div>
             </CardContent>
           </Card>

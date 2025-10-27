@@ -24,7 +24,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true)
       setError(null)
 
-      const response = await fetch("/api/admin/settings")
+      const response = await fetch("/api/settings")
       if (!response.ok) {
         throw new Error(`Failed to fetch settings: ${response.statusText}`)
       }
@@ -36,9 +36,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           seo: { ...defaultSettings.seo, ...data.data.seo },
           general: { ...defaultSettings.general, ...data.data.general },
           social: { ...defaultSettings.social, ...data.data.social },
-          email: { ...defaultSettings.email, ...data.data.email },
+          email: { ...defaultSettings.email, ...(data.data.email || {}) },
           theme: { ...defaultSettings.theme, ...data.data.theme },
-        }
+          flashSale: { ...defaultSettings.flashSale, ...(data.data.flashSale || {}) },
+        } as Settings
         setSettings(mergedSettings)
       }
     } catch (err) {

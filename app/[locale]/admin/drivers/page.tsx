@@ -33,6 +33,8 @@ export default function AdminDriversPage() {
   const [open, setOpen] = useState(false)
   const [formLoading, setFormLoading] = useState(false)
   const [editDriver, setEditDriver] = useState<Driver | null>(null)
+  const [cities, setCities] = useState<Array<{ id: string; name: string; isActive: boolean }>>([])
+  const [editServiceCityIds, setEditServiceCityIds] = useState<string[]>([])
 
   const filtered = useMemo(() => {
     return drivers.filter(d => {
@@ -58,6 +60,39 @@ export default function AdminDriversPage() {
 
   useEffect(() => { loadDrivers() }, [])
 
+  // Load delivery cities once
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/admin/delivery-cities?active=true`)
+        const json = await res.json()
+        if (res.ok) setCities(json.data?.cities || [])
+      } catch {}
+    }
+    load()
+  }, [])
+
+  // When editing, fetch driver details to prefill service areas
+  useEffect(() => {
+    const fetchDetails = async (id: string) => {
+      try {
+        const res = await fetch(`/api/admin/drivers/${id}`)
+        const json = await res.json()
+        if (res.ok && json.data) {
+          const ids: string[] = (json.data.serviceCities || []).map((x: any) => x.city?.id).filter(Boolean)
+          setEditServiceCityIds(ids)
+        } else {
+          setEditServiceCityIds([])
+        }
+      } catch { setEditServiceCityIds([]) }
+    }
+    if (editDriver?.id) {
+      fetchDetails(editDriver.id)
+    } else {
+      setEditServiceCityIds([])
+    }
+  }, [editDriver?.id])
+
   function resetAndClose() {
     setEditDriver(null)
     setOpen(false)
@@ -67,6 +102,9 @@ export default function AdminDriversPage() {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
     const payload = Object.fromEntries(fd.entries()) as any
+    // collect multiple city ids
+    const cityIds = fd.getAll("serviceCityIds").map(String)
+    if (cityIds.length > 0) payload.serviceCityIds = cityIds
     payload.isActive = fd.get("isActive") === "on"
     setFormLoading(true)
     try {
@@ -144,6 +182,27 @@ export default function AdminDriversPage() {
               <div>
                 <label className="text-sm">Vehicle No</label>
                 <Input name="vehicleNo" defaultValue={editDriver?.vehicleNo || ""} required />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Service Areas</label>
+                <div className="mt-2 max-h-40 overflow-auto rounded border p-2 space-y-1">
+                  {cities.length === 0 && (
+                    <div className="text-xs text-muted-foreground">No cities configured.</div>
+                  )}
+                  {cities.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="serviceCityIds"
+                        value={c.id}
+                        defaultChecked={editDriver ? editServiceCityIds.includes(c.id) : false}
+                        className="h-4 w-4"
+                      />
+                      <span>{c.name}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Leave all unchecked to allow all cities.</p>
               </div>
               <div className="flex items-center gap-2">
                 <input id="isActive" name="isActive" type="checkbox" defaultChecked={editDriver?.isActive ?? true} className="h-4 w-4" />

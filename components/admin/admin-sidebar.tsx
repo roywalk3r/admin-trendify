@@ -14,23 +14,24 @@ import {
   LogOut,
   Menu,
   ChevronDown,
+  History,
   ChevronRight,
   Images,
   Palette,
   Sparkles,
-  History,
   Tag,
   RotateCcw,
   ShoppingBag,
   Bell,
   MessageSquare,
+  Truck,
   RefreshCw,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+ import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Collapsible,
   CollapsibleContent,
@@ -270,6 +271,9 @@ export function AdminSidebar() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
+            <div className="sr-only">
+              <SheetTitle>Admin menu</SheetTitle>
+            </div>
             <SidebarContent />
           </SheetContent>
         </Sheet>

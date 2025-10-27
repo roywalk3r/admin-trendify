@@ -3,6 +3,18 @@ generator client {
   // binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
+// Many-to-many relation between Driver and DeliveryCity to model service areas
+model DriverServiceCity {
+  driverId String
+  cityId   String
+  driver   Driver       @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  city     DeliveryCity @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([driverId, cityId])
+  @@index([cityId])
+  @@map("driver_service_cities")
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -397,6 +409,7 @@ model DeliveryCity {
   doorFee         Decimal          @map("door_fee") @db.Decimal(10, 2)
   isActive        Boolean          @default(true) @map("is_active")
   pickupLocations PickupLocation[]
+  serviceCities   DriverServiceCity[]
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
 
@@ -690,6 +703,7 @@ model Driver {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   orders      Order[]
+  serviceCities DriverServiceCity[]
 
   @@index([isActive])
   @@index([email])

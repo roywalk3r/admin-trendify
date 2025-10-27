@@ -9,7 +9,7 @@ import { Loader2, Plus, X, ImageIcon, Sparkles, Copy, RefreshCw } from "lucide-r
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import RichTextEditor from "@/components/ui/rich-text-editor";
+import TiptapEditor from "@/components/ui/tiptap-editor";
 import {
   Card,
   CardContent,
@@ -368,7 +368,7 @@ export function ProductForm({
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <RichTextEditor
+                        <TiptapEditor
                           value={field.value || ""}
                           onChange={(html) => field.onChange(html)}
                           placeholder="Enter product description"

@@ -131,7 +131,27 @@ export const logger: Logger = isDev ? createConsoleLogger() : createPinoLogger()
 // Helper functions for common use cases
 export const logError = (error: unknown, context?: Record<string, any>) => {
   try {
-    logger.error({ err: error, ...context }, 'Error occurred')
+    // Ensure Error objects are serialized with useful fields
+    let serialized: any = error
+    if (error instanceof Error) {
+      serialized = {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        ...(error as any).code ? { code: (error as any).code } : {},
+        ...(error as any).meta ? { meta: (error as any).meta } : {},
+      }
+    } else if (typeof error === 'object' && error !== null) {
+      const maybeErr = error as any
+      serialized = {
+        ...maybeErr,
+        message: maybeErr.message ?? undefined,
+        code: maybeErr.code ?? undefined,
+        meta: maybeErr.meta ?? undefined,
+      }
+    }
+
+    logger.error({ err: serialized, ...context }, 'Error occurred')
   } catch (fallbackError) {
     console.error('[ERROR] Logging failed:', error)
   }

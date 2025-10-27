@@ -147,3 +147,34 @@ psql \
 -d postgres \
 -f ./db/tese_aerk_comm_projectmail811_9e43_h_aivencloud_com-2025_10_25_07_33_14-dump.sql
 
+sed -i '/^BEGIN;$/a TRUNCATE TABLE \
+public.analytics_events, \
+public.audit_logs, \
+public.cart_items, \
+public.carts, \
+public.categories, \
+public.coupons, \
+public.delivery_cities, \
+public.drivers, \
+public.guest_sessions, \
+public.hero_slides, \
+public.newsletter_subscriptions, \
+public.order_items, \
+public.orders, \
+public.payments, \
+public.pickup_locations, \
+public.product_tags, \
+public.product_variants, \
+public.products, \
+public.refunds, \
+public.returns, \
+public.reviews, \
+public.settings, \
+public.shipping_addresses, \
+public.stock_alerts, \
+public.tags, \
+public.translation_cache, \
+public.users, \
+public.wishlist_items, \
+public.wishlists \
+CASCADE;' prisma/migrations/data.sql && PGSSLMODE=disable psql -h 127.0.0.1 -p 5433 -d postgres --set ON_ERROR_STOP=on -f ./prisma/migrations/data.sql

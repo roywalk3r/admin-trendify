@@ -1,49 +1,38 @@
-import { NextRequest } from "next/server"
+export const dynamic = "force-dynamic"
+import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import { createApiResponse } from "@/lib/api-utils"
 import { defaultSettings } from "@/app/api/admin/settings/schema"
 
-// Helper to safely parse JSON values stored in DB
-function safeJsonParse(value: any) {
-  if (!value) return null
+function safeParse(val: any) {
   try {
-    return typeof value === "string" ? JSON.parse(value) : value
+    return typeof val === "string" ? JSON.parse(val) : val
   } catch {
     return null
   }
 }
 
 // Public GET endpoint to fetch app settings for storefront
-// Does NOT require admin auth and returns non-sensitive settings
-export async function GET(_req: NextRequest) {
-  // Start with defaults
-  const formatted = {
-    seo: { ...defaultSettings.seo },
-    general: { ...defaultSettings.general },
-    social: { ...defaultSettings.social },
-    email: { ...defaultSettings.email },
-    theme: { ...defaultSettings.theme },
-  }
-
+// Returns non-sensitive settings only
+export async function GET() {
   try {
-    const rows = await prisma.settings.findMany()
-    for (const row of rows) {
-      const key = row.key as keyof typeof formatted
-      if (key in formatted) {
-        const parsed = safeJsonParse(row.value)
-        if (parsed) {
-          // Merge to preserve defaults for missing fields
-          formatted[key] = { ...formatted[key], ...parsed }
-        }
-      }
+    const data: any = {
+      seo: { ...defaultSettings.seo },
+      general: { ...defaultSettings.general },
+      social: { ...defaultSettings.social },
+      theme: { ...defaultSettings.theme },
+      flashSale: { ...defaultSettings.flashSale },
     }
-  } catch (e) {
-    // Swallow DB errors and serve defaults to avoid breaking storefront
-    console.warn("[settings] Failed to read settings from DB, using defaults")
+
+    const rows = await prisma.settings.findMany({
+      where: { key: { in: ["seo", "general", "social", "theme", "flashSale"] } },
+    })
+    for (const row of rows) {
+      const parsed = safeParse(row.value)
+      if (parsed) data[row.key] = { ...data[row.key], ...parsed }
+    }
+
+    return NextResponse.json({ data }, { status: 200 })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || "Failed to load settings" }, { status: 500 })
   }
-
-  // Hide any sensitive email fields if present in schema in future
-  // e.g. smtpPassword, apiKeys etc.
-
-  return createApiResponse({ data: formatted, status: 200 })
 }

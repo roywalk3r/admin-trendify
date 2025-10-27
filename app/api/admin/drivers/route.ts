@@ -12,6 +12,7 @@ const driverSchema = z.object({
   vehicleType: z.string().min(2),
   vehicleNo: z.string().min(2),
   isActive: z.boolean().optional(),
+  serviceCityIds: z.array(z.string()).optional(),
 })
 
 export async function GET(req: NextRequest) {
@@ -76,11 +77,20 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const payload = driverSchema.parse(body)
 
-    const created = await prisma.driver.create({
-      data: {
-        ...payload,
-        isActive: payload.isActive ?? true,
-      },
+    const { serviceCityIds, ...driverData } = payload as any
+
+    const created = await prisma.$transaction(async (tx) => {
+      const d = await tx.driver.create({
+        data: {
+          ...driverData,
+          isActive: driverData.isActive ?? true,
+        },
+      })
+      if (serviceCityIds && serviceCityIds.length > 0) {
+        const uniq = Array.from(new Set(serviceCityIds))
+        await tx.driverServiceCity.createMany({ data: uniq.map((cityId) => ({ driverId: d.id, cityId })) })
+      }
+      return d
     })
 
     return createApiResponse({ data: created, status: 201 })

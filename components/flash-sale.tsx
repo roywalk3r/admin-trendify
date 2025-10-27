@@ -3,7 +3,7 @@ import Link from "next/link"
 
 async function getFlashSale() {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/public/settings`, {
+    const res = await fetch(`/api/public/settings`, {
       // no-store to always reflect current countdown
       cache: "no-store",
     })

@@ -7,6 +7,7 @@ import { Loader2, Edit, Trash2, ArrowLeft, Star, Package, AlertCircle } from "lu
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import SafeHtml from "@/components/safe-html"
 import { Separator } from "@/components/ui/separator"
 import Image from "next/image"
 import Link from "next/link"
@@ -226,7 +227,9 @@ export default function ProductViewPage() {
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Description</label>
-                <p className="mt-1">{product.description}</p>
+                <div className="mt-1 prose prose-sm max-w-none text-muted-foreground">
+                  <SafeHtml html={product.description} />
+                </div>
               </div>
 
               <Separator />
