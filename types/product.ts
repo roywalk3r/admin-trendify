@@ -50,6 +50,7 @@ export interface OrderItem {
   quantity: number;
   product: {
     name: string;
+    price: number;
   };
 }
 

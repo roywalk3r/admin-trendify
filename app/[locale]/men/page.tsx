@@ -64,10 +64,10 @@ function MenContent() {
                     <div className="flex items-center justify-between mb-6 p-4 bg-card rounded-2xl border">
                         <div className="flex items-center gap-4">
                             {isLoading && (
-                                <span className="text-sm text-muted-foreground">Loading men\'s products…</span>
+                                <span className="text-sm text-muted-foreground">Loading men&apos;s products…</span>
                             )}
                             {!isLoading && (
-                                <span className="text-sm text-muted-foreground">Showing {all_products?.pagination?.total ?? menProducts.length} men\'s products</span>
+                                <span className="text-sm text-muted-foreground">Showing {all_products?.pagination?.total ?? menProducts.length} men&apos;s products</span>
                             )}
                             {error && (
                                 <span className="text-sm text-destructive">{error}</span>

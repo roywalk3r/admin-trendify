@@ -3,7 +3,8 @@ import { createApiResponse, handleApiError } from "@/lib/api-utils";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
-import { deleteCache, getCache, setCache } from "@/lib/redis";
+import { getCategoriesCached, invalidateCategoriesLists, invalidateCategory } from "@/lib/data/categories";
+import { revalidateTag } from "next/cache";
 
 // Category validation schema
 const categorySchema = z.object({
@@ -69,8 +70,8 @@ export async function GET(req: NextRequest) {
       includeDeleted,
     } = queriesSchema.parse(Object.fromEntries(url.searchParams));
 
-    // Build cache key based on query parameters
-    const cacheKey = `categories:${JSON.stringify({
+    // Use cached helper for categories list
+    const response = await getCategoriesCached({
       withProducts,
       includeChildren,
       parentId,
@@ -80,133 +81,7 @@ export async function GET(req: NextRequest) {
       sortBy,
       sortOrder,
       includeDeleted,
-    })}`;
-
-    // Check cache first
-    const cachedData = await getCache(cacheKey);
-    if (cachedData) {
-      return NextResponse.json(cachedData);
-    }
-
-    // Build where clause
-    const where: any = {};
-
-    if (parentId !== undefined) {
-      where.parentId = parentId;
-    } else if (parentId === "") {
-      // Explicitly query for root categories (no parent)
-      where.parentId = null;
-    }
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { slug: { contains: search, mode: "insensitive" } },
-      ];
-    }
-
-    if (!includeDeleted) {
-      where.deletedAt = null;
-      where.isActive = true;
-    }
-
-    // Build orderBy
-    let orderBy: any = {};
-
-    if (sortBy === "productCount") {
-      // Special case for sorting by product count
-      orderBy = { products: { _count: sortOrder } };
-    } else {
-      orderBy[sortBy] = sortOrder;
-    }
-
-    // Calculate pagination
-    const skip = (page - 1) * limit;
-
-    // Fetch categories with appropriate includes
-    const [categories, totalCount] = await Promise.all([
-      prisma.category.findMany({
-        where,
-        include: {
-          products: withProducts
-            ? {
-                select: {
-                  id: true,
-                  name: true,
-                  price: true,
-                  images: true,
-                  slug: true,
-                  stock: true,
-                },
-                where: { isDeleted: false, deletedAt: null, isActive: true },
-                take: 4,
-              }
-            : false,
-          children: includeChildren
-            ? {
-                include: {
-                  _count: {
-                    select: {
-                      products: true,
-                    },
-                  },
-                },
-              }
-            : false,
-          _count: {
-            select: {
-              products: {
-                where: { isDeleted: false, deletedAt: null, isActive: true },
-              },
-              children: true,
-            },
-          },
-        },
-        orderBy,
-        skip,
-        take: limit,
-      }),
-      prisma.category.count({ where }),
-    ]);
-
-    // Calculate pagination metadata
-    const totalPages = Math.ceil(totalCount / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
-
-    const result = categories.map((category) => ({
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      image: category.image,
-      description: category.description,
-      parentId: category.parentId,
-      isActive: category.isActive,
-      createdAt: category.createdAt,
-      updatedAt: category.updatedAt,
-      _count: category._count,
-      // Ensure Decimal fields inside products are serialized safely
-      products: (category.products || []).map((p: any) => ({
-        ...p,
-        price: Number(p.price),
-      })),
-      children: category.children || [],
-    }));
-
-    const response = {
-      data: result,
-      meta: {
-        currentPage: page,
-        totalPages,
-        totalCount,
-        hasNextPage,
-        hasPrevPage,
-      },
-    };
-
-    // Cache result for 5 minutes
-    await setCache(cacheKey, response, 300);
+    });
 
     return NextResponse.json(response);
   } catch (error) {
@@ -271,8 +146,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Invalidate all category caches
-    await deleteCache("categories:*");
+    // Invalidate category lists and revalidate tags
+    try {
+      await invalidateCategoriesLists();
+      revalidateTag("categories");
+    } catch {}
 
     return createApiResponse({
       data: category,
@@ -397,17 +275,30 @@ export async function PATCH(req: NextRequest) {
             slug: true,
           },
         },
+        parent: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
       },
     });
 
-    // Invalidate all category caches
-    await deleteCache("categories:*");
+    // Invalidate caches and revalidate tags
+    try {
+      await invalidateCategoriesLists();
+      await invalidateCategory(id);
+      revalidateTag("categories");
+      revalidateTag(`category:${id}`);
+    } catch {}
 
     return createApiResponse({
       data: updatedCategory,
       status: 200,
     });
   } catch (error) {
+    console.error("Categories API Error:", error);
     return handleApiError(error);
   }
 }
@@ -481,8 +372,13 @@ export async function DELETE(req: NextRequest) {
       });
     }
 
-    // Invalidate all category caches
-    await deleteCache("categories:*");
+    // Invalidate caches and revalidate tags
+    try {
+      await invalidateCategoriesLists();
+      await invalidateCategory(id);
+      revalidateTag("categories");
+      revalidateTag(`category:${id}`);
+    } catch {}
 
     return createApiResponse({
       data: { message: "Category deleted successfully", force },

@@ -58,12 +58,6 @@ function buildCSP() {
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
-    domains: [
-      'cloud.appwrite.io',
-      'localhost',
-      'placeholder.svg',
-        'fra.cloud.appwrite.io'
-    ],
     remotePatterns: [
       // new URL('https://fra.cloud.appwrite.io/**'),
       {

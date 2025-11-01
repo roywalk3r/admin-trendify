@@ -68,7 +68,7 @@ function WomenContent() {
                 <div className="mt-8">
                     <div className="flex items-center justify-between mb-6 p-4 bg-card rounded-2xl border">
                         <div className="flex items-center gap-4">
-                            <span className="text-sm text-muted-foreground">Showing {all_products?.pagination?.total ?? womenProducts.length} women's products</span>
+                            <span className="text-sm text-muted-foreground">Showing {all_products?.pagination?.total ?? womenProducts.length} women&apos;s products</span>
                         </div>
                     </div>
 

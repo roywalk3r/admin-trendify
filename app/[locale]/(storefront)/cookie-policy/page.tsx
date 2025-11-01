@@ -53,7 +53,7 @@ export default function CookiePolicyPage() {
               </p>
               <ul className="list-disc pl-6 space-y-1 text-muted-foreground text-sm">
                 <li><strong>Preferences:</strong> Language, currency, theme settings</li>
-                <li><strong>Recently Viewed:</strong> Tracks products you've viewed</li>
+                <li><strong>Recently Viewed:</strong> Tracks products you&apos;ve viewed</li>
                 <li><strong>Wishlist:</strong> Saves your favorite items</li>
               </ul>
             </div>
@@ -154,7 +154,7 @@ export default function CookiePolicyPage() {
             <div>
               <h3 className="font-semibold mb-2">Cookie Banner</h3>
               <p className="text-muted-foreground">
-                When you first visit our website, you'll see a cookie consent banner. You can choose to accept all cookies or customize your preferences.
+                When you first visit our website, you&apos;ll see a cookie consent banner. You can choose to accept all cookies or customize your preferences.
               </p>
             </div>
 

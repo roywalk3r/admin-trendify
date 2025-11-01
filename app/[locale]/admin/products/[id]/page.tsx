@@ -118,7 +118,7 @@ export default function ProductViewPage() {
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold">Product not found</h2>
           <p className="text-muted-foreground mb-4">
-            The product you're looking for doesn't exist or has been deleted.
+            The product you&apos;re looking for doesn&apos;t exist or has been deleted.
           </p>
           <Button asChild>
             <Link href="/admin/products">

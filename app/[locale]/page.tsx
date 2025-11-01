@@ -11,7 +11,6 @@ export default function Home(){
         <>
           <Hero/>
             {/* Flash Sale widget (auto-hides if disabled) */}
-            {/* @ts-expect-error Async Server Component */}
             <FlashSale />
             <Category/>
             <FeaturedProducts />

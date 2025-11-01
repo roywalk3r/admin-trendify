@@ -58,6 +58,29 @@ export async function deleteCache(key: string): Promise<void> {
   }
 }
 
+// Delete multiple keys by pattern using SCAN to avoid blocking
+export async function deleteByPattern(pattern: string): Promise<number> {
+  try {
+    let cursor = "0";
+    let totalDeleted = 0;
+    do {
+      const [nextCursor, keys] = await (redis as any).scan(cursor, "MATCH", pattern, "COUNT", 500);
+      cursor = nextCursor;
+      if (keys && keys.length > 0) {
+        const pipeline = redis.pipeline();
+        for (const k of keys) pipeline.del(k);
+        const results = await pipeline.exec();
+        totalDeleted += results?.length || 0;
+      }
+    } while (cursor !== "0");
+    logDebug("Pattern cache delete", { pattern, totalDeleted });
+    return totalDeleted;
+  } catch (error) {
+    logError(error, { context: "Redis deleteByPattern error", pattern });
+    return 0;
+  }
+}
+
 // Rate limiting helper
 export async function rateLimit(
   identifier: string,

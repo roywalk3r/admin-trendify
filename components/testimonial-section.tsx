@@ -172,7 +172,7 @@ export default function TestimonialsSection() {
                             animate={{ opacity: 1 }}
                             transition={{ delay: index * 0.1 + 0.6 }}
                         >
-                            "{testimonial.content}"
+                            {testimonial.content}
                         </motion.p>
 
                         {/* Author */}

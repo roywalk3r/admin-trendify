@@ -117,7 +117,7 @@ export default function CheckoutSuccessPage() {
               <div>
                 <p className="font-medium">Order Confirmation Email Sent</p>
                 <p className="text-muted-foreground">
-                  We've sent order details to your email address
+                  We&apos;ve sent order details to your email address
                 </p>
               </div>
             </div>
@@ -139,7 +139,7 @@ export default function CheckoutSuccessPage() {
 
       <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
         <p className="text-sm text-blue-900">
-          <strong>What's Next?</strong> Your order is being processed. You'll receive shipping
+          <strong>What&apos;s Next?</strong> Your order is being processed. You&apos;ll receive shipping
           updates via email. Track your order anytime from your order history.
         </p>
       </div>

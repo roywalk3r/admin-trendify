@@ -3,6 +3,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
+import { getProductsListCached, invalidateProduct, invalidateProductLists } from "@/lib/data/products"
+import { revalidateTag } from "next/cache"
 
 const querySchema = z.object({
   search: z.string().optional().default(""),
@@ -46,7 +48,7 @@ export async function GET(request: NextRequest) {
       limit: searchParams.get("limit") || "20",
     })
 
-    console.log("Fetching products with params:", params)
+    // params parsed above; avoid verbose logging in production
 
     // Build where clause
     const where: any = {
@@ -80,63 +82,10 @@ export async function GET(request: NextRequest) {
       orderBy[params.sortBy] = params.sortOrder
     }
 
-    // Get total count
-    const totalCount = await prisma.product.count({ where })
+    // Use cached list fetcher (handles count, pagination, formatting)
+    const response = await getProductsListCached(params as any)
 
-    // Get products with pagination
-    const products = await prisma.product.findMany({
-      where,
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        _count: {
-          select: {
-            reviews: true,
-            orderItems: true,
-          },
-        },
-      },
-      orderBy,
-      skip: params.page !== undefined && params.limit !== undefined ? (params.page - 1) * params.limit : 0,
-      take: params.limit !== undefined ? params.limit : 10,
-    })
-
-    const totalPages = Math.ceil(totalCount / (params.limit !== undefined ? params.limit : 10))
-
-    const response = {
-      products: products.map((product) => ({
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        price: product.price.toString(),
-        stock: product.stock,
-        categoryId: product.categoryId,
-        category: product.category,
-        images: product.images,
-        isActive: product.isActive,
-        isFeatured: product.isFeatured,
-        status: product.status,
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
-        reviewCount: product._count.reviews,
-        orderCount: product._count.orderItems,
-      })),
-      pagination: {
-        page: params.page,
-        limit: params.limit,
-        totalCount,
-        totalPages,
-        hasNextPage: params.page !== undefined && params.page < totalPages,
-        hasPrevPage: params.page !== undefined && params.page > 1,
-      },
-      filters: params,
-    }
-
-    console.log("API Response:", { products: response.products.length, totalCount })
+    // return cached/assembled response
 
     return NextResponse.json(response)
   } catch (error) {
@@ -184,6 +133,14 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+
+    // Invalidate lists and revalidate tags; also invalidate product cache (in case of immediate read)
+    try {
+      await invalidateProductLists()
+      await invalidateProduct(product.id)
+      revalidateTag("products")
+      revalidateTag(`product:${product.id}`)
+    } catch {}
 
     return NextResponse.json(product, { status: 201 })
   } catch (error) {
@@ -256,6 +213,14 @@ export async function PATCH(request: NextRequest) {
         data: updateData,
       })
 
+      // Invalidate caches and revalidate tags
+      try {
+        await invalidateProductLists()
+        for (const pid of productIds) await invalidateProduct(pid)
+        revalidateTag("products")
+        for (const pid of productIds) revalidateTag(`product:${pid}`)
+      } catch {}
+
       return NextResponse.json({
         message: `${updateResult.count} products updated successfully`,
         updatedCount: updateResult.count,
@@ -312,6 +277,14 @@ export async function PATCH(request: NextRequest) {
         },
       },
     })
+
+    // Invalidate caches and revalidate tags
+    try {
+      await invalidateProduct(id)
+      await invalidateProductLists()
+      revalidateTag("products")
+      revalidateTag(`product:${id}`)
+    } catch {}
 
     return NextResponse.json(product)
   } catch (error) {

@@ -16,7 +16,11 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
+import { getProductByIdCached } from "@/lib/data/products"
 import { SettingsProvider } from "@/contexts/settings-context"
+import {Review} from "@/prisma/generated/client";
+
+export const revalidate = 300
 
 interface ProductPageProps {
   params: { id: string }
@@ -24,32 +28,8 @@ interface ProductPageProps {
 
 async function getProduct(id: string) {
   try {
-    const product = await prisma.product.findUnique({
-      where: { id },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
-        },
-        reviews: {
-          select: { rating: true },
-          orderBy: { createdAt: "desc" },
-          take: 10,
-        },
-        tags: {
-          include: { tag: { select: { name: true, slug: true } } },
-        },
-        _count: {
-          select: {
-            reviews: true,
-            wishlistItems: true,
-          },
-        },
-      },
-    })
+    // Use cached helper for read-through caching
+    const product = await getProductByIdCached(id)
 
     if (!product) return null
 
@@ -85,7 +65,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     openGraph: {
       title: metaTitle || product.name,
       description: metaDescription,
-      images: (product.images || []).slice(0, 4).map((image) => ({
+      images: (product.images || []).slice(0, 4).map((image: string) => ({
         url: image,
         alt: product.name,
       })),
@@ -111,7 +91,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   const averageRating =
       product.reviews.length > 0
-          ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
+          ? product.reviews.reduce((sum: number, review: Review) => sum + review.rating, 0) / product.reviews.length
           : 0
 
   // Map DB product to UI-friendly shape

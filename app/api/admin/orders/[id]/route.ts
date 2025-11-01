@@ -4,6 +4,8 @@ import { z } from "zod"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
 import { sendShippingNotificationEmail } from "@/lib/email"
 import { auth } from "@clerk/nextjs/server"
+import { getOrderByIdCached, invalidateOrderCache } from "@/lib/data/orders"
+import { revalidateTag } from "next/cache"
 
 // Validation schema for PATCH
 const orderStatusSchema = z.object({
@@ -16,17 +18,7 @@ const orderStatusSchema = z.object({
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params
-    const order = await prisma.order.findUnique({
-      where: { id },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-        orderItems: { include: { product: { select: { id: true, name: true, slug: true, images: true, price: true } } } },
-        shippingAddress: true,
-        payment: true,
-        driver: true,
-        coupon: true,
-      },
-    })
+    const order = await getOrderByIdCached(id)
     if (!order) return createApiResponse({ status: 404, error: "Order not found" })
     return createApiResponse({ status: 200, data: order })
   } catch (error) {
@@ -176,6 +168,13 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       }
     }
 
+    // Invalidate caches and revalidate tags for consumers using Next cache tags
+    try {
+      await invalidateOrderCache(id)
+      revalidateTag("orders")
+      revalidateTag(`order:${id}`)
+    } catch {}
+
     return createApiResponse({ status: 200, data: updatedOrder })
   } catch (error) {
     return handleApiError(error)
@@ -196,6 +195,11 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
       prisma.orderItem.deleteMany({ where: { orderId: id } }),
       prisma.order.delete({ where: { id } }),
     ])
+    try {
+      await invalidateOrderCache(id)
+      revalidateTag("orders")
+      revalidateTag(`order:${id}`)
+    } catch {}
     return createApiResponse({ status: 200, data: { message: "Order deleted successfully" } })
   } catch (error) {
     return handleApiError(error)

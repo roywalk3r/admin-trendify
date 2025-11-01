@@ -411,7 +411,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                         className="block text-center text-sm font-medium text-ascent hover:underline"
                         onClick={onClose}
                       >
-                        See all results for "{searchQuery}"
+                        See all results for &quot;{searchQuery}&quot;
                       </a>
                     </div>
                   )}
@@ -489,7 +489,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
               {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
                 <div className="p-6 text-center">
-                  <p className="text-muted-foreground mb-3">No products found for "{searchQuery}"</p>
+                  <p className="text-muted-foreground mb-3">No products found for &quot;{searchQuery}&quot;</p>
                   {aiSuggestions.length > 0 && (
                     <div className="mb-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <Sparkles className="w-3 h-3 text-ascent" />

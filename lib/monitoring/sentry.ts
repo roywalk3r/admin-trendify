@@ -11,8 +11,8 @@ export async function initSentry() {
   if (!process.env.SENTRY_DSN) return
   try {
     // Dynamically import to avoid hard dependency
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    sentry = require("@sentry/nextjs")
+    const mod = await import("@sentry/nextjs")
+    sentry = mod
     sentry.init({
       dsn: process.env.SENTRY_DSN,
       tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE || 0.1),

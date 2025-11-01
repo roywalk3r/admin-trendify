@@ -142,7 +142,7 @@ export default function PrivacyPolicyPage({ params }: { params: { locale: Locale
 
         <Card>
           <CardHeader>
-            <CardTitle>7. Children's Privacy</CardTitle>
+            <CardTitle>7. Children&apos;s Privacy</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
@@ -157,7 +157,7 @@ export default function PrivacyPolicyPage({ params }: { params: { locale: Locale
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on this page and updating the "Last updated" date.
+              We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on this page and updating the &quot;Last updated&quot; date.
             </p>
           </CardContent>
         </Card>

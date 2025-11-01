@@ -41,7 +41,7 @@ export default function GeminiPopover() {
   const quickPrompts = [
     "How many products are active?",
     "Show me low stock items",
-    "What's the total revenue this month?",
+    "What&apos;s the total revenue this month?",
     "How many pending orders today?",
   ];
 
@@ -282,7 +282,7 @@ export default function GeminiPopover() {
                       Welcome to Trendify AI
                     </h4>
                     <p className="text-sm text-muted-foreground max-w-xs">
-                      I'm here to help with questions, creative writing,
+                      I&apos;m here to help with questions, creative writing,
                       analysis, and more. What would you like to explore?
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2 justify-center">

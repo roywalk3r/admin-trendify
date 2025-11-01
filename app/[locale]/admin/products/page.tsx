@@ -567,7 +567,7 @@ export default function ProductsPage() {
                         </div>
                         {product.comparePrice && (
                           <div className="text-xs text-muted-foreground line-through">
-                            ${product.comparePrice}
+                              ₵{product.comparePrice}
                           </div>
                         )}
                       </div>

@@ -176,7 +176,7 @@ export function CookieConsentBanner() {
           </div>
           <p className="text-sm text-muted-foreground">
             We use cookies to personalize content, analyze traffic, and improve your experience. 
-            By clicking "Accept All", you consent to our use of cookies. {" "}
+            By clicking &quot;Accept All&quot;, you consent to our use of cookies. {" "}
             <Link href={addLocaleToPathname("/cookie-policy", locale)} className="text-primary underline">
               Learn more
             </Link>

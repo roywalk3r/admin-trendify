@@ -31,23 +31,37 @@ import {
 } from "@/app/api/admin/settings/schema"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { AppwriteMediaBrowser } from "@/components/appwrite-media-browser"
+import Image from "next/image";
 
-interface SettingsResponse {
-  data: {
-    seo?: SEOSettings
-    general?: GeneralSettings
-    social?: SocialSettings
-    email?: EmailSettings
-    theme?: ThemeSettings
-  }
+interface SettingsPayload {
+  seo?: SEOSettings
+  general?: GeneralSettings
+  social?: SocialSettings
+  email?: EmailSettings
+  theme?: ThemeSettings
+  flashSale?: FlashSaleSettings
 }
 
 export default function SettingsPage() {
+  // Currency symbol helper
+  const getCurrencySymbol = (code: string | undefined) => {
+    switch (code) {
+      case "USD": return "$"
+      case "EUR": return "€"
+      case "GBP": return "£"
+      case "JPY": return "¥"
+      case "CAD": return "C$"
+      case "AUD": return "A$"
+      case "GHS": return "₵"
+      default: return "₵"
+    }
+  }
   const [activeTab, setActiveTab] = useState("general")
   const [error, setError] = useState<string | null>(null)
 
   // Fetch settings
-  const { data, isLoading, error: fetchError, refetch } = useApi<SettingsResponse>("/api/admin/settings")
+  const { data, isLoading, error: fetchError, refetch } = useApi<SettingsPayload>("/api/admin/settings")
 
   // Helper to cast/transform API/general values to match schema
   function castGeneralSettings(input: any): GeneralSettings {
@@ -156,38 +170,38 @@ export default function SettingsPage() {
       return
     }
 
-    if (data?.data) {
+    if (data) {
       try {
         // Reset forms with data from API
-        if (data.data.seo) {
-          seoForm.reset({ ...defaultSettings.seo, ...data.data.seo })
+        if (data.seo) {
+          seoForm.reset({ ...defaultSettings.seo, ...data.seo })
         }
-        if (data.data.general) {
+        if (data.general) {
           generalForm.reset(castGeneralSettings({
             ...defaultSettings.general,
-            ...data.data.general,
+            ...data.general,
           }))
         }
-        if (data.data.social) {
-          socialForm.reset({ ...defaultSettings.social, ...data.data.social })
+        if (data.social) {
+          socialForm.reset({ ...defaultSettings.social, ...data.social })
         }
-        if (data.data.email) {
+        if (data.email) {
           emailForm.reset(castEmailSettings({
             ...defaultSettings.email,
-            ...data.data.email,
+            ...data.email,
           }))
         }
-        if (data.data.theme) {
+        if (data.theme) {
           themeForm.reset(castThemeSettings({
             ...defaultSettings.theme,
-            ...data.data.theme,
+            ...data.theme,
           }))
         }
 
-        if ((data.data as any).flashSale) {
+        if ((data as any).flashSale) {
           flashForm.reset({
             ...defaultSettings.flashSale,
-            ...(data.data as any).flashSale,
+            ...(data as any).flashSale,
           } as FlashSaleSettings)
         }
 
@@ -198,7 +212,7 @@ export default function SettingsPage() {
         setError(`Error loading settings: ${e.message || JSON.stringify(e)}`)
       }
     }
-  }, [data, fetchError, seoForm, generalForm, socialForm, emailForm, themeForm])
+  }, [data, fetchError, seoForm, generalForm, socialForm, emailForm, themeForm, flashForm])
 
   // Update SEO settings
   const onSEOSubmit = (data: SEOSettings) => {
@@ -387,6 +401,7 @@ export default function SettingsPage() {
                                         </SelectTrigger>
                                       </FormControl>
                                       <SelectContent>
+                                        <SelectItem value="GHS">GHS (₵)</SelectItem>
                                         <SelectItem value="USD">USD ($)</SelectItem>
                                         <SelectItem value="EUR">EUR (€)</SelectItem>
                                         <SelectItem value="GBP">GBP (£)</SelectItem>
@@ -485,7 +500,7 @@ export default function SettingsPage() {
                                   <FormItem>
                                     <FormLabel>Free Shipping Threshold</FormLabel>
                                     <div className="relative">
-                                      <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
+                                      <span className="absolute left-3 top-2.5 text-muted-foreground">{getCurrencySymbol(generalForm.watch("currencyCode"))}</span>
                                       <FormControl>
                                         <Input type="number" min="0" step="0.01" className="pl-7" {...field} />
                                       </FormControl>
@@ -652,10 +667,28 @@ export default function SettingsPage() {
                           name="bannerImage"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Banner Image URL</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="https://..." />
-                              </FormControl>
+                              <FormLabel>Banner Image</FormLabel>
+                              <div className="flex items-center gap-3">
+                                <div className="w-28 h-16 rounded-md overflow-hidden border bg-muted">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  {field.value ? (
+                                    <Image src={field.value} alt="flash banner" width={112} height={64} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No image</div>
+                                  )}
+                                </div>
+                                <div className="flex gap-2">
+                                  <AppwriteMediaBrowser
+                                    buttonText="Choose Image"
+                                    maxSelections={1}
+                                    onSelect={(urls) => {
+                                      const url = urls[0]
+                                      flashForm.setValue("bannerImage", url, { shouldDirty: true })
+                                    }}
+                                  />
+                                  <Button type="button" variant="outline" onClick={() => flashForm.setValue("bannerImage", "", { shouldDirty: true })}>Clear</Button>
+                                </div>
+                              </div>
                               <FormDescription>Optional image for the flash sale banner</FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -697,15 +730,50 @@ export default function SettingsPage() {
                           name="productIds"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Product IDs (comma-separated)</FormLabel>
-                              <FormControl>
+                              <FormLabel>Products</FormLabel>
+                              <div className="space-y-2">
+                                {/* Selected items as chips */}
+                                <div className="flex flex-wrap gap-2">
+                                  {(Array.isArray(field.value) ? field.value : []).map((id: string) => (
+                                    <span key={id} className="inline-flex items-center gap-2 px-2 py-1 text-xs rounded-full border">
+                                      <span className="font-mono">{id.slice(0, 8)}…</span>
+                                      <button type="button" className="text-destructive" onClick={() => field.onChange((field.value as string[]).filter((x) => x !== id))}>×</button>
+                                    </span>
+                                  ))}
+                                </div>
+                                {/* Search input */}
                                 <Input
-                                  value={Array.isArray(field.value) ? field.value.join(',') : ''}
-                                  onChange={(e) => field.onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                                  placeholder="prod_1, prod_2, prod_3"
+                                  placeholder="Search products..."
+                                  onChange={async (e) => {
+                                    const q = e.target.value
+                                    if (!q || q.length < 2) return
+                                    try {
+                                      const res = await fetch(`/api/products?search=${encodeURIComponent(q)}`, { cache: "no-store" })
+                                      if (!res.ok) return
+                                      const json = await res.json()
+                                      const items = (json?.data?.products ?? json?.products ?? []) as Array<{ id: string; name: string }>
+                                      // Show a simple dropdown list below input
+                                      const menu = document.getElementById('flash-products-menu')
+                                      if (menu) {
+                                        menu.innerHTML = items
+                                          .map((it) => `<button type='button' data-id='${it.id}' class='w-full text-left px-2 py-1 hover:bg-accent'>${it.name}</button>`)
+                                          .join("")
+                                        // attach handlers
+                                        Array.from(menu.querySelectorAll("button[data-id]"))
+                                          .forEach((btn) => {
+                                            btn.addEventListener("click", () => {
+                                              const id = (btn as HTMLButtonElement).dataset.id!
+                                              const cur = Array.isArray(field.value) ? field.value : []
+                                              if (!cur.includes(id)) field.onChange([...cur, id])
+                                            }, { once: true })
+                                          })
+                                      }
+                                    } catch {}
+                                  }}
                                 />
-                              </FormControl>
-                              <FormDescription>Optional: restrict flash sale to specific products</FormDescription>
+                                <div id="flash-products-menu" className="border rounded-md overflow-hidden" />
+                              </div>
+                              <FormDescription>Optional: select specific products to include in the sale</FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}

@@ -826,7 +826,7 @@ export default function AdminCategoriesPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Category</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to delete "{category.name}"?
+                              Are you sure you want to delete &quot;{category.name}&quot;?
                               This action cannot be undone and will affect all
                               products in this category.
                               {deleteError && (

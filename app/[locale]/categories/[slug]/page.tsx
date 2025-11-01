@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma"
 import CategoryProducts from "@/components/category-products"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 
+export const revalidate = 300
+
 interface CategoryPageProps {
   params: { slug: string }
 }

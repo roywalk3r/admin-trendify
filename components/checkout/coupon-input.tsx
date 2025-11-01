@@ -91,7 +91,7 @@ export default function CouponInput({ subtotal, onCouponApplied, onCouponRemoved
             </div>
             <div>
               <p className="text-sm font-medium text-green-900">
-                Coupon "{appliedCoupon.code}" applied
+                Coupon &quot;{appliedCoupon.code}&quot; applied
               </p>
               <p className="text-xs text-green-700">
                 You saved ₦{appliedCoupon.discount.toFixed(2)}

@@ -20,7 +20,7 @@ export default function TermsOfServicePage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              By accessing and using Trendify ("the Service"), you accept and agree to be bound by the terms and conditions of this agreement. If you do not agree to these terms, you should not use the Service.
+              By accessing and using Trendify (&quot;the Service&quot;), you accept and agree to be bound by the terms and conditions of this agreement. If you do not agree to these terms, you should not use the Service.
             </p>
           </CardContent>
         </Card>

@@ -3,7 +3,8 @@ import { createApiResponse, handleApiError } from "@/lib/api-utils"
 import type { NextRequest } from "next/server"
 import { z } from "zod"
 import { auth } from "@clerk/nextjs/server"
-import { deleteCache } from "@/lib/redis"
+import { getProductByIdCached, invalidateProduct, invalidateProductLists } from "@/lib/data/products"
+import { revalidateTag } from "next/cache"
 
 // Product validation schema
 const productSchema = z.object({
@@ -28,41 +29,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
   try {
     const { id } = await context.params
 
-    // Fetch product with all related data
-    const product = await prisma.product.findUnique({
-      where: { id },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
-        },
-        variants: true,
-        reviews: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: "desc",
-          },
-        },
-        _count: {
-          select: {
-            reviews: true,
-            orderItems: true,
-            wishlistItems: true,
-          },
-        },
-      },
-    })
+    const product = await getProductByIdCached(id)
 
     if (!product) {
       return createApiResponse({
@@ -181,8 +148,13 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       },
     })
 
-    // Invalidate all product caches
-    await deleteCache("products:*")
+    // Invalidate caches and revalidate tags
+    try {
+      await invalidateProduct(id)
+      await invalidateProductLists()
+      revalidateTag("products")
+      revalidateTag(`product:${id}`)
+    } catch {}
 
     return createApiResponse({
       data: updatedProduct,
@@ -252,8 +224,13 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
       })
     }
 
-    // Invalidate all product caches
-    await deleteCache("products:*")
+    // Invalidate caches and revalidate tags
+    try {
+      await invalidateProduct(id)
+      await invalidateProductLists()
+      revalidateTag("products")
+      revalidateTag(`product:${id}`)
+    } catch {}
 
     return createApiResponse({
       data: { message: "Product deleted successfully", force },

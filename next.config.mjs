@@ -50,11 +50,6 @@ function buildCSP() {
 
 const nextConfig = {
   images: {
-    domains: [
-      'cloud.appwrite.io',
-      'localhost',
-      'placeholder.svg'
-    ],
     remotePatterns: [
       {
         protocol: 'https',

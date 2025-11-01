@@ -194,7 +194,7 @@ export default function UserDetailPage() {
         <div className="text-center">
           <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold">User not found</h2>
-          <p className="text-muted-foreground mb-4">The user you're looking for doesn't exist or has been deleted.</p>
+          <p className="text-muted-foreground mb-4">The user you&apos;re looking for doesn&apos;t exist or has been deleted.</p>
           <Button asChild>
             <Link href="/admin/users">
               <ArrowLeft className="h-4 w-4 mr-2" />

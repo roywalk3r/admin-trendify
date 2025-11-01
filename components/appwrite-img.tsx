@@ -35,22 +35,33 @@ export function AppwriteImg({ src, alt, width = "100%", height = "auto", classNa
     )
   }
 
+  const isNumericDims = typeof width === 'number' && typeof height === 'number'
+
   return (
-    <div className="relative" style={{ width, height }}>
+    <div className={`relative ${className}`} style={{ width, height }}>
       {isLoading && <Skeleton className="absolute inset-0 w-full h-full" />}
 
       {error ? (
         <div className="absolute inset-0 flex items-center justify-center bg-muted">
           <span className="text-muted-foreground">{error}</span>
         </div>
+      ) : isNumericDims ? (
+        <Image
+          src={src || "/placeholder.svg"}
+          alt={alt}
+          className="object-cover"
+          width={width as number}
+          height={height as number}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+        />
       ) : (
         <Image
           src={src || "/placeholder.svg"}
           alt={alt}
-          className={className}
-          style={{ objectFit: "cover" }}
-          width={typeof width === "number" ? width : undefined}
-          height={typeof height === "number" ? height : undefined}
+          className="object-cover"
+          fill
+          sizes="100vw"
           onLoad={handleImageLoad}
           onError={handleImageError}
         />

@@ -1,6 +1,7 @@
 @import '@clerk/themes/shadcn.css';
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Bruno+Ace&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 * {
@@ -89,12 +90,14 @@
 }
 
 h1 {
-  font-family: var(--font-bruno-ace), sans-serif;
+    font-family: "Bruno Ace", sans-serif;
   color: var(--foreground);
 }
 
 .typography {
-  font-family: var(--font-bruno-ace), sans-serif;
+    font-family: "Bruno Ace", sans-serif;
+    font-weight: 400;
+    font-style: normal;
 }
 .cl-internal-y44tp9{
   display: none !important;

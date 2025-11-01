@@ -2,6 +2,8 @@ import ProductsGrid from "@/components/products-grid"
 import ProductFilters from "@/components/product-filters"
 import { Suspense } from "react"
 
+export const revalidate = 300
+
 export default function ProductsPage() {
   return (
     <div className="min-h-screen bg-background">

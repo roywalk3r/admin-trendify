@@ -22,6 +22,7 @@ interface OrderItem {
   product?: {
     id: string
     name: string
+      price:string
   }
 }
 
@@ -171,7 +172,7 @@ export default function OrderDetailsPage() {
     const numAmount = typeof amount === "string" ? Number.parseFloat(amount) : amount
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: "GHC",
     }).format(numAmount)
   }
 
@@ -221,7 +222,7 @@ export default function OrderDetailsPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h1 className="text-2xl font-bold">Order not found</h1>
-        <p className="text-muted-foreground mb-4">The order you're looking for doesn't exist or has been deleted.</p>
+        <p className="text-muted-foreground mb-4">The order you&apos;re looking for doesn&apos;t exist or has been deleted.</p>
         <Button onClick={() => router.push("/admin/orders")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Orders
@@ -285,16 +286,16 @@ export default function OrderDetailsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {order.orderItems.map((item) => (
+                      {order.orderItems.map((item: any) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">
-                            {item.product?.name || `Product ${item.productId.substring(0, 8)}`}
+                            {item.product?.name || `Product ${item.productId?.substring(0, 8)}`}
                           </TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(item.product?.price)}</TableCell>
                           <TableCell className="text-right">{item.quantity}</TableCell>
                           <TableCell className="text-right font-medium">
                             {formatCurrency(
-                              (typeof item.price === "string" ? Number.parseFloat(item.price) : item.price) *
+                              (typeof item.product?.price === "string" ? Number.parseFloat(item.product?.price) : item.product?.price) *
                                 item.quantity,
                             )}
                           </TableCell>

@@ -1,9 +1,14 @@
 import Image from "next/image"
 import Link from "next/link"
+import { headers } from "next/headers"
 
 async function getFlashSale() {
   try {
-    const res = await fetch(`/api/public/settings`, {
+    const hdrs = headers()
+    const host = hdrs.get("host")
+    const proto = process.env.VERCEL_URL ? "https" : "http"
+    const url = host ? `${proto}://${host}/api/public/settings` : `/api/public/settings`
+    const res = await fetch(url, {
       // no-store to always reflect current countdown
       cache: "no-store",
     })

@@ -161,7 +161,7 @@ function SearchContent() {
       </div>
 
       {q && (
-        <div className="mb-4 text-sm text-muted-foreground">Showing results for "{q}"</div>
+        <div className="mb-4 text-sm text-muted-foreground">Showing results for &quot;{q}&quot;</div>
       )}
 
       {loading && (
