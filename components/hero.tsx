@@ -1,4 +1,5 @@
 "use client"
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import "swiper/css"
 import "swiper/css/pagination"
@@ -12,8 +13,38 @@ import { Button } from "./ui/button"
 import HeroItem from "./hero-item"
 import { useI18n } from "@/lib/i18n/I18nProvider"
 
+interface AdminSlide {
+    id: string
+    title: string
+    subtitle?: string
+    description?: string
+    imageUrl?: string
+    buttonText?: string
+    buttonUrl?: string
+    isActive: boolean
+    order: number
+}
+
 export default function Hero() {
     const { t } = useI18n()
+    const [slides, setSlides] = useState<AdminSlide[]>([])
+
+    useEffect(() => {
+        let mounted = true
+        ;(async () => {
+            try {
+                const res = await fetch("/api/admin/hero", { cache: "no-store" })
+                if (!res.ok) return
+                const json = await res.json()
+                const data = (json?.data?.slides as AdminSlide[] | undefined) || []
+                if (mounted) setSlides(data.filter(s => s.isActive).sort((a,b) => a.order - b.order))
+            } catch {}
+        })()
+        return () => { mounted = false }
+    }, [])
+
+    const hasAdminSlides = slides.length > 0
+
     return (
         <motion.div
             className="relative w-full max-w-7xl mx-auto p-8"
@@ -74,32 +105,49 @@ export default function Hero() {
                     modules={[Autoplay, Pagination, Navigation]}
                     className="mySwiper"
                 >
-                    <SwiperSlide>
-                        <HeroItem
-                            image={"/images/hero2.jpg"}
-                            title={t("home.hero.slide1.title")}
-                            text={t("home.hero.slide1.text")}
-                            cta={t("home.hero.slide1.cta")}
-                            position={"items-left"}
-                        />
-                    </SwiperSlide>
-                    <SwiperSlide>
-                        <HeroItem
-                            image={"/images/heroImg1.png"}
-                            title={t("home.hero.slide2.title")}
-                            text={t("home.hero.slide2.text")}
-                            cta={t("home.hero.slide2.cta")}
-                            position="items-left"
-                        />
-                    </SwiperSlide>
-                    <SwiperSlide>
-                        <HeroItem
-                            image={"/images/hero3.jpg"}
-                            title={t("home.hero.slide3.title")}
-                            text={t("home.hero.slide3.text")}
-                            cta={t("home.hero.slide3.cta")}
-                        />
-                    </SwiperSlide>
+                    {hasAdminSlides ? (
+                        slides.map((s) => (
+                            <SwiperSlide key={s.id}>
+                                <HeroItem
+                                    image={s.imageUrl || "/images/hero2.jpg"}
+                                    title={s.title}
+                                    text={s.subtitle || s.description || ""}
+                                    cta={s.buttonText || t("home.hero.slide1.cta")}
+                                    href={s.buttonUrl || "/products"}
+                                    position={"items-left"}
+                                />
+                            </SwiperSlide>
+                        ))
+                    ) : (
+                        <>
+                            <SwiperSlide>
+                                <HeroItem
+                                    image={"/images/hero2.jpg"}
+                                    title={t("home.hero.slide1.title")}
+                                    text={t("home.hero.slide1.text")}
+                                    cta={t("home.hero.slide1.cta")}
+                                    position={"items-left"}
+                                />
+                            </SwiperSlide>
+                            <SwiperSlide>
+                                <HeroItem
+                                    image={"/images/heroImg1.png"}
+                                    title={t("home.hero.slide2.title")}
+                                    text={t("home.hero.slide2.text")}
+                                    cta={t("home.hero.slide2.cta")}
+                                    position="items-left"
+                                />
+                            </SwiperSlide>
+                            <SwiperSlide>
+                                <HeroItem
+                                    image={"/images/hero3.jpg"}
+                                    title={t("home.hero.slide3.title")}
+                                    text={t("home.hero.slide3.text")}
+                                    cta={t("home.hero.slide3.cta")}
+                                />
+                            </SwiperSlide>
+                        </>
+                    )}
                 </Swiper>
             </motion.div>
         </motion.div>

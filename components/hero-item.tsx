@@ -3,6 +3,8 @@
 import { motion } from "framer-motion"
 import { Button } from "./ui/button"
 import { ArrowRight, Sparkles } from "lucide-react"
+import Link from "next/link"
+import { useParams } from "next/navigation"
 
 interface HeroItems {
     image: string
@@ -10,9 +12,22 @@ interface HeroItems {
     text: string
     cta: string
     position?: string
+    href?: string
 }
 
-export default function HeroItem({ image, title, text, cta, position }: HeroItems) {
+export default function HeroItem({ image, title, text, cta, position, href }: HeroItems) {
+    const { locale } = useParams() as { locale: string }
+    let targetHref = `/${locale}/products`
+    if (href) {
+        if (href.startsWith("http")) {
+            targetHref = href
+        } else if (href.startsWith("/")) {
+            targetHref = `/${locale}${href}`
+        } else {
+            // treat as relative path without leading slash
+            targetHref = `/${locale}/${href}`
+        }
+    }
     return (
         <div
             className={`relative w-full h-[600px] ${position ? position : "items-center"} rounded-3xl flex flex-col justify-end p-12 bg-cover bg-center overflow-hidden`}
@@ -78,12 +93,14 @@ export default function HeroItem({ image, title, text, cta, position }: HeroItem
                     whileTap={{ scale: 0.95 }}
                 >
 
-<Button  variant={"ghost"} className="group glass bg-white px-6 py-3 rounded-full text-ascent font-semibold w-fit typography text-lg  hover:bg-ascent-foreground/20 hover:text-white hover:shadow-lg hover:border-ascent transition-all duration-300">
-                        <span className="mr-2">{cta}</span>
-                        <motion.div whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
-                            <ArrowRight className="w-5 h-5" />
-                        </motion.div>
-                    </Button>
+                    <Link href={targetHref} aria-label={cta}>
+                        <Button variant={"ghost"} className="group glass bg-white px-6 py-3 rounded-full text-ascent font-semibold w-fit typography text-lg  hover:bg-ascent-foreground/20 hover:text-white hover:shadow-lg hover:border-ascent transition-all duration-300">
+                            <span className="mr-2">{cta}</span>
+                            <motion.div whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
+                                <ArrowRight className="w-5 h-5" />
+                            </motion.div>
+                        </Button>
+                    </Link>
                 </motion.div>
             </motion.div>
 
