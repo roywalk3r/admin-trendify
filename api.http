@@ -36,3 +36,231 @@ Content-Type: application/json
   "key": "",
   "targetLang": "fr"
 }
+
+### Get mobile products
+
+# curl -i "http://localhost:3000/api/mobile/v1/products?limit=10&page=1"
+GET http://localhost:3000/api/mobile/v1/products?limit=10&page=1
+
+###
+
+### Variables
+@baseUrl = http://localhost:3000
+@auth = Bearer eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDIyMkFBQSIsImtpZCI6Imluc18ydXdKRzVTOTRvUkFoS0NFaE5kNElId3FMc3kiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiYXpwIjoiaHR0cDovL2xvY2FsaG9zdDozMDAwIiwiY2xlcmtfaWQiOiJ1c2VyXzJ2MkUzNWRMaVlnZkhHakI0cGtXdmJJZTVZbyIsImVtYWlsIjoidGVzdHBqbWFpbEBnbWFpbC5jb20iLCJleHAiOjE3NjIwODUzMDIsImZpcnN0X25hbWUiOiJSb3J5IiwiZnVsbF9uYW1lIjoiUm9yeSBBbWVuYW5vIiwiaWF0IjoxNzYyMDgzNDQyLCJpc3MiOiJodHRwczovL2FtYXplZC1sYWNld2luZy0zMS5jbGVyay5hY2NvdW50cy5kZXYiLCJqdGkiOiJiYTE3NTQyNTQ3NWI0ZGMxOGZhYSIsImxhc3RfbmFtZSI6IkFtZW5hbm8iLCJuYmYiOjE3NjIwODM0MzcsInN1YiI6InVzZXJfMnYyRTM1ZExpWWdmSEdqQjRwa1d2YkllNVlvIiwidXNlcm5hbWUiOm51bGx9.uKnt_yVkF1DvpJswa3tccP9gx_YdBo9rgdSTn315Tq3jzTt03hg6m82OgXFrO_xi-Vi-MSH3DWLIud9FXnvnAhNI8uzGTSABnw8DxY4XKmRlNDt2sdpy65M1gQ-srxb-n5O5CUs39z3L9bRhT7W_HbmsbGu62phPS3j7PFZI2hcg0sStGTYRwHku990DAjAi6N7B70VxltA1eq5iJe5Fez2DRSeboPqIWJVJ80SlgaHyJU9lPV0hCXyQ9IqoJhLKMx9lh-prlwUEaVOZA_PZ0wWM9PCHrdx7WTkF2yxzosMA8wWmRGnuVfei-CMNkzFse_rHsfzKtF8xnfgr2iM6bQ
+### Mobile OpenAPI
+GET {{baseUrl}}/api/mobile/v1/openapi.json
+
+### Auth: session (requires Authorization)
+GET {{baseUrl}}/api/mobile/v1/auth/session
+Authorization: {{auth}}
+
+### Auth: register push token
+POST {{baseUrl}}/api/mobile/v1/auth/push-token
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "deviceId": "dev-1",
+  "platform": "ios",
+  "token": "PUSH_TOKEN_SAMPLE"
+}
+
+### Auth: delete push token by token
+DELETE {{baseUrl}}/api/mobile/v1/auth/push-token
+Content-Type: application/json
+
+{
+  "token": "PUSH_TOKEN_SAMPLE"
+}
+
+### Catalog: products (list)
+GET {{baseUrl}}/api/mobile/v1/products?limit=12&page=1&sort=price-asc
+
+### Catalog: product search analytics wrapper
+GET {{baseUrl}}/api/mobile/v1/search?q=sneakers
+
+### Catalog: categories
+GET {{baseUrl}}/api/mobile/v1/categories
+
+### Catalog: hero slides
+GET {{baseUrl}}/api/mobile/v1/hero
+
+### Cart: get (requires Authorization)
+GET {{baseUrl}}/api/mobile/v1/cart
+Authorization: {{auth}}
+
+### Cart: add item
+POST {{baseUrl}}/api/mobile/v1/cart
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "id": "cmehmyuf8000zi9kgsu5rm18f",
+  "name": "Anti-Aging Serum",
+  "price": 120,
+  "quantity": 1,
+  "image": "/placeholder.png"
+}
+
+### Cart: update quantity
+PATCH {{baseUrl}}/api/mobile/v1/cart
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "id": "cmehmyuf8000zi9kgsu5rm18f",
+  "quantity": 2
+}
+
+### Cart: remove item by id
+DELETE {{baseUrl}}/api/mobile/v1/cart?id=cmehmyuf8000zi9kgsu5rm18f
+Authorization: {{auth}}
+
+### Cart: clear all items
+DELETE {{baseUrl}}/api/mobile/v1/cart?clear=1
+Authorization: {{auth}}
+
+### Wishlist: get
+GET {{baseUrl}}/api/mobile/v1/wishlist
+Authorization: {{auth}}
+
+### Wishlist: add
+POST {{baseUrl}}/api/mobile/v1/wishlist
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "productId": "cmehmyuf8000zi9kgsu5rm18f"
+}
+
+### Wishlist: remove
+DELETE {{baseUrl}}/api/mobile/v1/wishlist?productId=PRODUCT_ID
+Authorization: {{auth}}
+
+### Profile: get
+GET {{baseUrl}}/api/mobile/v1/profile
+Authorization: {{auth}}
+
+### Profile: update
+PUT {{baseUrl}}/api/mobile/v1/profile
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "name": "John Doe",
+  "avatar": "https://example.com/avatar.png"
+}
+
+### Addresses: list
+GET {{baseUrl}}/api/mobile/v1/profile/addresses
+Authorization: {{auth}}
+
+### Addresses: create
+POST {{baseUrl}}/api/mobile/v1/profile/addresses
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "fullName": "John Doe",
+  "street": "123 Main St",
+  "city": "Accra",
+  "state": "GA",
+  "zipCode": "233",
+  "country": "GH",
+  "phone": "+233550000000",
+  "isDefault": true
+}
+
+### Addresses: update
+PUT {{baseUrl}}/api/mobile/v1/profile/addresses/cmhhnngyp000b1aebxh7bhv6l
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "fullName": "John Doe",
+  "street": "456 New Rd"
+}
+
+### Addresses: delete
+DELETE {{baseUrl}}/api/mobile/v1/profile/addresses/ADDRESS_ID
+Authorization: {{auth}}
+
+### Reviews: list
+GET {{baseUrl}}/api/mobile/v1/reviews?productId=PRODUCT_ID
+
+### Reviews: create
+POST {{baseUrl}}/api/mobile/v1/reviews
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "productId": "PRODUCT_ID",
+  "rating": 5,
+  "title": "Great!",
+  "comment": "Loved it",
+  "images": []
+}
+
+### Reviews: delete
+DELETE {{baseUrl}}/api/mobile/v1/reviews/REVIEW_ID
+Authorization: {{auth}}
+
+### Orders: list
+GET {{baseUrl}}/api/mobile/v1/orders
+Authorization: {{auth}}
+
+### Orders: get by id
+GET {{baseUrl}}/api/mobile/v1/orders/ORDER_ID
+Authorization: {{auth}}
+
+### Returns: list
+GET {{baseUrl}}/api/mobile/v1/returns
+Authorization: {{auth}}
+
+### Returns: create
+POST {{baseUrl}}/api/mobile/v1/returns
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "orderId": "ORDER_ID",
+  "orderItemIds": ["ITEM_ID"],
+  "reason": "Damaged"
+}
+
+### Returns: get by id
+GET {{baseUrl}}/api/mobile/v1/returns/RETURN_ID
+Authorization: {{auth}}
+
+### Shipping: fee
+GET {{baseUrl}}/api/mobile/v1/shipping/fee?city=Accra&method=door
+
+### Checkout: guest
+POST {{baseUrl}}/api/mobile/v1/checkout/guest
+Content-Type: application/json
+
+{
+  "email": "guest@example.com",
+  "cart": [{ "id": "PRODUCT_ID", "name": "Sample", "price": 100, "quantity": 1, "image": "/p.png" }]
+}
+
+### Payments: init (requires Authorization)
+POST {{baseUrl}}/api/mobile/v1/payments/init
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "amount": 120,
+  "email": "user@example.com",
+  "metadata": { "delivery": { "method": "pickup", "pickupCity": "Accra", "pickupLocation": "Osu" } }
+}
+
+### Payments: verify (requires Authorization)
+POST {{baseUrl}}/api/mobile/v1/payments/verify
+Content-Type: application/json
+Authorization: {{auth}}
+
+{
+  "reference": "PAYSTACK_REF",
+  "orderId": "ORDER_ID"
+}

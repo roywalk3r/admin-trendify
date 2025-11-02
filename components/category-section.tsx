@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n/I18nProvider"
 
 export default function Category() {
     const { t } = useI18n()
+
     // Fetch categories from backend API. We avoid passing parentId due to API filtering semantics.
     const { data, isLoading, error } = useApi(`/api/categories?limit=16&sortBy=name&sortOrder=asc`)
     const categories = (data as Array<any>) || []

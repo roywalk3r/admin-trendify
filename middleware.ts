@@ -1,25 +1,38 @@
 import { clerkMiddleware } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import arcjet, { createMiddleware, detectBot } from "@arcjet/next"
+import arcjet, { detectBot, shield, tokenBucket } from "@arcjet/next"
 import { locales, defaultLocale, isValidLocale, getLocaleFromPathname, stripLocaleFromPathname } from "@/lib/i18n/config"
 
 // Initialize Arcjet
 const aj = arcjet({
   key: process.env.ARCJET_KEY!, // Get your site key from https://app.arcjet.com
-  rules: [
-    detectBot({
-      mode: "DRY_RUN", // will block requests. Use "DRY_RUN" to log only
-      // Block all bots except the following
-      allow: [
-        "CATEGORY:SEARCH_ENGINE", // Google, Bing, etc
-        // Uncomment to allow these other common bot categories
-        // See the full list at https://arcjet.com/bot-list
-        "CATEGORY:MONITOR", // Uptime monitoring services
-        "CATEGORY:PREVIEW", // Link previews e.g. Slack, Discord
-      ],
-    }),
-  ],
+    rules: [
+        // Shield protects your app from common attacks e.g. SQL injection
+        shield({ mode: "LIVE" }),
+        // Create a bot detection rule
+        detectBot({
+            mode: "LIVE", // Blocks requests. Use "DRY_RUN" to log only
+            // Block all bots except the following
+            allow: [
+                "CATEGORY:SEARCH_ENGINE", // Google, Bing, etc
+                // Uncomment to allow these other common bot categories
+                // See the full list at https://arcjet.com/bot-list
+                "CATEGORY:MONITOR", // Uptime monitoring services
+                "CATEGORY:PREVIEW", // Link previews e.g. Slack, Discord
+            ],
+        }),
+        // Create a token bucket rate limit. Other algorithms are supported.
+        tokenBucket({
+            mode: "LIVE",
+            // Tracked by IP address by default, but this can be customized
+            // See https://docs.arcjet.com/fingerprints
+            //characteristics: ["ip.src"],
+            refillRate: 5, // Refill 5 tokens per interval
+            interval: 10, // Refill every 10 seconds
+            capacity: 10, // Bucket capacity of 10 tokens
+        }),
+        ],
 })
 
 function isProtectedPath(pathname: string): boolean {
@@ -27,18 +40,22 @@ function isProtectedPath(pathname: string): boolean {
   return pathNoLocale.startsWith("/admin") || pathNoLocale.startsWith("/api/admin")
 }
 
-// Combine Clerk and Arcjet middleware
-const combinedMiddleware = createMiddleware(aj, async (req) => {
-  const pathname = req.nextUrl.pathname
+// Arcjet + locale redirects + Clerk protection
+export default async function middleware(req: NextRequest) {
+  // 1) Arcjet protection (tokenBucket requires `requested` prop)
+  const decision = await aj.protect(req, { requested: 1 })
+  if (decision.isDenied()) {
+    return NextResponse.json({ error: "Blocked by Arcjet", reason: (decision as any).reason }, { status: 403 })
+  }
 
-  // Redirect root to default locale
+  // 2) Locale redirects
+  const pathname = req.nextUrl.pathname
   if (pathname === "/") {
     const url = req.nextUrl.clone()
     url.pathname = `/${defaultLocale}`
     return NextResponse.redirect(url)
   }
 
-  // If path is missing a locale prefix, redirect to default locale with same path
   const segments = pathname.split("/").filter(Boolean)
   const first = segments[0]
   const hasLocale = first && isValidLocale(first)
@@ -48,16 +65,14 @@ const combinedMiddleware = createMiddleware(aj, async (req) => {
     return NextResponse.redirect(url)
   }
 
-  // Run Clerk middleware with admin protection
+  // 3) Clerk admin protection
   // @ts-ignore
   return clerkMiddleware(async (auth, req) => {
     if (isProtectedPath(pathname)) {
       await auth.protect()
     }
   })(req)
-})
-
-export default combinedMiddleware
+}
 
 export const config = {
   matcher: [

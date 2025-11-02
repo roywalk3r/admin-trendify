@@ -21,18 +21,18 @@ datasource db {
 }
 
 model User {
-  id              String           @id @default(cuid())
-  clerkId         String?          @unique @map("clerk_id") @db.VarChar(255) // Added Clerk ID for better integration
-  name            String           @db.VarChar(100)
-  email           String           @unique @db.VarChar(255)
-  avatar          String?          @db.VarChar(500) // Added avatar field
-  role            UserRole         @default(customer)
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  isActive        Boolean          @default(true)
-  isVerified      Boolean          @default(false) @map("is_verified") // Added email verification
-  lastLoginAt     DateTime?        @map("last_login_at") // Added last login tracking
-  deletedAt       DateTime?        @map("deleted_at")
+  id              String            @id @default(cuid())
+  clerkId         String?           @unique @map("clerk_id") @db.VarChar(255) // Added Clerk ID for better integration
+  name            String            @db.VarChar(100)
+  email           String            @unique @db.VarChar(255)
+  avatar          String?           @db.VarChar(500) // Added avatar field
+  role            UserRole          @default(customer)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  isActive        Boolean           @default(true)
+  isVerified      Boolean           @default(false) @map("is_verified") // Added email verification
+  lastLoginAt     DateTime?         @map("last_login_at") // Added last login tracking
+  deletedAt       DateTime?         @map("deleted_at")
   addresses       Address[]
   analyticsEvents AnalyticsEvent[]
   orders          Order[]
@@ -40,6 +40,7 @@ model User {
   wishlist        Wishlist?
   auditLogs       Audit[] // Added relation to audit logs
   Cart            Cart?
+  DevicePushToken DevicePushToken[]
 
   @@index([email])
   @@index([clerkId]) // Added index for Clerk ID
@@ -337,27 +338,27 @@ model Settings {
 }
 
 model Coupon {
-  id          String     @id @default(cuid())
-  code        String     @unique @db.VarChar(20)
-  type        CouponType
-  value       Decimal    @db.Decimal(10, 2)
-  minPurchase Decimal?   @map("min_purchase") @db.Decimal(10, 2)
-  maxDiscount Decimal?   @map("max_discount") @db.Decimal(10, 2)
-  productId   String?    @map("product_id") // Optional: applies to specific product
-  categoryId  String?    @map("category_id") // Optional: applies to specific category
-  startDate   DateTime   @map("start_date")
-  endDate     DateTime   @map("end_date")
-  usageLimit  Int?       @map("usage_limit")
-  usageCount  Int        @default(0) @map("usage_count")
-  description String?    @db.VarChar(255)
-  perUserLimit Int?      @map("per_user_limit")
-  isActive    Boolean    @default(true) @map("is_active")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  deletedAt   DateTime?  @map("deleted_at")
-  orders      Order[]
-  product     Product?   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  category    Category?  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  id           String     @id @default(cuid())
+  code         String     @unique @db.VarChar(20)
+  type         CouponType
+  value        Decimal    @db.Decimal(10, 2)
+  minPurchase  Decimal?   @map("min_purchase") @db.Decimal(10, 2)
+  maxDiscount  Decimal?   @map("max_discount") @db.Decimal(10, 2)
+  productId    String?    @map("product_id") // Optional: applies to specific product
+  categoryId   String?    @map("category_id") // Optional: applies to specific category
+  startDate    DateTime   @map("start_date")
+  endDate      DateTime   @map("end_date")
+  usageLimit   Int?       @map("usage_limit")
+  usageCount   Int        @default(0) @map("usage_count")
+  description  String?    @db.VarChar(255)
+  perUserLimit Int?       @map("per_user_limit")
+  isActive     Boolean    @default(true) @map("is_active")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  deletedAt    DateTime?  @map("deleted_at")
+  orders       Order[]
+  product      Product?   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category     Category?  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([code])
   @@index([isActive])
@@ -404,14 +405,14 @@ model Refund {
 
 // Delivery config models
 model DeliveryCity {
-  id              String           @id @default(cuid())
-  name            String           @unique @db.VarChar(100)
-  doorFee         Decimal          @map("door_fee") @db.Decimal(10, 2)
-  isActive        Boolean          @default(true) @map("is_active")
+  id              String              @id @default(cuid())
+  name            String              @unique @db.VarChar(100)
+  doorFee         Decimal             @map("door_fee") @db.Decimal(10, 2)
+  isActive        Boolean             @default(true) @map("is_active")
   pickupLocations PickupLocation[]
   serviceCities   DriverServiceCity[]
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
 
   @@index([isActive])
   @@map("delivery_cities")
@@ -450,6 +451,7 @@ model AnalyticsEvent {
   @@index([createdAt])
   @@map("analytics_events")
 }
+
 model Payment {
   id            String        @id @default(cuid())
   orderId       String        @unique @map("order_id")
@@ -690,19 +692,19 @@ enum ReturnStatus {
 
 // Driver management for deliveries
 model Driver {
-  id          String   @id @default(cuid())
-  name        String   @db.VarChar(100)
-  phone       String   @db.VarChar(20)
-  email       String?  @unique @db.VarChar(255)
-  licenseNo   String   @unique @map("license_no") @db.VarChar(50)
-  vehicleType String   @map("vehicle_type") @db.VarChar(50) // car, bike, van
-  vehicleNo   String   @map("vehicle_no") @db.VarChar(50)
-  isActive    Boolean  @default(true) @map("is_active")
-  rating      Decimal? @db.Decimal(3, 2) // Average rating
-  totalTrips  Int      @default(0) @map("total_trips")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  orders      Order[]
+  id            String              @id @default(cuid())
+  name          String              @db.VarChar(100)
+  phone         String              @db.VarChar(20)
+  email         String?             @unique @db.VarChar(255)
+  licenseNo     String              @unique @map("license_no") @db.VarChar(50)
+  vehicleType   String              @map("vehicle_type") @db.VarChar(50) // car, bike, van
+  vehicleNo     String              @map("vehicle_no") @db.VarChar(50)
+  isActive      Boolean             @default(true) @map("is_active")
+  rating        Decimal?            @db.Decimal(3, 2) // Average rating
+  totalTrips    Int                 @default(0) @map("total_trips")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  orders        Order[]
   serviceCities DriverServiceCity[]
 
   @@index([isActive])
@@ -738,4 +740,22 @@ model NewsletterSubscription {
   @@index([email])
   @@index([isActive])
   @@map("newsletter_subscriptions")
+}
+
+/// Mobile device push tokens
+model DevicePushToken {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  deviceId   String   @map("device_id") @db.VarChar(255)
+  platform   String   @db.VarChar(20) // ios | android | web | other
+  token      String   @unique @db.VarChar(512)
+  lastUsedAt DateTime @default(now()) @map("last_used_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([platform])
+  @@map("device_push_tokens")
 }
