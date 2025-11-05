@@ -1,97 +1,12 @@
-import { clerkMiddleware } from "@clerk/nextjs/server"
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
-import arcjet, { detectBot, shield, tokenBucket } from "@arcjet/next"
-import { locales, defaultLocale, isValidLocale, getLocaleFromPathname, stripLocaleFromPathname } from "@/lib/i18n/config"
+import { clerkMiddleware } from '@clerk/nextjs/server'
 
-// Initialize Arcjet
-const aj = arcjet({
-  key: process.env.ARCJET_KEY!, // Get your site key from https://app.arcjet.com
-    rules: [
-        // Shield protects your app from common attacks e.g. SQL injection
-//        shield({ mode: "LIVE" }),
-        // Create a bot detection rule
-        detectBot({
-            mode: "DRY_RUN", // Blocks requests. Use "DRY_RUN" to log only
-            // Block all bots except the following
-            allow: [
-                "CATEGORY:SEARCH_ENGINE", // Google, Bing, etc
-                // Uncomment to allow these other common bot categories
-                // See the full list at https://arcjet.com/bot-list
-                "CATEGORY:MONITOR", // Uptime monitoring services
-                "CATEGORY:PREVIEW", // Link previews e.g. Slack, Discord
-            ],
-        }),
-        // Create a token bucket rate limit. Other algorithms are supported.
-        tokenBucket({
-            mode: "LIVE",
-            // Tracked by IP address by default, but this can be customized
-            // See https://docs.arcjet.com/fingerprints
-            //characteristics: ["ip.src"],
-            refillRate: 5, // Refill 5 tokens per interval
-            interval: 10, // Refill every 10 seconds
-            capacity: 10, // Bucket capacity of 10 tokens
-        }),
-        ],
-})
-
-function isProtectedPath(pathname: string): boolean {
-  const pathNoLocale = stripLocaleFromPathname(pathname)
-  return pathNoLocale.startsWith("/admin") || pathNoLocale.startsWith("/api/admin")
-}
-
-// Skip Arcjet for mobile API routes and during local/dev
-function isMobileApiPath(pathname: string): boolean {
-  // App Router API path for mobile endpoints
-  return pathname.startsWith("/api/mobile/v1")
-}
-
-// Arcjet + locale redirects + Clerk protection
-export default async function middleware(req: NextRequest) {
-  // Pull pathname early for routing decisions
-  const pathname = req.nextUrl.pathname
-
-  // 1) Arcjet protection (tokenBucket requires `requested` prop)
-  // Bypass in non-production or for mobile API routes to avoid blocking local devices
-  const isMobileProxyHeader = req.headers.get("x-mobile-proxy") === "1"
-  const shouldBypassArcjet = process.env.NODE_ENV !== "production" || isMobileApiPath(pathname) || isMobileProxyHeader
-  if (!shouldBypassArcjet) {
-    const decision = await aj.protect(req, { requested: 1 })
-    if (decision.isDenied()) {
-      return NextResponse.json({ error: "Blocked by Arcjet", reason: (decision as any).reason }, { status: 403 })
-    }
-  }
-
-  // 2) Locale redirects
-  if (pathname === "/") {
-    const url = req.nextUrl.clone()
-    url.pathname = `/${defaultLocale}`
-    return NextResponse.redirect(url)
-  }
-
-  const segments = pathname.split("/").filter(Boolean)
-  const first = segments[0]
-  const hasLocale = first && isValidLocale(first)
-  if (!hasLocale && !pathname.startsWith("/api") && !pathname.startsWith("/trpc")) {
-    const url = req.nextUrl.clone()
-    url.pathname = `/${defaultLocale}${pathname}`
-    return NextResponse.redirect(url)
-  }
-
-  // 3) Clerk admin protection
-  // @ts-ignore
-  return clerkMiddleware(async (auth, req) => {
-    if (isProtectedPath(pathname)) {
-      await auth.protect()
-    }
-  })(req)
-}
+export default clerkMiddleware()
 
 export const config = {
-  matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
-    "/(api|trpc)(.*)",
-  ],
+    matcher: [
+        // Skip Next.js internals and all static files, unless found in search params
+        '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+        // Always run for API routes
+        '/(api|trpc)(.*)',
+    ],
 }

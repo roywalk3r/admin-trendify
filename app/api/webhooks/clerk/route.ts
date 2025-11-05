@@ -2,8 +2,11 @@ import { Webhook } from "svix"
 import { headers } from "next/headers"
 import type { WebhookEvent } from "@clerk/nextjs/server"
 import prisma from "@/lib/prisma"
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 export async function POST(req: Request) {
-  const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SECRET!
+  const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SECRET
 
   if (!SIGNING_SECRET) {
     throw new Error("Error: Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env")
@@ -40,14 +43,7 @@ export async function POST(req: Request) {
     return new Response("Error: Verification error", { status: 400 })
   }
 
-  // Parse the verified payload for use
-  // Note: body is a JSON string
-  try {
-    evt = JSON.parse(body) as WebhookEvent
-  } catch (e) {
-    console.error("Error parsing webhook body after verification", e)
-    return new Response("Invalid JSON", { status: 400 })
-  }
+  // Use the verified event object from Svix
 
   if (evt.type === "user.updated") {
     const { id, email_addresses, first_name, last_name } = evt.data
