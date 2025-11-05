@@ -11,9 +11,7 @@ export async function GET(
     const { id } = params
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Product ID is required" },
-      )
+      return createApiResponse({ error: "Product ID is required", status: 400 })
     }
 
     // Try to get from cache first
@@ -21,7 +19,7 @@ export async function GET(
     const cachedProduct = await getCache(cacheKey)
 
     if (cachedProduct) {
-      return NextResponse.json(createApiResponse({ data: cachedProduct }))
+      return createApiResponse({ data: cachedProduct })
     }
 
     // If not in cache, fetch from database
@@ -53,15 +51,13 @@ export async function GET(
       })
 
     if (!product) {
-      return NextResponse.json(
-        { error: "Product not found" },
-      )
+      return createApiResponse({ error: "Product not found", status: 404 })
     }
 
     // Cache the product for future requests (5 minutes TTL)
     await setCache(cacheKey, product, 300)
 
-    return NextResponse.json(createApiResponse({ data: product }))
+    return createApiResponse({ data: product })
   } catch (error) {
     return handleApiError(error)
   }

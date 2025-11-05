@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
 import { withCors, handleOptions } from "@/lib/cors"
 
@@ -6,17 +6,18 @@ export async function OPTIONS(req: NextRequest) {
   return handleOptions(req, { credentials: true })
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const url = new URL(req.url)
-    const origin = url.origin
-    const qs = url.search
+    const origin = new URL(req.url).origin
+    const id = params?.id
 
-    const res = await fetch(`${origin}/api/products${qs}`, {
+    const res = await fetch(`${origin}/api/products/${encodeURIComponent(id)}` , {
       method: "GET",
       headers: {
         Authorization: req.headers.get("authorization") || "",
-        // Signal to middleware this is an internal proxy request from the mobile API route
         "x-mobile-proxy": "1",
       },
       cache: "no-store",
@@ -24,9 +25,8 @@ export async function GET(req: NextRequest) {
     })
 
     const json = await res.json().catch(() => ({}))
-
-    // If the upstream already returns { data, error }, pass through into our envelope
     const data = json?.data ?? json
+
     const out = createApiResponse({ status: res.status, data, error: json?.error })
     return withCors(out, req, { credentials: true })
   } catch (e) {
@@ -34,4 +34,3 @@ export async function GET(req: NextRequest) {
     return withCors(out, req, { credentials: true })
   }
 }
-

@@ -133,6 +133,9 @@ Authorization: {{auth}}
   "productId": "cmehmyuf8000zi9kgsu5rm18f"
 }
 
+### Product Detail: get
+GET http://localhost:3000/api/mobile/v1/products/cmehmyuf8000zi9kgsu5rm18f
+
 ### Wishlist: remove
 DELETE {{baseUrl}}/api/mobile/v1/wishlist?productId=PRODUCT_ID
 Authorization: {{auth}}

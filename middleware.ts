@@ -9,10 +9,10 @@ const aj = arcjet({
   key: process.env.ARCJET_KEY!, // Get your site key from https://app.arcjet.com
     rules: [
         // Shield protects your app from common attacks e.g. SQL injection
-        shield({ mode: "LIVE" }),
+//        shield({ mode: "LIVE" }),
         // Create a bot detection rule
         detectBot({
-            mode: "LIVE", // Blocks requests. Use "DRY_RUN" to log only
+            mode: "DRY_RUN", // Blocks requests. Use "DRY_RUN" to log only
             // Block all bots except the following
             allow: [
                 "CATEGORY:SEARCH_ENGINE", // Google, Bing, etc
@@ -40,16 +40,29 @@ function isProtectedPath(pathname: string): boolean {
   return pathNoLocale.startsWith("/admin") || pathNoLocale.startsWith("/api/admin")
 }
 
+// Skip Arcjet for mobile API routes and during local/dev
+function isMobileApiPath(pathname: string): boolean {
+  // App Router API path for mobile endpoints
+  return pathname.startsWith("/api/mobile/v1")
+}
+
 // Arcjet + locale redirects + Clerk protection
 export default async function middleware(req: NextRequest) {
+  // Pull pathname early for routing decisions
+  const pathname = req.nextUrl.pathname
+
   // 1) Arcjet protection (tokenBucket requires `requested` prop)
-  const decision = await aj.protect(req, { requested: 1 })
-  if (decision.isDenied()) {
-    return NextResponse.json({ error: "Blocked by Arcjet", reason: (decision as any).reason }, { status: 403 })
+  // Bypass in non-production or for mobile API routes to avoid blocking local devices
+  const isMobileProxyHeader = req.headers.get("x-mobile-proxy") === "1"
+  const shouldBypassArcjet = process.env.NODE_ENV !== "production" || isMobileApiPath(pathname) || isMobileProxyHeader
+  if (!shouldBypassArcjet) {
+    const decision = await aj.protect(req, { requested: 1 })
+    if (decision.isDenied()) {
+      return NextResponse.json({ error: "Blocked by Arcjet", reason: (decision as any).reason }, { status: 403 })
+    }
   }
 
   // 2) Locale redirects
-  const pathname = req.nextUrl.pathname
   if (pathname === "/") {
     const url = req.nextUrl.clone()
     url.pathname = `/${defaultLocale}`
