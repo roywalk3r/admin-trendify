@@ -1,12 +1,14 @@
 import type React from "react";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import GeminiPopover from "@/components/gemini-popover";
+import { redirect } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
+import prisma from "@/lib/prisma";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -18,11 +20,30 @@ export const metadata: Metadata = {
   description: "Manage Your store front",
 };
 
-export default function RootLayout({
+
+
+export default async function RootLayout({
   children,
+  params,
 }: Readonly<{
   children: React.ReactNode;
+  params: { locale: string };
 }>) {
+  // Server-side admin/staff protection
+  const { userId } = await auth();
+  if (!userId) {
+    redirect(`/${params.locale}/sign-in`);
+  }
+
+  const user = await prisma.user.findFirst({
+    where: { OR: [{ clerkId: userId }, { id: userId }] },
+    select: { role: true },
+  });
+
+  if (!user || (user.role !== "admin" && user.role !== "staff")) {
+    redirect(`/${params.locale}`);
+  }
+
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <SidebarProvider>

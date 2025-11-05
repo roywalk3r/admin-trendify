@@ -1,9 +1,9 @@
 import { Webhook } from "svix"
 import { headers } from "next/headers"
 import type { WebhookEvent } from "@clerk/nextjs/server"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 export async function POST(req: Request) {
-  const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SECRET
+  const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SECRET!
 
   if (!SIGNING_SECRET) {
     throw new Error("Error: Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env")
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const wh = new Webhook(SIGNING_SECRET)
 
   // Get headers
-  const headerPayload = await headers()
+  const headerPayload = headers()
   const svix_id = headerPayload.get("svix-id")
   const svix_timestamp = headerPayload.get("svix-timestamp")
   const svix_signature = headerPayload.get("svix-signature")
@@ -23,9 +23,8 @@ export async function POST(req: Request) {
     return new Response("Error: Missing Svix headers", { status: 400 })
   }
 
-  // Get body
-  const payload = await req.json()
-  const body = JSON.stringify(payload)
+  // Get raw body for verification
+  const body = await req.text()
 
   let evt: WebhookEvent
 
@@ -40,17 +39,27 @@ export async function POST(req: Request) {
     console.error("Error: Could not verify webhook:", err)
     return new Response("Error: Verification error", { status: 400 })
   }
+
+  // Parse the verified payload for use
+  // Note: body is a JSON string
+  try {
+    evt = JSON.parse(body) as WebhookEvent
+  } catch (e) {
+    console.error("Error parsing webhook body after verification", e)
+    return new Response("Invalid JSON", { status: 400 })
+  }
+
   if (evt.type === "user.updated") {
     const { id, email_addresses, first_name, last_name } = evt.data
     const email = email_addresses?.[0]?.email_address || ""
     const fullName = `${first_name} ${last_name}` || ""
     try {
-      // Update user in database
-      await prisma.user.update({
-        where: {
-          id,
-        },
-        data: {
+      // Idempotent upsert by Clerk ID, keep internal primary key stable
+      await prisma.user.upsert({
+        where: { clerkId: id },
+        update: { email, name: fullName || "" },
+        create: {
+          clerkId: id,
           email,
           name: fullName || "",
         },
@@ -69,10 +78,12 @@ export async function POST(req: Request) {
     const fullName = `${first_name} ${last_name}` || ""
 
     try {
-      // Insert user into database
-      await prisma.user.create({
-        data: {
-          id,
+      // Idempotent create by Clerk ID; do not overwrite primary key
+      await prisma.user.upsert({
+        where: { clerkId: id },
+        update: { email, name: fullName || "" },
+        create: {
+          clerkId: id,
           email,
           name: fullName || "",
         },
