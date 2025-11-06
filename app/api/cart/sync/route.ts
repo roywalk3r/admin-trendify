@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs/server"
+import { auth, currentUser } from "@clerk/nextjs/server"
 import { z } from "zod"
 import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
@@ -38,9 +38,29 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     const body = await req.json()
     const { guestCartItems } = syncCartSchema.parse(body)
 
+    // Resolve internal user id via clerkId and get or create cart
+    let local = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (!local) {
+      const cu = await currentUser()
+      if (!cu) return createApiResponse({ error: "Unauthorized - No profile", status: 401 })
+      const email = cu.primaryEmailAddress?.emailAddress || cu.emailAddresses?.[0]?.emailAddress
+      if (!email) return createApiResponse({ error: "User email missing", status: 400 })
+      const name = (cu.firstName && cu.lastName) ? `${cu.firstName} ${cu.lastName}` : cu.username || email
+      local = await prisma.user.create({
+        data: {
+          clerkId: userId,
+          email,
+          name,
+          role: "customer",
+          isVerified: (cu.primaryEmailAddress as any)?.verification?.status === "verified" || false,
+          lastLoginAt: new Date(),
+        },
+      })
+    }
+
     // Get or create user's cart
     let userCart = await prisma.cart.findUnique({
-      where: { userId },
+      where: { userId: local.id },
       include: {
         items: {
           include: {
@@ -62,7 +82,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
       // Create new cart for user
       userCart = await prisma.cart.create({
         data: {
-          userId,
+          userId: local.id,
           items: {
             create: [],
           },
@@ -149,7 +169,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
 
     // Fetch updated cart to return
     const updatedCart = await prisma.cart.findUnique({
-      where: { userId },
+      where: { userId: local.id },
       include: {
         items: {
           include: {
@@ -213,8 +233,11 @@ export const GET = withRateLimit(async (req: NextRequest) => {
       })
     }
 
+    // Resolve internal user and fetch cart by internal id
+    const local = await prisma.user.findUnique({ where: { clerkId: userId }, select: { id: true } })
+    if (!local) return createApiResponse({ data: { items: [] }, status: 200 })
     const userCart = await prisma.cart.findUnique({
-      where: { userId },
+      where: { userId: local.id },
       include: {
         items: {
           include: {

@@ -99,7 +99,9 @@ export function isPaystackTxSuccess(data: PaystackTransaction | undefined | null
 
 export const PAYSTACK_BASE_URL = "https://api.paystack.co"
 
-export async function paystackInitialize(secretKey: string, payload: any): Promise<PaystackInitResponse> {
+export async function paystackInitialize(secretKey: string, payload: any, timeoutMs = 10000): Promise<PaystackInitResponse> {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeoutMs)
   const res = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
     method: "POST",
     headers: {
@@ -108,17 +110,21 @@ export async function paystackInitialize(secretKey: string, payload: any): Promi
     },
     body: JSON.stringify(payload),
     cache: "no-store",
-  })
+    signal: controller.signal,
+  }).finally(() => clearTimeout(id))
   return res.json()
 }
 
-export async function paystackVerify(secretKey: string, reference: string): Promise<PaystackVerifyResponse> {
+export async function paystackVerify(secretKey: string, reference: string, timeoutMs = 10000): Promise<PaystackVerifyResponse> {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeoutMs)
   const res = await fetch(`${PAYSTACK_BASE_URL}/transaction/verify/${reference}`, {
     headers: {
       Authorization: `Bearer ${secretKey}`,
       "Content-Type": "application/json",
     },
     cache: "no-store",
-  })
+    signal: controller.signal,
+  }).finally(() => clearTimeout(id))
   return res.json()
 }

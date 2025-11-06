@@ -38,13 +38,17 @@ export async function POST(req: NextRequest) {
       if (!cityName || !locName) {
         return createApiResponse({ status: 400, error: "Invalid pickup selection" })
       }
+      // Lightweight validation: fetch only ids
       const city = await prisma.deliveryCity.findFirst({
         where: { name: { equals: cityName, mode: "insensitive" }, isActive: true },
-        include: { pickupLocations: { where: { isActive: true } } },
+        select: { id: true },
       })
-      if (!city || !city.pickupLocations.some((p) => p.name.toLowerCase() === locName.toLowerCase())) {
-        return createApiResponse({ status: 400, error: "Invalid pickup selection" })
-      }
+      if (!city) return createApiResponse({ status: 400, error: "Invalid pickup selection" })
+      const loc = await prisma.pickupLocation.findFirst({
+        where: { cityId: city.id, name: { equals: locName, mode: "insensitive" }, isActive: true },
+        select: { id: true },
+      })
+      if (!loc) return createApiResponse({ status: 400, error: "Invalid pickup selection" })
     }
     // If delivery is door-to-door, require an address that belongs to the user
     let address: any = null
@@ -114,7 +118,7 @@ export async function POST(req: NextRequest) {
       initPayload.channels = channels
     }
 
-    const init = await paystackInitialize(secretKey, initPayload)
+    const init = await paystackInitialize(secretKey, initPayload, 8000)
 
     if (!init.status || !init.data) {
       return createApiResponse({ status: 400, error: init.message || "Failed to initialize payment" })

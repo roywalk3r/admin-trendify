@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server"
+import { currentUser } from "@clerk/nextjs/server"
 import { z } from "zod"
 import type { NextRequest } from "next/server"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
@@ -33,10 +34,35 @@ const updateQtySchema = z.object({
   size: z.string().optional(),
 })
 
-async function getOrCreateCart(userId: string) {
-  const existing = await prisma.cart.findUnique({ where: { userId } })
+async function resolveOrCreateLocalUser(clerkUserId: string) {
+  // Try to find by clerkId
+  let local = await prisma.user.findUnique({ where: { clerkId: clerkUserId } })
+  if (local) return local
+  // Create minimal local user from Clerk profile if available
+  const cu = await currentUser()
+  if (!cu) return null
+  const email = cu.primaryEmailAddress?.emailAddress || cu.emailAddresses?.[0]?.emailAddress
+  if (!email) return null
+  const name = (cu.firstName && cu.lastName) ? `${cu.firstName} ${cu.lastName}` : cu.username || email
+  local = await prisma.user.create({
+    data: {
+      clerkId: clerkUserId,
+      email,
+      name,
+      role: "customer",
+      isVerified: (cu.primaryEmailAddress as any)?.verification?.status === "verified" || false,
+      lastLoginAt: new Date(),
+    },
+  })
+  return local
+}
+
+async function getOrCreateCartByClerkId(clerkUserId: string) {
+  const local = await resolveOrCreateLocalUser(clerkUserId)
+  if (!local) throw new Error("User not found")
+  const existing = await prisma.cart.findUnique({ where: { userId: local.id } })
   if (existing) return existing
-  return prisma.cart.create({ data: { userId } })
+  return prisma.cart.create({ data: { userId: local.id } })
 }
 
 export async function GET() {
@@ -46,8 +72,10 @@ export async function GET() {
       return createApiResponse({ error: "Unauthorized", status: 401 })
     }
 
+    const local = await resolveOrCreateLocalUser(userId)
+    if (!local) return createApiResponse({ error: "User not found", status: 404 })
     const cart = await prisma.cart.findUnique({
-      where: { userId },
+      where: { userId: local.id },
       include: { items: true },
     })
 
@@ -78,7 +106,7 @@ export async function POST(req: NextRequest) {
     const item = addItemSchema.parse(body) as CartItemPayload
 
     // ensure cart exists
-    const cart = await getOrCreateCart(userId)
+    const cart = await getOrCreateCartByClerkId(userId)
 
     // find existing cart item by composite keys
     const existing = await prisma.cartItem.findFirst({
@@ -137,7 +165,9 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json()
     const { id, quantity, color, size } = updateQtySchema.parse(body)
 
-    const cart = await prisma.cart.findUnique({ where: { userId } })
+    const local = await resolveOrCreateLocalUser(userId)
+    if (!local) return createApiResponse({ error: "User not found", status: 404 })
+    const cart = await prisma.cart.findUnique({ where: { userId: local.id } })
     if (!cart) return createApiResponse({ error: "Cart not found", status: 404 })
 
     let item = await prisma.cartItem.findFirst({ where: { cartId: cart.id, productId: id, color: color ?? null, size: size ?? null } })
@@ -187,9 +217,11 @@ export async function DELETE(req: NextRequest) {
 
     const url = new URL(req.url)
     const id = url.searchParams.get("id")
+    const color = url.searchParams.get("color")
+    const size = url.searchParams.get("size")
     const clear = url.searchParams.get("clear")
 
-    const cart = await getOrCreateCart(userId)
+    const cart = await getOrCreateCartByClerkId(userId)
 
     if (clear === "1") {
       await prisma.cartItem.deleteMany({ where: { cartId: cart.id } })
@@ -200,7 +232,15 @@ export async function DELETE(req: NextRequest) {
       return createApiResponse({ error: "id is required", status: 400 })
     }
 
-    await prisma.cartItem.deleteMany({ where: { cartId: cart.id, productId: id } })
+    // Delete specific variant if color/size provided; otherwise delete by productId
+    await prisma.cartItem.deleteMany({
+      where: {
+        cartId: cart.id,
+        productId: id,
+        color: color ? color : undefined,
+        size: size ? size : undefined,
+      },
+    })
     const refreshed = await prisma.cart.findUnique({ where: { id: cart.id }, include: { items: true } })
     const items = (refreshed?.items ?? []).map((i) => ({
       id: i.productId,

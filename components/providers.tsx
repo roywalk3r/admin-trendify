@@ -2,9 +2,11 @@
 
 import { ClerkProvider, useUser } from "@clerk/nextjs"
 import type React from "react"
-import { useEffect, useRef } from "react"
+import {useEffect, useMemo, useRef} from "react"
 import { useCartStore } from "@/lib/store/cart-store"
 import { SettingsProvider } from "@/lib/contexts/settings-context"
+import {useParams, usePathname} from "next/navigation";
+import {getLocaleFromPathname} from "@/lib/i18n/config";
 
 function CartSync() {
   const { isSignedIn, user } = useUser()
@@ -14,6 +16,9 @@ function CartSync() {
   const hydrated = useCartStore((s) => s.hydrated)
   const setItems = useCartStore((s) => s.setItems)
   const mergeItems = useCartStore((s) => s.mergeItems)
+    const params = useParams() as { locale?: string }
+    const pathname = usePathname()
+    const locale = useMemo(() => params?.locale || getLocaleFromPathname(pathname), [params, pathname])
 
   useEffect(() => {
     // Ensure local storage has loaded before any sync
@@ -56,10 +61,8 @@ function CartSync() {
           }))
 
           if (!cancelled) {
-            // Merge server items into local cart to avoid losing guest items
-            if (serverItems.length > 0) {
-              mergeItems(serverItems)
-            }
+            // Replace local cart with server truth to avoid duplicates after login
+            setItems(serverItems)
           }
         }
 
