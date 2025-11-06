@@ -83,7 +83,7 @@ function CartSync() {
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider afterSignOutUrl={"/"}>
+    <ClerkProvider afterSignOutUrl={"/en"} afterSignInUrl={"/en"}>
       <SettingsProvider>
         <CartSync />
         {children}

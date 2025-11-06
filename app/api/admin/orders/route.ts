@@ -4,27 +4,20 @@ import { NextResponse, type NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
 
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
-
-import { adminAuthMiddleware } from "@/lib/admin-auth"
+import { requireAdmin } from "@/lib/middleware/admin-auth"
 
 import { z } from "zod"
-
-import { auth } from "@clerk/nextjs/server"
 
 // Order update validation schema
 const orderUpdateSchema = z.object({
   id: z.string(),
-  status: z.enum(["processing", "shipped", "deivered", "canceled"]).optional(),
+  status: z.enum(["processing", "shipped", "delivered", "canceled"]).optional(),
   paymentStatus: z.enum(["pending", "paid", "failed", "refunded"]).optional(),
 })
 
 export async function GET(req: NextRequest) {
-  // Check admin authorization
-  const { userId } = await auth()
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+  const adminCheck = await requireAdmin()
+  if (adminCheck.error) return adminCheck.response
 
   try {
     // Get query parameters
@@ -107,11 +100,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  // Check admin authorization
-  const authResponse = await adminAuthMiddleware(req)
-  if (authResponse.status !== 200) {
-    return authResponse
-  }
+  const adminCheck = await requireAdmin()
+  if (adminCheck.error) return adminCheck.response
 
   try {
     const body = await req.json()
@@ -120,6 +110,7 @@ export async function PATCH(req: NextRequest) {
     // Manually map field names if Prisma expects `payment_status`
     const dbData: any = {}
     if (data.status) dbData.status = data.status
+    if (data.paymentStatus) dbData.payment_status = data.paymentStatus // Use snake case
     if (data.paymentStatus) dbData.payment_status = data.paymentStatus // Use snake_case
 
     const order = await prisma.order.update({

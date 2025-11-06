@@ -11,8 +11,8 @@ export async function isAdmin() {
   try {
     const { userId } = await auth()
     if (!userId) return false
-    const user = await prisma.user.findFirst({
-      where: { OR: [{ clerkId: userId }, { id: userId }] },
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
       select: { role: true },
     })
     return user?.role === "admin"
@@ -34,8 +34,8 @@ export async function adminAuthMiddleware(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const user = await prisma.user.findFirst({
-      where: { OR: [{ clerkId: userId }, { id: userId }] },
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
       select: { role: true },
     })
 

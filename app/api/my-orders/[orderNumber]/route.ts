@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: { orderNumber:
     const orderNumber = params.orderNumber
     if (!orderNumber) return createApiResponse({ error: "orderNumber is required", status: 400 })
 
-    const user = await prisma.user.findFirst({ where: { OR: [{ clerkId: userId }, { id: userId }] }, select: { id: true } })
+    const user = await prisma.user.findUnique({ where: { clerkId: userId }, select: { id: true } })
     if (!user) return createApiResponse({ error: "User not found", status: 404 })
 
     const order = await prisma.order.findFirst({

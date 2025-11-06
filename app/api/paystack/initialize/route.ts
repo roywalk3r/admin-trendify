@@ -25,6 +25,10 @@ export async function POST(req: NextRequest) {
 
     const { amount, email, metadata, addressId } = parsed.data
 
+    // Resolve local user from Clerk userId
+    const localUser = await prisma.user.findUnique({ where: { clerkId: userId } })
+    if (!localUser) return createApiResponse({ status: 404, error: "User not found" })
+
     // Validate delivery selection from metadata
     const delivery = (metadata as any)?.delivery as { method?: string; pickupCity?: string | null; pickupLocation?: string | null }
     const method = (delivery?.method || "pickup").toString() as "pickup" | "door"
@@ -46,7 +50,7 @@ export async function POST(req: NextRequest) {
     let address: any = null
     if (method === "door") {
       if (!addressId) return createApiResponse({ status: 400, error: "addressId is required for door delivery" })
-      address = await prisma.address.findFirst({ where: { id: addressId, userId } })
+      address = await prisma.address.findFirst({ where: { id: addressId, userId: localUser.id } })
       if (!address) return createApiResponse({ status: 400, error: "Invalid address" })
     }
 
@@ -88,7 +92,7 @@ export async function POST(req: NextRequest) {
       callback_url: `${publicUrl}/checkout/confirm`,
       metadata: {
         ...metadata,
-        userId,
+        userId: localUser.id,
         addressId: method === "door" ? addressId : undefined,
         // include a snapshot of the shipping address only for door delivery
         addressSnapshot: method === "door" && address

@@ -35,8 +35,8 @@ export default async function RootLayout({
     redirect(`/${params.locale}/sign-in`);
   }
 
-  const user = await prisma.user.findFirst({
-    where: { OR: [{ clerkId: userId }, { id: userId }] },
+  const user = await prisma.user.findUnique({
+    where: { clerkId: userId },
     select: { role: true },
   });
 

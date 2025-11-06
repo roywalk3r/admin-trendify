@@ -7,7 +7,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const user = await prisma.user.findFirst({ where: { id: userId } })
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
     const id = params.id
@@ -47,7 +47,7 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const user = await prisma.user.findFirst({ where: { id: userId } })
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
     const id = params.id

@@ -13,8 +13,8 @@ export async function GET() {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    // Find or create a local user record using Clerk userId as local id
-    let user = await prisma.user.findFirst({ where: { id: userId } })
+    // Find or create local user record using Clerk userId mapped to clerkId
+    let user = await prisma.user.findUnique({ where: { clerkId: userId } })
     const cu = await currentUser()
     if (!user) {
       if (!cu) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -26,7 +26,7 @@ export async function GET() {
 
       user = await prisma.user.create({
         data: {
-          id: userId,
+          clerkId: userId,
           email: primaryEmail,
           name: displayName,
           avatar: avatarUrl,
@@ -63,7 +63,7 @@ export async function PUT(req: NextRequest) {
     const { name, avatar } = parsed.data
 
     const updated = await prisma.user.update({
-      where: { id: userId },
+      where: { clerkId: userId },
       data: {
         name,
         avatar: avatar || null,

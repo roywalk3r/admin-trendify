@@ -1,12 +1,53 @@
-import { clerkMiddleware } from '@clerk/nextjs/server'
+import { clerkMiddleware } from "@clerk/nextjs/server"
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import { defaultLocale, isValidLocale, stripLocaleFromPathname } from "@/lib/i18n/config"
 
-export default clerkMiddleware()
+function isWebhookPath(pathname: string): boolean {
+  return pathname.startsWith("/api/webhooks/")
+}
+
+function isProtectedPath(pathname: string): boolean {
+  const noLocale = stripLocaleFromPathname(pathname)
+  return noLocale.startsWith("/admin") || noLocale.startsWith("/api/admin")
+}
+
+export default function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl
+
+  // 0) Bypass webhooks completely to preserve raw body for signature verification
+  if (isWebhookPath(pathname)) {
+    return NextResponse.next()
+  }
+
+  // 1) Locale handling: prefix default locale if missing for non-API routes
+  if (pathname === "/") {
+    const url = req.nextUrl.clone()
+    url.pathname = `/${defaultLocale}`
+    return NextResponse.redirect(url)
+  }
+
+  const segments = pathname.split("/").filter(Boolean)
+  const hasLocale = segments[0] && isValidLocale(segments[0]!)
+  const isApi = pathname.startsWith("/api") || pathname.startsWith("/trpc")
+
+  if (!hasLocale && !isApi) {
+    const url = req.nextUrl.clone()
+    url.pathname = `/${defaultLocale}${pathname}`
+    return NextResponse.redirect(url)
+  }
+
+  // 2) Clerk protection for protected paths
+  return clerkMiddleware(async (auth, request) => {
+    if (isProtectedPath(request.nextUrl.pathname)) {
+      await auth.protect()
+    }
+  })(req)
+}
 
 export const config = {
     matcher: [
-        // Skip Next.js internals and all static files, unless found in search params
-        '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-        // Always run for API routes
-        '/(api|trpc)(.*)',
+        "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+        "/(api|trpc)(.*)",
     ],
 }

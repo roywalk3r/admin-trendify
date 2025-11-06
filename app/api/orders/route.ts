@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import { adminAuthMiddleware } from "@/lib/admin-auth"
 import { Decimal } from "@prisma/client/runtime/library"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
@@ -139,11 +139,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // If effectiveUserId is a Clerk user id, map it to our internal user.id
+    let effectiveInternalUserId = effectiveUserId
+    if (effectiveUserId) {
+      const local = await prisma.user.findUnique({ where: { clerkId: effectiveUserId } })
+      if (local) effectiveInternalUserId = local.id
+    }
+
     // Resolve shipping address: either object provided or fetched via addressId
     let resolvedAddress: any = shippingAddress || null
     if (!resolvedAddress && addressId) {
       const addr = await prisma.address.findFirst({
-        where: { id: addressId, userId: effectiveUserId },
+        where: { id: addressId, userId: effectiveInternalUserId },
       })
       if (addr) {
         resolvedAddress = {
@@ -256,7 +263,7 @@ export async function POST(request: NextRequest) {
 
     // Idempotency: compute a signature of this order request and reuse recent unpaid order if present
     const sigPayload = {
-      userId: effectiveUserId,
+      userId: effectiveInternalUserId,
       items: validatedItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
       shipping: shipping || 0,
       tax: tax || 0,
@@ -271,7 +278,7 @@ export async function POST(request: NextRequest) {
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
     const existingSame = await prisma.order.findFirst({
       where: {
-        userId: String(effectiveUserId),
+        userId: String(effectiveInternalUserId),
         status: "pending",
         paymentStatus: "unpaid",
         notes: sigTag,
@@ -294,7 +301,7 @@ export async function POST(request: NextRequest) {
       const newOrder = await tx.order.create({
         data: {
           orderNumber: `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
-          userId: String(effectiveUserId),
+          userId: String(effectiveInternalUserId),
           status: "pending",
           paymentStatus: "unpaid",
           totalAmount: finalTotal,

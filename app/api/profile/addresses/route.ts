@@ -9,7 +9,7 @@ export async function GET() {
     const { userId } = await auth()
     if (!userId) return createApiResponse({ status: 401, error: "Unauthorized" })
 
-    const user = await prisma.user.findFirst({ where: { id: userId } })
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
     if (!user) return createApiResponse({ status: 404, error: "User not found" })
 
     const addresses = await prisma.address.findMany({ where: { userId: user.id }, orderBy: { isDefault: "desc" } })
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const { userId } = await auth()
     if (!userId) return createApiResponse({ status: 401, error: "Unauthorized" })
 
-    const user = await prisma.user.findFirst({ where: { id: userId } })
+    const user = await prisma.user.findUnique({ where: { clerkId: userId } })
     if (!user) return createApiResponse({ status: 404, error: "User not found" })
 
     const body = await req.json()

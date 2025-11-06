@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs/server"
 import { z } from "zod"
 import { getProductsListCached, invalidateProduct, invalidateProductLists } from "@/lib/data/products"
 import { revalidateTag } from "next/cache"
+import { requireAdmin } from "@/lib/middleware/admin-auth"
 
 const querySchema = z.object({
   search: z.string().optional().default(""),
@@ -31,10 +32,8 @@ const productSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const adminCheck = await requireAdmin()
+    if (adminCheck.error) return adminCheck.response
 
     const { searchParams } = new URL(request.url)
     const params = querySchema.parse({
@@ -96,10 +95,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const adminCheck = await requireAdmin()
+    if (adminCheck.error) return adminCheck.response
 
     const body = await request.json()
     const validatedData = productSchema.parse(body)
@@ -154,10 +151,8 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const adminCheck = await requireAdmin()
+    if (adminCheck.error) return adminCheck.response
 
     const body = await request.json()
 

@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic"
 import type { NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
-import { adminAuthMiddleware } from "@/lib/admin-auth"
+import { requireAdmin } from "@/lib/middleware/admin-auth"
 import { z } from "zod"
 
 // User update validation schema
@@ -15,10 +15,8 @@ const userUpdateSchema = z.object({
 
 export async function GET(req: NextRequest) {
   // Check admin authorization
-  const authResponse = await adminAuthMiddleware(req)
-  if (authResponse.status !== 200) {
-    return authResponse
-  }
+  const adminCheck = await requireAdmin(req)
+  if (adminCheck.error) return adminCheck.response
 
   try {
     // Get query parameters
@@ -89,10 +87,8 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   // Check admin authorization
-  const authResponse = await adminAuthMiddleware(req)
-  if (authResponse.status !== 200) {
-    return authResponse
-  }
+  const adminCheck = await requireAdmin(req)
+  if (adminCheck.error) return adminCheck.response
 
   try {
     // Parse and validate request body
@@ -124,10 +120,8 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   // Check admin authorization
-  const authResponse = await adminAuthMiddleware(req)
-  if (authResponse.status !== 200) {
-    return authResponse
-  }
+  const adminCheck = await requireAdmin(req)
+  if (adminCheck.error) return adminCheck.response
 
   try {
     const url = new URL(req.url)
