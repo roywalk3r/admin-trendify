@@ -1,6 +1,5 @@
 import { clerkMiddleware } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
 import { defaultLocale, isValidLocale, stripLocaleFromPathname } from "@/lib/i18n/config"
 
 function isWebhookPath(pathname: string): boolean {
@@ -12,7 +11,7 @@ function isProtectedPath(pathname: string): boolean {
   return noLocale.startsWith("/admin") || noLocale.startsWith("/api/admin")
 }
 
-export default function middleware(req: NextRequest) {
+export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl
 
   // 0) Bypass webhooks completely to preserve raw body for signature verification
@@ -38,12 +37,12 @@ export default function middleware(req: NextRequest) {
   }
 
   // 2) Clerk protection for protected paths
-  return clerkMiddleware(async (auth, request) => {
-    if (isProtectedPath(request.nextUrl.pathname)) {
-      await auth.protect()
-    }
-  })(req)
-}
+  if (isProtectedPath(req.nextUrl.pathname)) {
+    await auth.protect()
+  }
+
+  return NextResponse.next()
+})
 
 export const config = {
     matcher: [

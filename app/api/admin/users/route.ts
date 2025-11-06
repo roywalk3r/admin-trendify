@@ -15,7 +15,7 @@ const userUpdateSchema = z.object({
 
 export async function GET(req: NextRequest) {
   // Check admin authorization
-  const adminCheck = await requireAdmin(req)
+  const adminCheck = await requireAdmin()
   if (adminCheck.error) return adminCheck.response
 
   try {
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   // Check admin authorization
-  const adminCheck = await requireAdmin(req)
+  const adminCheck = await requireAdmin()
   if (adminCheck.error) return adminCheck.response
 
   try {
@@ -120,7 +120,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   // Check admin authorization
-  const adminCheck = await requireAdmin(req)
+  const adminCheck = await requireAdmin()
   if (adminCheck.error) return adminCheck.response
 
   try {
