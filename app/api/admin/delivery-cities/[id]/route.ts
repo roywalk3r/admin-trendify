@@ -10,7 +10,8 @@ const updateSchema = z.object({
   isActive: z.boolean().optional(),
 })
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const authRes = await adminAuthMiddleware(req)
   if (authRes.status !== 200) return authRes
 
@@ -33,7 +34,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const authRes = await adminAuthMiddleware(req)
   if (authRes.status !== 200) return authRes
 

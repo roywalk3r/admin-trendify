@@ -10,7 +10,8 @@ const updateSchema = z.object({
   notes: z.string().optional()
 })
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const authRes = await adminAuthMiddleware(req)
   if (authRes.status !== 200) return authRes
 

@@ -4,7 +4,8 @@ import { withCors, handleOptions } from "@/lib/cors"
 
 export async function OPTIONS(req: NextRequest) { return handleOptions(req, { credentials: true }) }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const origin = new URL(req.url).origin
     const res = await fetch(`${origin}/api/returns/${params.id}`, { headers: { Authorization: req.headers.get("authorization") || "" }, cache: "no-store" })

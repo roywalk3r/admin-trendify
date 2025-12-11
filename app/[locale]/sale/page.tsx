@@ -5,7 +5,7 @@ import { headers } from "next/headers"
 import { Suspense } from "react"
 
 async function fetchSale() {
-  const hdrs = headers()
+  const hdrs = await headers()
   const host = hdrs.get("host")
   const proto = process.env.VERCEL_URL ? "https" : "http"
   const url = host ? `${proto}://${host}/api/sale` : `/api/sale`

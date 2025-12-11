@@ -2,7 +2,7 @@ import React from "react"
 import { headers } from "next/headers"
 
 async function getData(days = 30) {
-  const h = headers()
+  const h = await headers()
   const host = h.get("x-forwarded-host") || h.get("host") || "localhost:3000"
   const proto = h.get("x-forwarded-proto") || "http"
   const base = `${proto}://${host}`
@@ -22,7 +22,8 @@ async function getData(days = 30) {
   }
 }
 
-export default async function SearchAnalyticsPage({ searchParams }: { searchParams?: { days?: string } }) {
+export default async function SearchAnalyticsPage(props: { searchParams?: Promise<{ days?: string }> }) {
+  const searchParams = await props.searchParams;
   const days = Number(searchParams?.days ?? 30)
   const resp = await getData(isNaN(days) ? 30 : days)
   const error = (resp as any)?.error as string | undefined

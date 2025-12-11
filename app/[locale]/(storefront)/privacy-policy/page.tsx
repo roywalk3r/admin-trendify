@@ -7,7 +7,8 @@ export const metadata = {
   description: "Learn how we collect, use, and protect your personal information.",
 }
 
-export default function PrivacyPolicyPage({ params }: { params: { locale: Locale } }) {
+export default async function PrivacyPolicyPage(props: { params: Promise<{ locale: Locale }> }) {
+  const params = await props.params;
   const locale = params.locale
   return (
     <div className="container max-w-4xl py-12">

@@ -8,7 +8,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 export const revalidate = 300
 
 interface CategoryPageProps {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 async function getCategoryBySlug(slug: string) {
@@ -23,7 +23,8 @@ async function getCategoryBySlug(slug: string) {
   }
 }
 
-export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
+export async function generateMetadata(props: CategoryPageProps): Promise<Metadata> {
+  const params = await props.params;
   const category = await getCategoryBySlug(params.slug)
   if (!category) {
     return { title: "Category Not Found | Trendify" }
@@ -34,7 +35,8 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   }
 }
 
-export default async function CategoryPage({ params }: CategoryPageProps) {
+export default async function CategoryPage(props: CategoryPageProps) {
+  const params = await props.params;
   const category = await getCategoryBySlug(params.slug)
   if (!category) return notFound()
 

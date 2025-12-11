@@ -4,7 +4,8 @@ import { withCors, handleOptions } from "@/lib/cors"
 
 export async function OPTIONS(req: NextRequest) { return handleOptions(req, { credentials: true }) }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const origin = new URL(req.url).origin
     const body = await req.json().catch(() => ({}))
@@ -15,7 +16,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   } catch (e) { const out = handleApiError(e); return withCors(out, req, { credentials: true }) }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const origin = new URL(req.url).origin
     const res = await fetch(`${origin}/api/profile/addresses/${params.id}`, { method: "DELETE", headers: { Authorization: req.headers.get("authorization") || "" }, cache: "no-store" })

@@ -9,10 +9,8 @@ const statusSchema = z.object({
   notes: z.string().optional(),
 })
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Check admin authentication
     const authResponse = await adminAuthMiddleware(request)

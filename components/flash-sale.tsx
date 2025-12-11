@@ -4,7 +4,7 @@ import { headers } from "next/headers"
 
 async function getFlashSale() {
   try {
-    const hdrs = headers()
+    const hdrs = await headers()
     const host = hdrs.get("host")
     const proto = process.env.VERCEL_URL ? "https" : "http"
     const url = host ? `${proto}://${host}/api/public/settings` : `/api/public/settings`

@@ -16,7 +16,8 @@ const updateSchema = z.object({
   serviceCityIds: z.array(z.string()).optional(),
 })
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Fetch driver core data first (avoid relying on relation include that may be missing in generated client)
     const driver = await prisma.driver.findUnique({
@@ -37,7 +38,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const authRes = await adminAuthMiddleware(req)
   if (authRes.status !== 200) return authRes
 
@@ -97,7 +99,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const authRes = await adminAuthMiddleware(req)
   if (authRes.status !== 200) return authRes
 

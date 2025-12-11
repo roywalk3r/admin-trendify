@@ -3,7 +3,8 @@ import { auth } from "@clerk/nextjs/server"
 import prisma from "@/lib/prisma"
 import { createApiResponse } from "@/lib/api-utils"
 
-export async function GET(req: NextRequest, { params }: { params: { orderNumber: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ orderNumber: string }> }) {
+  const params = await props.params;
   try {
     const { userId } = await auth()
     if (!userId) return createApiResponse({ error: "Unauthorized", status: 401 })

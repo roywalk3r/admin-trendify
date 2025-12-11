@@ -22,13 +22,18 @@ export const metadata: Metadata = {
 
 
 
-export default async function RootLayout({
-  children,
-  params,
-}: Readonly<{
-  children: React.ReactNode;
-  params: { locale: string };
-}>) {
+export default async function RootLayout(
+  props: Readonly<{
+    children: React.ReactNode;
+    params: { locale: string };
+  }>
+) {
+  const params = await props.params;
+
+  const {
+    children
+  } = props;
+
   // Server-side admin/staff protection
   const { userId } = await auth();
   if (!userId) {

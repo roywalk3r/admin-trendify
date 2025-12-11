@@ -19,11 +19,11 @@ function q(obj: Record<string, any>) {
 async function getAudit(params: Record<string, any>) {
   const qs = q(params)
   // Build absolute same-origin URL for Node fetch and forward cookies for Clerk/middleware
-  const h = headers()
+  const h = await headers()
   const host = h.get("x-forwarded-host") || h.get("host") || "localhost:3000"
   const proto = h.get("x-forwarded-proto") || "http"
   const base = `${proto}://${host}`
-  const cookieHeader = cookies().toString()
+  const cookieHeader = (await cookies()).toString()
   const res = await fetch(`${base}/api/admin/audit${qs ? `?${qs}` : ""}`, {
     cache: "no-store",
     headers: cookieHeader ? { cookie: cookieHeader } : undefined,
@@ -36,7 +36,8 @@ async function getAudit(params: Record<string, any>) {
   return res.json()
 }
 
-export default async function AuditPage({ searchParams }: { searchParams?: Record<string, string | undefined> }) {
+export default async function AuditPage(props: { searchParams?: Promise<Record<string, string | undefined>> }) {
+  const searchParams = await props.searchParams;
   const page = Number(searchParams?.page ?? 1)
   const limit = Number(searchParams?.limit ?? 50)
   const entityType = searchParams?.entityType ?? ""

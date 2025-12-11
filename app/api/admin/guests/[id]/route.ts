@@ -3,7 +3,8 @@ import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
 import { adminAuthMiddleware } from "@/lib/admin-auth"
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const authRes = await adminAuthMiddleware(req)
   if (authRes.status !== 200) return authRes
 
@@ -20,7 +21,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const authRes = await adminAuthMiddleware(req)
   if (authRes.status !== 200) return authRes
 
