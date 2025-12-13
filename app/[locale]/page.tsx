@@ -5,6 +5,7 @@ import NewsletterSection from "@/components/newsletter-section";
 import TestimonialsSection from "@/components/testimonial-section";
 import BrandsSection from "@/components/brands-section";
 import FlashSale from "@/components/flash-sale";
+import LimitedCarousel from "@/components/limited";
 
 export default function Home(){
     return (
@@ -14,6 +15,7 @@ export default function Home(){
             <FlashSale />
             <Category/>
             <FeaturedProducts />
+            <LimitedCarousel/>
             <TestimonialsSection />
             <BrandsSection />
             <NewsletterSection />

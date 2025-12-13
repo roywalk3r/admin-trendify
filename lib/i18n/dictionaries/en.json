@@ -147,5 +147,13 @@
       "subscribed": "Subscribed!",
       "disclaimer": "No spam, unsubscribe at any time. We respect your privacy."
     }
+  },
+  "error": {
+    "notFoundTitle": "404 - Page Not Found",
+    "notFoundText": "Oops! The page you are looking for does not exist. It might have been moved or deleted.",
+    "goHome": "Go back to Homepage",
+    "errorTitle": "Something went wrong",
+    "errorText": "An unexpected error occurred. Please try again later.",
+    "reload": "Reload Page"
   }
 }

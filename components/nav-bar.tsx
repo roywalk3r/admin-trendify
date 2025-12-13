@@ -128,7 +128,6 @@ export default function NavBar() {
         { name: t("nav.men"), href: "/men" },
         { name: t("nav.women"), href: "/women" },
         { name: t("nav.accessories"), href: "/accessories" },
-        { name: t("nav.sale"), href: "/sale" },
     ]
 
     return (

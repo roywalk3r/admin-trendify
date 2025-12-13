@@ -262,7 +262,7 @@ export function useCurrency() {
   return {
     code: settings.currencyCode,
     symbol: settings.currencySymbol,
-    format: (amount: number) => `${settings.currencySymbol}${amount.toFixed(2)}`,
+    format: (amount: number) => `${settings.currencySymbol}${amount?.toFixed(2)}`,
   }
 }
 

@@ -43,8 +43,8 @@ export default function RootLayout({
     // The actual locale is in the URL path (e.g., /en/... or /fr/...)
     return (
         <html lang="en" suppressHydrationWarning
-              className={`${brunoAce.variable} ${poppins.variable} antialiased`}>
-                <body>
+              className={`${brunoAce.variable} ${poppins.variable} antialiased `}>
+                <body className={"bg-[#f6f3f3]"}>
         <LocaleProvider>
           <Providers>
             {/* Consent and analytics */}
