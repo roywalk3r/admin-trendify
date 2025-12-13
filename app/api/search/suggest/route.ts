@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma"
-import { createApiResponse, handleApiError } from "@/lib/api-utils"
+import { createApiResponse, handleApiError, checkRateLimit } from "@/lib/api-utils"
 import type { NextRequest } from "next/server"
 
 export async function GET(req: NextRequest) {
@@ -10,6 +10,16 @@ export async function GET(req: NextRequest) {
 
     if (!q) {
       return createApiResponse({ data: { suggestions: [] }, status: 200 })
+    }
+
+    const clientIp = req.headers.get("x-forwarded-for") || "anonymous"
+    const isRateLimited = await checkRateLimit(`search-suggest:${clientIp}`, 30, 60)
+
+    if (isRateLimited) {
+      return createApiResponse({
+        error: "Too many search requests. Please slow down and try again.",
+        status: 429,
+      })
     }
 
     // Basic synonym expansion (helps queries like "laptop" match products like "Dell XPS 13")

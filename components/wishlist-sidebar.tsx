@@ -7,6 +7,7 @@ import Image from "next/image"
 import { useApi } from "@/lib/hooks/use-api"
 import { useCartStore } from "@/lib/store/cart-store"
 import { useToast } from "@/hooks/use-toast"
+import {useCurrency} from "@/lib/contexts/settings-context";
 
 interface WishlistSidebarProps {
   isOpen: boolean
@@ -19,7 +20,7 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
 
   // Fetch wishlist only when sidebar is open
   const { data, error, isLoading, refetch } = useApi<any>("/api/wishlist", { enabled: isOpen });
-
+const {format} = useCurrency()
   // Fetching is controlled by useApi via the `enabled` option; no extra effect needed
 
   const wishlistItems = useMemo(() => {
@@ -43,7 +44,7 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
       image: string
       inStock: boolean
     }>
-  }, [data]);
+  }, [data?.items]);
 
   // (Mutations for wishlist add/remove are done via fetch; hooks optional here)
    const handleRemove = async (productId: string) => {
@@ -181,7 +182,7 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
                       <div className="flex-1">
                         <h3 className="font-medium text-sm line-clamp-2">{item.name}</h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="font-semibold">${item.price}</span>
+                          <span className="font-semibold">{format(item.price)}</span>
                         </div>
                         <div className="flex gap-2 mt-3">
                           <Button

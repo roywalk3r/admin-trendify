@@ -294,7 +294,7 @@ export function ProductForm({
           {isEditing ? "Edit Product" : "Create New Product"}
         </h1>
         {formStatus && (
-          <div className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded">
+          <div className="text-sm hidden text-muted-foreground bg-muted px-2 py-1 rounded">
             Status: {formStatus}
           </div>
         )}
@@ -311,11 +311,11 @@ export function ProductForm({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {isEditing && (
-                  <div className="text-sm bg-muted p-2 rounded mb-4">
-                    Editing product ID: {initialData?.id}
-                  </div>
-                )}
+                {/*{isEditing && (*/}
+                {/*  <div className="text-sm bg-muted p-2 rounded mb-4">*/}
+                {/*    Editing product ID: {initialData?.id}*/}
+                {/*  </div>*/}
+                {/*)}*/}
 
                 <FormField
                   control={form.control}
@@ -591,31 +591,32 @@ export function ProductForm({
               onClick={handleManualSubmit}
               disabled={isSubmitting}
               variant="secondary"
+              className={"hidden"}
             >
               Force Submit
             </Button>
           </div>
 
           {/* Debug form state */}
-          <div className="mt-8 p-4 bg-muted rounded-md">
-            <details>
-              <summary className="cursor-pointer text-sm font-medium">
-                Debug Form Information
-              </summary>
-              <div className="mt-2 text-xs">
-                <p>Form dirty: {form.formState.isDirty ? "Yes" : "No"}</p>
-                <p>Form valid: {form.formState.isValid ? "Yes" : "No"}</p>
-                <p>
-                  Form errors:{" "}
-                  {Object.keys(form.formState.errors).length > 0
-                    ? JSON.stringify(form.formState.errors)
-                    : "None"}
-                </p>
-                <p>Is Editing: {isEditing ? "Yes" : "No"}</p>
-                <p>Product ID: {initialData?.id || "Not set"}</p>
-              </div>
-            </details>
-          </div>
+          {/*<div className="mt-8 p-4 bg-muted rounded-md">*/}
+          {/*  <details>*/}
+          {/*    <summary className="cursor-pointer text-sm font-medium">*/}
+          {/*      Debug Form Information*/}
+          {/*    </summary>*/}
+          {/*    <div className="mt-2 text-xs">*/}
+          {/*      <p>Form dirty: {form.formState.isDirty ? "Yes" : "No"}</p>*/}
+          {/*      <p>Form valid: {form.formState.isValid ? "Yes" : "No"}</p>*/}
+          {/*      <p>*/}
+          {/*        Form errors:{" "}*/}
+          {/*        {Object.keys(form.formState.errors).length > 0*/}
+          {/*          ? JSON.stringify(form.formState.errors)*/}
+          {/*          : "None"}*/}
+          {/*      </p>*/}
+          {/*      <p>Is Editing: {isEditing ? "Yes" : "No"}</p>*/}
+          {/*      <p>Product ID: {initialData?.id || "Not set"}</p>*/}
+          {/*    </div>*/}
+          {/*  </details>*/}
+          {/*</div>*/}
         </form>
       </Form>
     </div>

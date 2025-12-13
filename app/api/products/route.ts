@@ -3,7 +3,7 @@ import { createApiResponse, handleApiError, checkRateLimit } from "@/lib/api-uti
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { auth } from "@clerk/nextjs/server"
-import { getCache, setCache } from "@/lib/redis"
+import { withCache, getCacheKey, CACHE_TTL, CACHE_TAGS } from "@/lib/cache-helpers"
 
 // Product validation schema
 const productSchema = z.object({
@@ -69,62 +69,71 @@ export async function GET(req: NextRequest) {
     // Calculate pagination
     const skip = (page - 1) * limit
 
-    // Build cache key and attempt cache
-    const cacheKey = `products:${JSON.stringify({ category, categoryId, exclude, search, sort, limit, page })}`
-    const cached = await getCache<any>(cacheKey)
-    if (cached) {
-      return NextResponse.json(cached, { status: 200 })
+    // Build cache key compatible with product list invalidation helpers
+    const cacheBase = {
+      category,
+      categoryId,
+      exclude,
+      search,
+      sort,
+      limit,
+      page,
     }
+    const cacheKey = getCacheKey(
+      `${CACHE_TAGS.PRODUCTS}:list`,
+      Buffer.from(JSON.stringify(cacheBase)).toString("base64"),
+    )
 
-    // Get products with pagination
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        include: {
-          category: true,
-          reviews: {
-            select: {
-              rating: true,
+    const response = await withCache(cacheKey, CACHE_TTL.PRODUCTS, async () => {
+      // Get products with pagination
+      const [products, total] = await Promise.all([
+        prisma.product.findMany({
+          where,
+          include: {
+            category: true,
+            reviews: {
+              select: {
+                rating: true,
+              },
             },
           },
-        },
-        orderBy,
-        skip,
-        take: limit,
-      }),
-      prisma.product.count({ where }),
-    ])
+          orderBy,
+          skip,
+          take: limit,
+        }),
+        prisma.product.count({ where }),
+      ])
 
-    // Calculate average ratings and serialize Decimal fields
-    const productsWithRatings = products.map((product) => {
-      const ratings = product.reviews.map((review) => review.rating)
-      const averageRating = ratings.length > 0 ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0
+      // Calculate average ratings and serialize Decimal fields
+      const productsWithRatings = products.map((product) => {
+        const ratings = product.reviews.map((review) => review.rating)
+        const averageRating = ratings.length > 0
+          ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+          : 0
+
+        return {
+          ...product,
+          // Ensure Decimal fields are serialized safely
+          price: Number(product.price),
+          comparePrice: product.comparePrice != null ? Number(product.comparePrice) : null,
+          costPrice: product.costPrice != null ? Number(product.costPrice) : null,
+          averageRating,
+          reviewCount: ratings.length,
+        }
+      })
 
       return {
-        ...product,
-        // Ensure Decimal fields are serialized safely
-        price: Number(product.price),
-        comparePrice: product.comparePrice != null ? Number(product.comparePrice) : null,
-        costPrice: product.costPrice != null ? Number(product.costPrice) : null,
-        averageRating,
-        reviewCount: ratings.length,
+        data: {
+          products: productsWithRatings,
+          pagination: {
+            total,
+            pages: Math.ceil(total / limit),
+            page,
+            limit,
+          },
+        },
       }
     })
-
-    const response = {
-      data: {
-        products: productsWithRatings,
-        pagination: {
-          total,
-          pages: Math.ceil(total / limit),
-          page,
-          limit,
-        },
-      },
-    }
-
-    // Cache for 2 minutes
-    await setCache(cacheKey, response, 120)
 
     return NextResponse.json(response, { status: 200 })
   } catch (error) {

@@ -12,6 +12,7 @@ import { useUser } from "@clerk/nextjs"
 import { useI18n } from "@/lib/i18n/I18nProvider"
 import { usePathname } from "next/navigation"
 import { addLocaleToPathname, getLocaleFromPathname } from "@/lib/i18n/config"
+import { useCurrency } from "@/lib/contexts/settings-context"
 
 interface ProductCardProps {
     id: string
@@ -48,7 +49,7 @@ export default function ProductCard({
     // We'll only sync to server if signed in
     const { isSignedIn } = useUser()
     const { toast } = useToast()
-
+    const { format } = useCurrency()
     const cardVariants: Variants = {
         hidden: { opacity: 0, y: 20 },
         visible: {
@@ -289,8 +290,12 @@ export default function ProductCard({
                     animate={{ opacity: 1 }}
                     transition={{ delay: index * 0.1 + 0.5 }}
                 >
-                    <span className="text-xl text-foreground typography">${price}</span>
-                    {originalPrice && <span className="text-sm text-muted-foreground line-through">${originalPrice}</span>}
+                    <span className="text-xl text-foreground typography">{format(Number(price))}</span>
+                    {originalPrice && (
+                      <span className="text-sm text-muted-foreground line-through">
+                        {format(Number(originalPrice))}
+                      </span>
+                    )}
                 </motion.div>
 
                 {/* Add to Cart Button */}

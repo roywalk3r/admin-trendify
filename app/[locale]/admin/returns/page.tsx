@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useCurrency } from "@/lib/contexts/settings-context"
 import { toast } from "sonner"
 import { Loader2, ClipboardCheck, Truck, RotateCcw, XCircle } from "lucide-react"
 
@@ -26,6 +27,8 @@ export default function AdminReturnsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [approveId, setApproveId] = useState<string | null>(null)
   const [form, setForm] = useState({ restockFee: "", shippingCost: "", returnLabel: "" })
+
+  const { format } = useCurrency()
 
   const load = async () => {
     setLoading(true)
@@ -65,7 +68,7 @@ export default function AdminReturnsPage() {
     setDialogOpen(true)
   }
 
-  function formatMoney(v: string) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(v)) }
+  function formatMoney(v: string) { return format(Number(v || 0)) }
 
   return (
     <div className="space-y-6">

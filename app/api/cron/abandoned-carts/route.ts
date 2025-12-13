@@ -11,7 +11,7 @@ import { Receiver } from "@upstash/qstash"
  */
 export async function GET(req: NextRequest) {
   // Health check or manual trigger in development with a simple token
-  const devToken = process.env.CRON_AUTH_TOKEN
+  const devToken = process.env.CRON_SECRET
   if (process.env.NODE_ENV !== "production") {
     const token = req.headers.get("x-cron-token")
     if (devToken && token !== devToken) {
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   } else {
     // Development: allow manual POST with x-cron-token
     const token = req.headers.get("x-cron-token")
-    const devToken = process.env.CRON_AUTH_TOKEN
+    const devToken = process.env.CRON_SECRET
     if (devToken && token !== devToken) {
       return NextResponse.json({ error: "Unauthorized (dev)" }, { status: 401 })
     }

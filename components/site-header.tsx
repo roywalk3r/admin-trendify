@@ -1,6 +1,6 @@
 "use client"
 
-import { useGeneralSettings, useSocialSettings } from "@/contexts/settings-context"
+import { useGeneralSettings, useSocialSettings } from "@/lib/contexts/settings-context"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
@@ -39,13 +39,6 @@ export function SiteHeader() {
                 <Button variant="ghost" size="sm" asChild>
                   <Link href={socialSettings.instagram} target="_blank">
                     <Instagram className="h-4 w-4" />
-                  </Link>
-                </Button>
-              )}
-              {socialSettings.youtube && (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={socialSettings.youtube} target="_blank">
-                    <Youtube className="h-4 w-4" />
                   </Link>
                 </Button>
               )}

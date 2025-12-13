@@ -103,11 +103,11 @@ export function AdminSidebar() {
       ],
     },
     {
-      title: "Customers",
+      title: "User",
       href: "/admin/users",
       icon: Users,
       submenu: [
-        { title: "All Customers", href: "/admin/users" },
+        { title: "All Users", href: "/admin/users" },
         { title: "Reviews", href: "/admin/reviews" },
       ],
     },

@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import Image from "next/image"
 import Link from "next/link"
 import { Search, X } from "lucide-react"
+import { useCurrency } from "@/lib/contexts/settings-context"
 
 interface Suggestion {
   id: string
@@ -25,6 +26,7 @@ export function SearchAutocomplete() {
   const [loading, setLoading] = useState(false)
   const [items, setItems] = useState<Suggestion[]>([])
   const abortRef = useRef<AbortController | null>(null)
+  const { format } = useCurrency()
 
   const debouncedQuery = useDebounce(query, 200)
 
@@ -95,7 +97,7 @@ export function SearchAutocomplete() {
                       <div className="flex-1 min-w-0">
                         <div className="truncate text-sm font-medium">{p.name}</div>
                         <div className="text-xs text-muted-foreground truncate">
-                          {p.category ? `${p.category} • ` : ""}${Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(p.price)}
+                          {p.category ? `${p.category} • ` : ""}{format(Number(p.price || 0))}
                         </div>
                       </div>
                     </Link>

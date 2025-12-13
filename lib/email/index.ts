@@ -9,7 +9,7 @@
  */
 
 import { logInfo, logError } from "@/lib/logger"
-
+import { formatCurrency } from "@/lib/format"
 // Email configuration
 // Sender strategy:
 // - In production: require FROM_EMAIL (verified domain). If missing, skip send to avoid Resend 403.
@@ -17,7 +17,6 @@ import { logInfo, logError } from "@/lib/logger"
 const RAW_FROM_EMAIL = process.env.FROM_EMAIL || ""
 const APP_NAME = process.env.APP_NAME || "Trendify"
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-
 // Check if Resend is configured
 const isEmailConfigured = !!process.env.RESEND_API_KEY
 
@@ -169,7 +168,7 @@ export async function sendOrderConfirmationEmail(
                   ${item.image ? `<img src="${item.image}" alt="${item.name}" class="item-image" />` : ''}
                   <div class="item-details">
                     <div class="item-name">${item.name}</div>
-                    <div class="item-quantity">Quantity: ${item.quantity} × $${item.price.toFixed(2)}</div>
+                    <div class="item-quantity">Quantity: ${item.quantity} × ${formatCurrency(item.price)}</div>
                   </div>
                 </div>
               `).join('')}
@@ -177,24 +176,19 @@ export async function sendOrderConfirmationEmail(
               <div class="totals">
                 <div class="total-row subtotal">
                   <span>Subtotal:</span>
-                  <span>$${orderData.subtotal.toFixed(2)}</span>
+                  <span>${formatCurrency(orderData.subtotal)}</span>
                 </div>
                 <div class="total-row tax">
                   <span>Tax:</span>
-                  <span>$${orderData.tax.toFixed(2)}</span>
+                  <span>${formatCurrency(orderData.tax)}</span>
                 </div>
                 <div class="total-row shipping">
                   <span>Shipping:</span>
-                  <span>$${orderData.shipping.toFixed(2)}</span>
+                  <span>${formatCurrency(orderData.shipping)}</span>
                 </div>
-                ${orderData.estimatedDelivery ? `
-                <div class="total-row">
-                  <span>Estimated Delivery:</span>
-                  <span>${orderData.estimatedDelivery}</span>
-                </div>` : ''}
                 <div class="total-row final">
                   <span>Total:</span>
-                  <span>$${orderData.total.toFixed(2)}</span>
+                  <span>${formatCurrency(orderData.total)}</span>
                 </div>
               </div>
             </div>

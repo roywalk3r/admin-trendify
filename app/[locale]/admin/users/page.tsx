@@ -15,6 +15,7 @@ import {
   Eye,
 } from "lucide-react";
 import { useApi, useApiMutation } from "@/lib/hooks/use-api";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -66,9 +67,11 @@ export default function AdminUsersPage() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [role, setRole] = useState("");
 
+  const debouncedSearch = useDebounce(search, 500);
+
   // Fetch users
   const { data, isLoading, refetch } = useApi<any>(
-    `/api/admin/users?page=${page}&search=${search}`
+    `/api/admin/users?page=${page}&search=${debouncedSearch}`
   );
 
   // Update user mutation
@@ -91,7 +94,6 @@ export default function AdminUsersPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    refetch();
   };
 
   const handleUpdateUser = () => {
@@ -216,16 +218,16 @@ export default function AdminUsersPage() {
                         {new Date(
                           user.createdAt || user.created_at
                         ).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
                               <Link href={`/admin/users/${user.id}`}>
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Details

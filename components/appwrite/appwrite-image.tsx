@@ -63,6 +63,7 @@ export function AppwriteImage({
           width={width}
           height={height}
           className={className}
+          loading={"eager"}
           style={{ objectFit }}
           priority={priority}
           onLoad={handleImageLoad}

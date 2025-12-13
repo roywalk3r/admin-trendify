@@ -22,22 +22,19 @@ export const metadata: Metadata = {
 
 
 
-export default async function RootLayout(
-  props: Readonly<{
-    children: React.ReactNode;
-    params: { locale: string };
-  }>
-) {
-  const params = await props.params;
-
-  const {
-    children
-  } = props;
+export default async function RootLayout({
+  children,
+  params,
+}: Readonly<{
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}>) {
+  const { locale } = await params;
 
   // Server-side admin/staff protection
   const { userId } = await auth();
   if (!userId) {
-    redirect(`/${params.locale}/sign-in`);
+    redirect(`/${locale}/sign-in`);
   }
 
   const user = await prisma.user.findUnique({
@@ -46,7 +43,7 @@ export default async function RootLayout(
   });
 
   if (!user || (user.role !== "admin" && user.role !== "staff")) {
-    redirect(`/${params.locale}`);
+    redirect(`/${locale}`);
   }
 
   return (

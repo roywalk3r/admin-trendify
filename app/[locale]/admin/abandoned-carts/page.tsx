@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { useCurrency } from "@/lib/contexts/settings-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Loader2, ShoppingCart, TrendingUp, DollarSign } from "lucide-react"
@@ -54,8 +55,10 @@ export default function AdminAbandonedCartsPage() {
 
   useEffect(() => { loadCarts() }, [debouncedSearch, recovered])
 
-  function formatMoney(v: number) { 
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(v) 
+  const { format } = useCurrency()
+
+  function formatMoney(v: number) {
+    return format(Number(v || 0))
   }
 
   return (
@@ -151,6 +154,7 @@ export default function AdminAbandonedCartsPage() {
                 <TableHead>Reminders</TableHead>
                 <TableHead>Abandoned</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -167,6 +171,34 @@ export default function AdminAbandonedCartsPage() {
                       <Badge variant={c.recovered ? "default" : "secondary"}>
                         {c.recovered ? "Recovered" : "Pending"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {!c.recovered && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={loading}
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/admin/abandoned-carts/${c.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ action: "remind" }),
+                              })
+                              const json = await res.json().catch(() => ({}))
+                              if (!res.ok) {
+                                throw new Error(json?.error || "Failed to send reminder")
+                              }
+                              toast.success("Reminder email sent")
+                              loadCarts()
+                            } catch (e) {
+                              toast.error("Failed to send reminder")
+                            }
+                          }}
+                        >
+                          Send Reminder
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 )

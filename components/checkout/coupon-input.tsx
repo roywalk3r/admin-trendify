@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { useCurrency } from "@/lib/contexts/settings-context"
 import { Loader2, Tag, X, Check } from "lucide-react"
 
 interface CouponInputProps {
@@ -22,6 +23,7 @@ export default function CouponInput({ subtotal, onCouponApplied, onCouponRemoved
   } | null>(null)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+  const { format } = useCurrency()
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -57,7 +59,7 @@ export default function CouponInput({ subtotal, onCouponApplied, onCouponRemoved
         
         toast({
           title: "Coupon applied!",
-          description: `You saved ₦${discount.toFixed(2)}`,
+          description: `You saved ${format(Number(discount || 0))}`,
         })
       }
     } catch (error) {
@@ -94,7 +96,7 @@ export default function CouponInput({ subtotal, onCouponApplied, onCouponRemoved
                 Coupon &quot;{appliedCoupon.code}&quot; applied
               </p>
               <p className="text-xs text-green-700">
-                You saved ₦{appliedCoupon.discount.toFixed(2)}
+                You saved {format(Number(appliedCoupon.discount || 0))}
               </p>
             </div>
           </div>

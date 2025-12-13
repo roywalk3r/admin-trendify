@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-// Removed Google Fonts to avoid external fetches in restricted networks
+import {Bruno_Ace, Poppins} from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 import Providers from "@/components/providers"
@@ -9,8 +9,19 @@ import { Analytics } from "@/components/analytics"
 import { LocaleProvider } from "@/components/locale-provider"
 import * as Sentry from '@sentry/nextjs';
 
-// Using system font stack via Tailwind's font-sans
+const brunoAce = Bruno_Ace({
+    weight: "400",
+    style: "normal",
+    preload: true,
+    variable: "--font-bruno"
+})
 
+const poppins = Poppins({
+    weight: "400",
+    style: "normal",
+    preload: true,
+    variable: "--font-poppins"
+})
 
 // Add or edit your "generateMetadata" to include the Sentry trace data:
 export function generateMetadata(): Metadata {
@@ -31,8 +42,9 @@ export default function RootLayout({
     // Note: lang is set via middleware redirects and rewrites to locale-prefixed paths
     // The actual locale is in the URL path (e.g., /en/... or /fr/...)
     return (
-        <html lang="en" suppressHydrationWarning>
-        <body className={`font-sans antialiased`}>
+        <html lang="en" suppressHydrationWarning
+              className={`${brunoAce.variable} ${poppins.variable} antialiased`}>
+                <body>
         <LocaleProvider>
           <Providers>
             {/* Consent and analytics */}

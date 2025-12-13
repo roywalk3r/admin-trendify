@@ -152,8 +152,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     try {
       await invalidateProduct(id)
       await invalidateProductLists()
-      revalidateTag("products")
-      revalidateTag(`product:${id}`)
+      revalidateTag("products", "")
+      revalidateTag(`product:${id}`, "")
     } catch {}
 
     return createApiResponse({
@@ -228,8 +228,8 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     try {
       await invalidateProduct(id)
       await invalidateProductLists()
-      revalidateTag("products")
-      revalidateTag(`product:${id}`)
+      revalidateTag("products", "")
+      revalidateTag(`product:${id}`, "")
     } catch {}
 
     return createApiResponse({

@@ -171,8 +171,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     // Invalidate caches and revalidate tags for consumers using Next cache tags
     try {
       await invalidateOrderCache(id)
-      revalidateTag("orders")
-      revalidateTag(`order:${id}`)
+      revalidateTag("orders", "")
+      revalidateTag(`order:${id}`, "")
     } catch {}
 
     return createApiResponse({ status: 200, data: updatedOrder })
@@ -197,8 +197,8 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     ])
     try {
       await invalidateOrderCache(id)
-      revalidateTag("orders")
-      revalidateTag(`order:${id}`)
+      revalidateTag("orders", "")
+      revalidateTag(`order:${id}`, "")
     } catch {}
     return createApiResponse({ status: 200, data: { message: "Order deleted successfully" } })
   } catch (error) {

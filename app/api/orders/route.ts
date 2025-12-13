@@ -117,8 +117,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, email, items, shippingAddress, addressId, paymentMethod, total, subtotal, tax, shipping, couponCode, delivery, gatewayFee } = await request.json()
-
+    const {
+      userId,
+      email,
+      items,
+      shippingAddress,
+      addressId,
+      paymentMethod,
+      total,
+      subtotal,
+      tax,
+      shipping,
+      couponCode,
+      delivery,
+      gatewayFee,
+      currencyCode,
+    } = await request.json()
     // Validate required fields
     if ((!userId && !email) || !items || !Array.isArray(items) || items.length === 0) {
       return createApiResponse({ status: 400, error: "Missing required fields" })
@@ -143,7 +157,26 @@ export async function POST(request: NextRequest) {
     let effectiveInternalUserId = effectiveUserId
     if (effectiveUserId) {
       const local = await prisma.user.findUnique({ where: { clerkId: effectiveUserId } })
-      if (local) effectiveInternalUserId = local.id
+      if (local) {
+        effectiveInternalUserId = local.id
+      } else if (email) {
+        // Ensure signed-in users always have a local record for FK integrity
+        const nameFromEmail = String(email).split("@")[0] || "Customer"
+        const created = await prisma.user.create({
+          data: {
+            clerkId: effectiveUserId,
+            email: String(email),
+            name: nameFromEmail,
+            role: "customer",
+            isVerified: true,
+          },
+        })
+        effectiveInternalUserId = created.id
+      }
+    }
+
+    if (!effectiveInternalUserId) {
+      return createApiResponse({ status: 400, error: "Unable to resolve customer record" })
     }
 
     // Resolve shipping address: either object provided or fetched via addressId
@@ -352,7 +385,7 @@ export async function POST(request: NextRequest) {
           method: paymentMethod || "paystack",
           amount: newOrder.totalAmount,
           status: "unpaid",
-          currency: "NGN",
+          currency: currencyCode || "GHC",
           gatewayFee: gatewayFee ? Number(gatewayFee) : null,
         },
       })

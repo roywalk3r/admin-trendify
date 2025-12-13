@@ -52,7 +52,7 @@ export default function AdminReviewsPage() {
     } catch (e) {
       toast.error("Failed to load reviews")
     } finally { setLoading(false) }
-  }, [search, status])
+  }, [debouncedSearch, status])
 
   useEffect(() => { loadReviews() }, [loadReviews])
 

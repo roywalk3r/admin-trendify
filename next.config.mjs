@@ -69,10 +69,8 @@ const nextConfig = {
       }
     ],
   },
-  eslint: {
-    // Allow production builds to complete even if there are ESLint errors
-    ignoreDuringBuilds: true,
-  },
+  // Keep heavy logger dependencies external so Turbopack doesn't try to parse their tests/fixtures
+  serverExternalPackages: ['pino', 'pino-pretty', 'thread-stream', 'sonic-boom', 'real-require'],
   async headers() {
     return [
       {

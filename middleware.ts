@@ -14,6 +14,13 @@ function isProtectedPath(pathname: string): boolean {
 export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl
 
+  // Normalize dev host so browser origin matches Appwrite CORS (allows localhost only)
+  if (req.nextUrl.hostname === "127.0.0.1" || req.nextUrl.hostname === "::1") {
+    const url = req.nextUrl.clone()
+    url.hostname = "localhost"
+    return NextResponse.redirect(url)
+  }
+
   // 0) Bypass webhooks completely to preserve raw body for signature verification
   if (isWebhookPath(pathname)) {
     return NextResponse.next()

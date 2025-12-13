@@ -27,8 +27,8 @@ NEXT_PUBLIC_APPWRITE_BUCKET_ID="your_bucket_id"
 ARCJET_KEY="ajkey_xxxxx"
 
 # Redis (Caching)
-REDIS_URL="redis://localhost:6379"
-# OR for Upstash Redis
+VALKEY_URL="redis://localhost:6379"
+# OR for Upstash Redis (if you adapt redis.ts to use REST API)
 # UPSTASH_REDIS_REST_URL="https://xxxxx.upstash.io"
 # UPSTASH_REDIS_REST_TOKEN="xxxxx"
 

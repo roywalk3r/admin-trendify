@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type {Metadata} from "next"
 import prisma from "@/lib/prisma"
 import Categories from "@/components/categories"
 
@@ -11,12 +11,11 @@ export const metadata: Metadata = {
 
 async function getCategories() {
   try {
-    const items = await prisma.category.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, slug: true, image: true },
+    return await prisma.category.findMany({
+      where: {isActive: true},
+      orderBy: {name: "asc"},
+      select: {id: true, name: true, slug: true, image: true},
     })
-    return items
   } catch {
     return []
   }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useGeneralSettings } from "@/contexts/settings-context"
+import { useGeneralSettings } from "@/lib/contexts/settings-context"
 
 export function useOrderRestrictions() {
   const settings = useGeneralSettings()

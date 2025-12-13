@@ -4,7 +4,7 @@ import AddressPicker from "@/components/checkout/address-picker"
 import DeliveryOptions from "@/components/checkout/delivery-options"
 import CouponInput from "@/components/checkout/coupon-input"
 import { type DeliverySelection } from "@/lib/shipping"
-import { usePaymentFee } from "@/lib/contexts/settings-context"
+import { useCurrency, usePaymentFee } from "@/lib/contexts/settings-context"
 import { useCartStore } from "@/lib/store/cart-store"
 import CheckoutButton from "@/components/checkout-button"
 import { useI18n } from "@/lib/i18n/I18nProvider"
@@ -51,6 +51,7 @@ export default function CheckoutSection() {
     }
   }, [delivery.method, delivery.pickupCity])
   const { percentage: gatewayRate, fixedFee: gatewayFixed } = usePaymentFee()
+  const { format } = useCurrency()
   const base = useMemo(() => Number(subtotal()) + Number(shippingFee) - Number(discount), [subtotal, shippingFee, discount])
   const gatewayFee = useMemo(() => {
     const r = Number(gatewayRate) || 0
@@ -84,12 +85,12 @@ export default function CheckoutSection() {
       
       <div className="rounded-md border p-4 space-y-3">
         <DeliveryOptions value={delivery} onChange={setDelivery} />
-        <div className="text-sm text-muted-foreground">{t("checkout.shippingFee")}: <span className="font-medium text-foreground">{shippingFee.toFixed(2)}</span></div>
+        <div className="text-sm text-muted-foreground">{t("checkout.shippingFee")}: <span className="font-medium text-foreground">{format(Number(shippingFee || 0))}</span></div>
         {discount > 0 && (
-          <div className="text-sm text-green-600">Discount: <span className="font-medium">-₦{discount.toFixed(2)}</span></div>
+          <div className="text-sm text-green-600">Discount: <span className="font-medium">-{format(Number(discount || 0))}</span></div>
         )}
-        <div className="text-sm text-muted-foreground">{t("checkout.gatewayFee")}: <span className="font-medium text-foreground">{gatewayFee.toFixed(2)}</span></div>
-        <div className="flex justify-between text-sm pt-1 border-t mt-1"><span className="text-muted-foreground">{t("checkout.estimatedTotal")}</span><span className="font-medium text-foreground">{estimatedTotal.toFixed(2)}</span></div>
+        <div className="text-sm text-muted-foreground">{t("checkout.gatewayFee")}: <span className="font-medium text-foreground">{format(Number(gatewayFee || 0))}</span></div>
+        <div className="flex justify-between text-sm pt-1 border-t mt-1"><span className="text-muted-foreground">{t("checkout.estimatedTotal")}</span><span className="font-medium text-foreground">{format(Number(estimatedTotal || 0))}</span></div>
       </div>
       <CheckoutButton addressId={addressId || undefined} delivery={delivery} shippingFee={shippingFee} couponCode={couponCode} discount={discount} />
     </div>

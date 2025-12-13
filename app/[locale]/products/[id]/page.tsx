@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { prisma } from "@/lib/prisma"
 import { getProductByIdCached } from "@/lib/data/products"
-import { SettingsProvider } from "@/contexts/settings-context"
+import { SettingsProvider } from "@/lib/contexts/settings-context"
 import {Review} from "@/prisma/generated/client";
 
 export const revalidate = 300

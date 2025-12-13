@@ -27,6 +27,7 @@ interface OrderData {
   shippingAddress?: ShippingAddress
   paymentStatus: string
   status: string
+  currencySymbol?: string
 }
 
 export function generateOrderConfirmationEmail(
@@ -38,6 +39,8 @@ export function generateOrderConfirmationEmail(
     month: 'long',
     day: 'numeric',
   })
+
+  const currency = order.currencySymbol ?? "";
 
   const html = `
 <!DOCTYPE html>
@@ -171,10 +174,10 @@ export function generateOrderConfirmationEmail(
         <div class="item">
           <div>
             <strong>${item.productName}</strong><br>
-            <span style="color: #6b7280; font-size: 14px;">Qty: ${item.quantity} × ₦${item.unitPrice.toFixed(2)}</span>
+            <span style="color: #6b7280; font-size: 14px;">Qty: ${item.quantity} × ${currency}${item.unitPrice.toFixed(2)}</span>
           </div>
           <div style="font-weight: 600;">
-            ₦${item.totalPrice.toFixed(2)}
+            ${currency}${item.totalPrice.toFixed(2)}
           </div>
         </div>
       `
@@ -185,14 +188,14 @@ export function generateOrderConfirmationEmail(
     <div class="totals">
       <div class="total-row">
         <span>Subtotal:</span>
-        <span>₦${order.subtotal.toFixed(2)}</span>
+        <span>${currency}${order.subtotal.toFixed(2)}</span>
       </div>
       ${
         order.shipping > 0
           ? `
       <div class="total-row">
         <span>Shipping:</span>
-        <span>₦${order.shipping.toFixed(2)}</span>
+        <span>${currency}${order.shipping.toFixed(2)}</span>
       </div>
       `
           : ''
@@ -202,7 +205,7 @@ export function generateOrderConfirmationEmail(
           ? `
       <div class="total-row">
         <span>Tax:</span>
-        <span>₦${order.tax.toFixed(2)}</span>
+        <span>${currency}${order.tax.toFixed(2)}</span>
       </div>
       `
           : ''
@@ -212,14 +215,14 @@ export function generateOrderConfirmationEmail(
           ? `
       <div class="total-row" style="color: #10b981;">
         <span>Discount:</span>
-        <span>-₦${order.discount.toFixed(2)}</span>
+        <span>-${currency}${order.discount.toFixed(2)}</span>
       </div>
       `
           : ''
       }
       <div class="total-row final">
         <span>Total:</span>
-        <span>₦${order.totalAmount.toFixed(2)}</span>
+        <span>${currency}${order.totalAmount.toFixed(2)}</span>
       </div>
     </div>
     
@@ -283,16 +286,16 @@ Items Ordered:
 ${order.orderItems
   .map(
     (item) =>
-      `- ${item.productName} (Qty: ${item.quantity}) - ₦${item.totalPrice.toFixed(2)}`
+      `- ${item.productName} (Qty: ${item.quantity}) - ${currency}${item.totalPrice.toFixed(2)}`
   )
   .join('\n')}
 
 Order Summary:
-Subtotal: ₦${order.subtotal.toFixed(2)}
-${order.shipping > 0 ? `Shipping: ₦${order.shipping.toFixed(2)}` : ''}
-${order.tax > 0 ? `Tax: ₦${order.tax.toFixed(2)}` : ''}
-${order.discount > 0 ? `Discount: -₦${order.discount.toFixed(2)}` : ''}
-Total: ₦${order.totalAmount.toFixed(2)}
+Subtotal: ${currency}${order.subtotal.toFixed(2)}
+${order.shipping > 0 ? `Shipping: ${currency}${order.shipping.toFixed(2)}` : ''}
+${order.tax > 0 ? `Tax: ${currency}${order.tax.toFixed(2)}` : ''}
+${order.discount > 0 ? `Discount: -${currency}${order.discount.toFixed(2)}` : ''}
+Total: ${currency}${order.totalAmount.toFixed(2)}
 
 ${
   order.shippingAddress

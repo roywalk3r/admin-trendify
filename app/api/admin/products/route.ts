@@ -135,8 +135,8 @@ export async function POST(request: NextRequest) {
     try {
       await invalidateProductLists()
       await invalidateProduct(product.id)
-      revalidateTag("products")
-      revalidateTag(`product:${product.id}`)
+      revalidateTag("products", "")
+      revalidateTag(`product:${product.id}`, "")
     } catch {}
 
     return NextResponse.json(product, { status: 201 })
@@ -212,8 +212,8 @@ export async function PATCH(request: NextRequest) {
       try {
         await invalidateProductLists()
         for (const pid of productIds) await invalidateProduct(pid)
-        revalidateTag("products")
-        for (const pid of productIds) revalidateTag(`product:${pid}`)
+        revalidateTag("products", "")
+        for (const pid of productIds) revalidateTag(`product:${pid}`, "")
       } catch {}
 
       return NextResponse.json({
@@ -277,8 +277,8 @@ export async function PATCH(request: NextRequest) {
     try {
       await invalidateProduct(id)
       await invalidateProductLists()
-      revalidateTag("products")
-      revalidateTag(`product:${id}`)
+      revalidateTag("products", "")
+      revalidateTag(`product:${id}`, "")
     } catch {}
 
     return NextResponse.json(product)

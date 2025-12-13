@@ -6,41 +6,49 @@ export interface AppSettings {
   // General
   storeName: string
   storeEmail: string
+  storePhone: string
+  storeAddress: string
   currencyCode: string
   currencySymbol: string
   taxRate: number
   enableTaxCalculation: boolean
-  
+  orderPrefix: string
+
+  // Inventory / stock behaviour
+  allowBackorders: boolean
+  showOutOfStockProducts: boolean
+  lowStockThreshold: number
+
   // Shipping
   shippingFee: number
   freeShippingThreshold: number
   enableFreeShipping: boolean
-  
+
   // Payment
   paymentGatewayFeePercentage: number
   paymentGatewayFixedFee: number
-  
+
   // Theme
   primaryColor: string
   logoUrl: string
   faviconUrl: string
-  
+
   // SEO
   siteTitle: string
   siteDescription: string
   metaKeywords: string
   defaultOgImage: string
-  
+
   // Social
   facebookUrl: string
   twitterUrl: string
   instagramUrl: string
   linkedinUrl: string
-  
+
   // Email
   fromEmail: string
   fromName: string
-  
+
   // Features
   enableWishlist: boolean
   enableReviews: boolean
@@ -51,15 +59,21 @@ export interface AppSettings {
 const defaultSettings: AppSettings = {
   storeName: "Trendify",
   storeEmail: "testpjmail@gmail.com",
+  storePhone: "",
+  storeAddress: "",
   currencyCode: "GHS",
   currencySymbol: "GH₵",
-  taxRate: 0.10,
+  taxRate: 0.1,
   enableTaxCalculation: true,
+  orderPrefix: "",
+  allowBackorders: false,
+  showOutOfStockProducts: true,
+  lowStockThreshold: 5,
   shippingFee: 10,
   freeShippingThreshold: 100,
   enableFreeShipping: true,
   paymentGatewayFeePercentage: 0.015,
-  paymentGatewayFixedFee: 0.30,
+  paymentGatewayFixedFee: 0.3,
   primaryColor: "#7c3aed",
   logoUrl: "/logo.png",
   faviconUrl: "/favicon.ico",
@@ -114,19 +128,40 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
               // General
               storeName: data.general?.storeName ?? defaultSettings.storeName,
               storeEmail: data.general?.storeEmail ?? defaultSettings.storeEmail,
-              currencyCode: currencyCode,
+              storePhone: data.general?.storePhone ?? defaultSettings.storePhone,
+              storeAddress: data.general?.storeAddress ?? defaultSettings.storeAddress,
+              currencyCode,
               currencySymbol: derivedCurrencySymbol,
-              taxRate: typeof data.general?.taxRate === 'number' ? data.general.taxRate : defaultSettings.taxRate,
+              taxRate: typeof data.general?.taxRate === "number" ? data.general.taxRate : defaultSettings.taxRate,
               enableTaxCalculation: data.general?.enableTaxCalculation ?? defaultSettings.enableTaxCalculation,
+              orderPrefix: data.general?.orderPrefix ?? defaultSettings.orderPrefix,
+              allowBackorders: data.general?.allowBackorders ?? defaultSettings.allowBackorders,
+              showOutOfStockProducts: data.general?.showOutOfStockProducts ?? defaultSettings.showOutOfStockProducts,
+              lowStockThreshold:
+                typeof data.general?.lowStockThreshold === "number"
+                  ? data.general.lowStockThreshold
+                  : defaultSettings.lowStockThreshold,
 
               // Shipping
-              shippingFee: typeof data.general?.shippingFee === 'number' ? data.general.shippingFee : defaultSettings.shippingFee,
-              freeShippingThreshold: typeof data.general?.freeShippingThreshold === 'number' ? data.general.freeShippingThreshold : defaultSettings.freeShippingThreshold,
+              shippingFee:
+                typeof data.general?.shippingFee === "number"
+                  ? data.general.shippingFee
+                  : defaultSettings.shippingFee,
+              freeShippingThreshold:
+                typeof data.general?.freeShippingThreshold === "number"
+                  ? data.general.freeShippingThreshold
+                  : defaultSettings.freeShippingThreshold,
               enableFreeShipping: data.general?.enableFreeShipping ?? defaultSettings.enableFreeShipping,
 
-              // Payment
-              paymentGatewayFeePercentage: typeof data.general?.paymentGatewayFeePercentage === 'number' ? data.general.paymentGatewayFeePercentage : defaultSettings.paymentGatewayFeePercentage,
-              paymentGatewayFixedFee: typeof data.general?.paymentGatewayFixedFee === 'number' ? data.general.paymentGatewayFixedFee : defaultSettings.paymentGatewayFixedFee,
+              // Payment (can be moved to dedicated payment settings later)
+              paymentGatewayFeePercentage:
+                typeof data.general?.paymentGatewayFeePercentage === "number"
+                  ? data.general.paymentGatewayFeePercentage
+                  : defaultSettings.paymentGatewayFeePercentage,
+              paymentGatewayFixedFee:
+                typeof data.general?.paymentGatewayFixedFee === "number"
+                  ? data.general.paymentGatewayFixedFee
+                  : defaultSettings.paymentGatewayFixedFee,
 
               // Theme
               primaryColor: data.theme?.primaryColor ?? defaultSettings.primaryColor,
@@ -191,6 +226,37 @@ export function useSettings() {
 }
 
 // Helper hooks for specific settings
+export function useGeneralSettings() {
+  const settings = useSettings()
+  return {
+    storeName: settings.storeName,
+    storeEmail: settings.storeEmail,
+    storePhone: settings.storePhone,
+    storeAddress: settings.storeAddress,
+    currencyCode: settings.currencyCode,
+    taxRate: settings.taxRate,
+    enableTaxCalculation: settings.enableTaxCalculation,
+    orderPrefix: settings.orderPrefix,
+    allowBackorders: settings.allowBackorders,
+    showOutOfStockProducts: settings.showOutOfStockProducts,
+    lowStockThreshold: settings.lowStockThreshold,
+    shippingFee: settings.shippingFee,
+    freeShippingThreshold: settings.freeShippingThreshold,
+    enableFreeShipping: settings.enableFreeShipping,
+  }
+}
+
+export function useSocialSettings() {
+  const settings = useSettings()
+  return {
+    facebook: settings.facebookUrl,
+    twitter: settings.twitterUrl,
+    instagram: settings.instagramUrl,
+    linkedin: settings.linkedinUrl,
+    pinterest: undefined as string | undefined,
+  }
+}
+
 export function useCurrency() {
   const settings = useSettings()
   return {

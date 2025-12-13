@@ -113,6 +113,7 @@ export default function AdminStockAlertsPage() {
                 <TableHead>Requested</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Notified At</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -128,6 +129,34 @@ export default function AdminStockAlertsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>{a.notifiedAt ? new Date(a.notifiedAt).toLocaleString() : "-"}</TableCell>
+                  <TableCell>
+                    {!a.notified && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={loading}
+                        onClick={async () => {
+                          try {
+                            const res = await fetch("/api/admin/stock-alerts/trigger", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ productId: a.productId }),
+                            })
+                            const json = await res.json().catch(() => ({}))
+                            if (!res.ok) {
+                              throw new Error(json?.error || "Failed to trigger notifications")
+                            }
+                            toast.success("Stock alert notifications sent")
+                            loadAlerts()
+                          } catch (e) {
+                            toast.error("Failed to trigger notifications")
+                          }
+                        }}
+                      >
+                        Trigger Notification
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

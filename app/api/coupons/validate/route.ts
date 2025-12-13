@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: `Minimum purchase amount of ₦${Number(coupon.minPurchase).toFixed(2)} required`,
+          error: `Minimum purchase amount of ${Number(coupon.minPurchase).toFixed(2)} required`,
         },
         { status: 400 }
       )
