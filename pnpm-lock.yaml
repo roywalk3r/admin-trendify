@@ -30,11 +30,32 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.1.1
         version: 5.2.1(react-hook-form@7.62.0(react@19.2.3))
+      '@lexical/code':
+        specifier: 0.39.0
+        version: 0.39.0
+      '@lexical/html':
+        specifier: 0.39.0
+        version: 0.39.0
+      '@lexical/link':
+        specifier: 0.39.0
+        version: 0.39.0
+      '@lexical/list':
+        specifier: 0.39.0
+        version: 0.39.0
+      '@lexical/markdown':
+        specifier: 0.39.0
+        version: 0.39.0
       '@lexical/react':
         specifier: ^0.39.0
         version: 0.39.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(yjs@13.6.27)
       '@lexical/rich-text':
         specifier: ^0.39.0
+        version: 0.39.0
+      '@lexical/table':
+        specifier: 0.39.0
+        version: 0.39.0
+      '@lexical/utils':
+        specifier: 0.39.0
         version: 0.39.0
       '@prisma/client':
         specifier: ^6.11.1

@@ -49,6 +49,7 @@ export async function generateMetadata(props: ProductPageProps): Promise<Metadat
     return {
       title: "Product Not Found | Trendify",
       description: "The product you're looking for could not be found.",
+      robots: "noindex, nofollow",
     }
   }
 
@@ -58,26 +59,87 @@ export async function generateMetadata(props: ProductPageProps): Promise<Metadat
     ? ((product as any).tags as any[]).map((pt) => pt?.tag?.name).filter(Boolean)
     : []
   const keywords = tagNames.length ? tagNames.join(", ") : undefined
+  const averageRating = product.reviews.length > 0
+    ? product.reviews.reduce((sum: number, review: Review) => sum + review.rating, 0) / product.reviews.length
+    : 0
+  const reviewCount = product._count.reviews
+  const price = Number((product as any).price)
+  const comparePrice = (product as any).comparePrice != null ? Number((product as any).comparePrice) : null
+  const inStock = product.stock > 0
+
+  const structuredData = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: product.name,
+    image: product.images || [],
+    description: metaDescription,
+    sku: product.sku,
+    brand: {
+      "@type": "Brand",
+      name: "Trendify"
+    },
+    offers: {
+      "@type": "Offer",
+      url: `${process.env.NEXT_PUBLIC_APP_URL}/products/${id}`,
+      priceCurrency: "USD",
+      price: price,
+      availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
+      seller: {
+        "@type": "Organization",
+        name: "Trendify"
+      }
+    },
+    aggregateRating: reviewCount > 0 ? {
+      "@type": "AggregateRating",
+      ratingValue: averageRating.toFixed(1),
+      reviewCount: reviewCount,
+      bestRating: "5",
+      worstRating: "1"
+    } : undefined,
+    category: product.category?.name,
+    keywords: keywords
+  }
 
   return {
     title: metaTitle,
     description: metaDescription,
     keywords,
+    robots: "index, follow",
     openGraph: {
       title: metaTitle || product.name,
       description: metaDescription,
       images: (product.images || []).slice(0, 4).map((image: string) => ({
         url: image,
         alt: product.name,
+        width: 1200,
+        height: 630,
       })),
       type: "website",
+      siteName: "Trendify",
+      locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
       title: metaTitle || product.name,
       description: metaDescription,
       images: (product.images || []).slice(0, 4),
+      creator: "@trendify",
+      site: "@trendify",
     },
+    alternates: {
+      canonical: `${process.env.NEXT_PUBLIC_APP_URL}/products/${id}`,
+    },
+    other: {
+      "product:price:amount": price.toString(),
+      "product:price:currency": "USD",
+      "product:availability": inStock ? "in stock" : "out of stock",
+      "product:condition": "new",
+      "product:brand": "Trendify",
+      "product:category": product.category?.name || "",
+      ...(comparePrice && { "product:sale_price": comparePrice.toString() }),
+      "application/ld+json": JSON.stringify(structuredData)
+    }
   }
 }
 
@@ -111,15 +173,71 @@ export default async function ProductPage(props: ProductPageProps) {
     tags: Array.isArray((product as any).tags)
       ? ((product as any).tags as any[]).map((pt) => pt?.tag?.name).filter(Boolean)
       : [],
+    variants: Array.isArray((product as any).variants)
+      ? (product as any).variants.map((v: any) => ({
+          ...v,
+          price: Number(v.price),
+          attributes: (v.attributes || {}) as Record<string, string>,
+        }))
+      : [],
     // map threshold naming from schema lowStockAlert
     lowStockThreshold: (product as any).lowStockAlert ?? undefined,
   }
 
+  // Generate structured data for SEO
+  const metaDescription = (product as any)?.seoDesc || product.description || ""
+  const tagNames = Array.isArray((product as any)?.tags)
+    ? ((product as any).tags as any[]).map((pt) => pt?.tag?.name).filter(Boolean)
+    : []
+  const keywords = tagNames.length ? tagNames.join(", ") : undefined
+  const price = Number((product as any).price)
+  const inStock = product.stock > 0
+
+  const structuredData = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: product.name,
+    image: product.images || [],
+    description: metaDescription,
+    sku: product.sku,
+    brand: {
+      "@type": "Brand",
+      name: "Trendify"
+    },
+    offers: {
+      "@type": "Offer",
+      url: `${process.env.NEXT_PUBLIC_APP_URL}/products/${id}`,
+      priceCurrency: "USD",
+      price: price,
+      availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
+      seller: {
+        "@type": "Organization",
+        name: "Trendify"
+      }
+    },
+    aggregateRating: product._count.reviews > 0 ? {
+      "@type": "AggregateRating",
+      ratingValue: averageRating.toFixed(1),
+      reviewCount: product._count.reviews,
+      bestRating: "5",
+      worstRating: "1"
+    } : undefined,
+    category: product.category?.name,
+    keywords: keywords
+  }
+
   return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
+        {/* Structured Data for SEO */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        
         {/* Enhanced sticky header with glass morphism */}
-        <div className="border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 shadow-sm">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="border-b border-border/40 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
                 <Link href="/products">
@@ -162,58 +280,66 @@ export default async function ProductPage(props: ProductPageProps) {
         </div>
 
         <SettingsProvider>
-          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+          <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+            <div className="space-y-10 lg:space-y-12">
             {/* Main product section */}
-            <div className="bg-background rounded-2xl shadow-lg border border-border/50 p-6 lg:p-10 mb-8">
+            <section className="bg-background/80 backdrop-blur-sm rounded-2xl shadow-sm border border-border/60 p-5 sm:p-6 lg:p-10">
               <ProductDetail product={productWithRating as any} />
-            </div>
+            </section>
 
             {/* Specifications section */}
             {(product.weight || product.dimensions || product.sku) && (
-              <div className="bg-background rounded-2xl shadow-lg border border-border/50 p-6 lg:p-10 mb-8">
-                <h2 className="text-2xl lg:text-3xl font-bold mb-6 flex items-center gap-2">
-                  <span className="w-1 h-8 bg-primary rounded-full"></span>
-                  Technical Specifications
-                </h2>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <section className="bg-background/80 backdrop-blur-sm rounded-2xl shadow-sm border border-border/60 p-5 sm:p-6 lg:p-10">
+                <div className="flex items-end justify-between gap-6 mb-6">
+                  <div className="space-y-1">
+                    <h2 className="text-2xl lg:text-3xl font-bold tracking-tight">Technical Specifications</h2>
+                    <p className="text-sm text-muted-foreground">A quick overview of dimensions and key product details.</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {product.weight && (
-                    <div className="bg-muted/30 rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                    <div className="rounded-xl border border-border/50 bg-muted/20 p-4 hover:bg-muted/30 transition-colors">
                       <span className="text-sm text-muted-foreground block mb-1">Weight</span>
                       <span className="font-semibold text-lg">{Number(product.weight)}g</span>
                     </div>
                   )}
                   {product.dimensions && (
-                    <div className="bg-muted/30 rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                    <div className="rounded-xl border border-border/50 bg-muted/20 p-4 hover:bg-muted/30 transition-colors">
                       <span className="text-sm text-muted-foreground block mb-1">Dimensions</span>
                       <span className="font-semibold text-lg">{typeof product.dimensions === "string" ? product.dimensions : JSON.stringify(product.dimensions)}</span>
                     </div>
                   )}
                   {product.sku && (
-                    <div className="bg-muted/30 rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                    <div className="rounded-xl border border-border/50 bg-muted/20 p-4 hover:bg-muted/30 transition-colors">
                       <span className="text-sm text-muted-foreground block mb-1">SKU</span>
                       <span className="font-semibold text-lg">{product.sku}</span>
                     </div>
                   )}
                 </div>
-              </div>
+              </section>
             )}
 
             {/* Reviews section */}
-            <div className="bg-background rounded-2xl shadow-lg border border-border/50 p-6 lg:p-10 mb-8">
-              <h2 className="text-2xl lg:text-3xl font-bold mb-8 flex items-center gap-2">
-                <span className="w-1 h-8 bg-primary rounded-full"></span>
-                Customer Reviews & Ratings
-              </h2>
+            <section className="bg-background/80 backdrop-blur-sm rounded-2xl shadow-sm border border-border/60 p-5 sm:p-6 lg:p-10">
+              <div className="flex items-end justify-between gap-6 mb-8">
+                <div className="space-y-1">
+                  <h2 className="text-2xl lg:text-3xl font-bold tracking-tight">Customer Reviews</h2>
+                  <p className="text-sm text-muted-foreground">Real feedback from verified shoppers.</p>
+                </div>
+              </div>
               <ReviewList productId={product.id} currentUserId={userId ?? undefined} />
-            </div>
+            </section>
 
             {/* Related products section */}
-            <div className="bg-background rounded-2xl shadow-lg border border-border/50 p-6 lg:p-10">
-              <h2 className="text-2xl lg:text-3xl font-bold mb-8 flex items-center gap-2">
-                <span className="w-1 h-8 bg-primary rounded-full"></span>
-                You May Also Like
-              </h2>
+            <section className="bg-background/80 backdrop-blur-sm rounded-2xl shadow-sm border border-border/60 p-5 sm:p-6 lg:p-10">
+              <div className="flex items-end justify-between gap-6 mb-8">
+                <div className="space-y-1">
+                  <h2 className="text-2xl lg:text-3xl font-bold tracking-tight">You May Also Like</h2>
+                  <p className="text-sm text-muted-foreground">More items picked based on this product’s category.</p>
+                </div>
+              </div>
               <RelatedProducts productId={product.id} categoryId={product.categoryId} />
+            </section>
             </div>
           </main>
         </SettingsProvider>

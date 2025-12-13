@@ -22,6 +22,7 @@ export interface Product {
   weight?: number | null; // grams
   dimensions?: string | null; // e.g., "10x5x2 cm"
   sku?: string | null;
+  variants?: ProductVariant[];
 }
 
 export interface Category {
@@ -52,6 +53,15 @@ export interface OrderItem {
     name: string;
     price: number;
   };
+}
+
+export interface ProductVariant {
+  id: string;
+  name: string;
+  sku?: string | null;
+  price: number;
+  stock: number;
+  attributes: Record<string, string>;
 }
 
 export interface ShippingAddress {

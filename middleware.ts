@@ -1,6 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 import { defaultLocale, isValidLocale, stripLocaleFromPathname } from "@/lib/i18n/config"
+import { withRateLimit } from "@/lib/rate-limit"
 
 function isWebhookPath(pathname: string): boolean {
   return pathname.startsWith("/api/webhooks/")
@@ -9,6 +10,35 @@ function isWebhookPath(pathname: string): boolean {
 function isProtectedPath(pathname: string): boolean {
   const noLocale = stripLocaleFromPathname(pathname)
   return noLocale.startsWith("/admin") || noLocale.startsWith("/api/admin")
+}
+
+// Rate limiting configurations for different API endpoints
+const rateLimitConfigs = {
+  '/api/cart': { limit: 30, windowSeconds: 60 },
+  '/api/checkout': { limit: 10, windowSeconds: 60 },
+  '/api/payments': { limit: 5, windowSeconds: 60 },
+  '/api/search': { limit: 100, windowSeconds: 60 },
+  '/api/products': { limit: 200, windowSeconds: 60 },
+  '/api/admin': { limit: 50, windowSeconds: 60 },
+  '/api/newsletter': { limit: 3, windowSeconds: 300 }, // 3 subscriptions per 5 minutes
+  '/api/contact': { limit: 5, windowSeconds: 300 }, // 5 contact messages per 5 minutes
+  'default': { limit: 100, windowSeconds: 60 }
+}
+
+function getRateLimitConfig(pathname: string) {
+  // Check for exact matches first
+  if (rateLimitConfigs[pathname as keyof typeof rateLimitConfigs]) {
+    return rateLimitConfigs[pathname as keyof typeof rateLimitConfigs]
+  }
+  
+  // Check for prefix matches
+  for (const [key, config] of Object.entries(rateLimitConfigs)) {
+    if (key !== 'default' && pathname.startsWith(key)) {
+      return config
+    }
+  }
+  
+  return rateLimitConfigs.default
 }
 
 export default clerkMiddleware(async (auth, req) => {

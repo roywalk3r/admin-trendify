@@ -15,6 +15,9 @@ import { useUser } from "@clerk/nextjs"
 import { useI18n } from "@/lib/i18n/I18nProvider"
 import SafeHtml from "@/components/safe-html"
 import StockBadge from "@/components/product/stock-badge"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 
 interface ProductDetailProps {
   product: Product & {
@@ -35,7 +38,32 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const settings = useSettings()
   const [wishlistLoading, setWishlistLoading] = useState(false)
   const [inWishlist, setInWishlist] = useState<boolean | null>(null)
+  const [isDescriptionOpen, setIsDescriptionOpen] = useState(false)
+  const variants = Array.isArray((product as any).variants) ? (product as any).variants : []
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    variants[0]?.id ?? null
+  )
   const { isSignedIn } = useUser()
+  const descriptionTextLength = (product.description || "").replace(/<[^>]*>/g, "").trim().length
+  const hasLongDescription = descriptionTextLength > 260 || (product.description || "").length > 600
+  const selectedVariant = variants.find((v: any) => v.id === selectedVariantId) || null
+  const activePrice = selectedVariant ? Number(selectedVariant.price) : Number(product.price)
+  const activeStock = selectedVariant ? selectedVariant.stock : product.stock
+  const variantAttributes = (selectedVariant?.attributes || {}) as Record<string, string>
+  const variantColor = typeof variantAttributes.color === "string" ? variantAttributes.color : undefined
+  const variantSize = typeof variantAttributes.size === "string" ? variantAttributes.size : undefined
+  const variantDisplayName = selectedVariant?.name ? `${product.name} (${selectedVariant.name})` : product.name
+
+  useEffect(() => {
+    if (variants.length === 0) {
+      setSelectedVariantId(null)
+      return
+    }
+    const exists = variants.some((v: any) => v.id === selectedVariantId)
+    if (!exists) {
+      setSelectedVariantId(variants[0].id)
+    }
+  }, [variants, selectedVariantId])
 
   // Track product view
   useProductView(product.id)
@@ -93,10 +121,13 @@ export function ProductDetail({ product }: ProductDetailProps) {
     // Optimistic local add
     addItem({
       id: product.id,
-      name: product.name,
-      price: Number(product.price),
+      name: variantDisplayName,
+      price: activePrice,
       quantity,
       image: product.images[0] || "/placeholder.svg",
+      color: variantColor,
+      size: variantSize,
+      variantId: selectedVariant?.id,
     })
 
     try {
@@ -106,16 +137,18 @@ export function ProductDetail({ product }: ProductDetailProps) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: product.id,
-            name: product.name,
-            price: Number(product.price),
+            name: variantDisplayName,
+            price: activePrice,
             quantity,
             image: product.images[0] || "/placeholder.svg",
+            color: variantColor,
+            size: variantSize,
           }),
         })
         if (!res.ok) throw new Error(`${res.status}`)
       }
       toast.success(t("product.addedToCart"), {
-        description: `${product.name}`,
+        description: `${variantDisplayName}`,
       })
     } catch (e: any) {
       const msg = String(e?.message || "")
@@ -147,7 +180,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
   }
 
   const increaseQuantity = () => {
-    if (quantity < product.stock) {
+    if (quantity < activeStock) {
       setQuantity((prev) => prev + 1)
     }
   }
@@ -158,14 +191,14 @@ export function ProductDetail({ product }: ProductDetailProps) {
     }
   }
 
-  const isOutOfStock = product.stock <= 0
-  const isLowStock = product.stock <= (product.lowStockThreshold || 5)
-  const hasDiscount = product.comparePrice && Number(product.comparePrice) > Number(product.price)
+  const isOutOfStock = activeStock <= 0
+  const hasDiscount = product.comparePrice && Number(product.comparePrice) > activePrice
   const discountPercentage = hasDiscount
-      ? Math.round(((Number(product.comparePrice) - Number(product.price)) / Number(product.comparePrice)) * 100)
+      ? Math.round(((Number(product.comparePrice) - activePrice) / Number(product.comparePrice)) * 100)
       : 0
 
   return (
+    <>
       <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Product Images */}
         <div className="space-y-6">
@@ -241,7 +274,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
               <div className="flex items-baseline gap-3 flex-wrap">
                 <span className="text-4xl lg:text-5xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                   {settings?.currencySymbol || "$"}
-                  {Number(product.price).toFixed(2)}
+                  {activePrice.toFixed(2)}
                 </span>
                 {hasDiscount && (
                     <>
@@ -264,13 +297,53 @@ export function ProductDetail({ product }: ProductDetailProps) {
             </div>
           </div>
 
+          {/* Variant selection */}
+          {variants.length > 0 && (
+            <div className="space-y-2">
+              <Label className="font-semibold">Choose a variant</Label>
+              <Select
+                value={selectedVariant?.id ?? ""}
+                onValueChange={(val) => {
+                  setSelectedVariantId(val)
+                  setQuantity(1)
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select variant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {variants.map((variant: any) => {
+                    const attrs = variant.attributes || {}
+                    const attrLabel = Object.keys(attrs)
+                      .map((key) => `${key}: ${attrs[key]}`)
+                      .join(" • ")
+                    return (
+                      <SelectItem key={variant.id} value={variant.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{variant.name || "Variant"}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {attrLabel || "Attributes"}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+              <div className="flex flex-wrap gap-2">
+                {variantColor && <Badge variant="outline">Color: {variantColor}</Badge>}
+                {variantSize && <Badge variant="outline">Size: {variantSize}</Badge>}
+              </div>
+            </div>
+          )}
+
           {/* Stock Status */}
           <div className="space-y-2">
             <StockBadge
-              stock={product.stock}
-              lowStockThreshold={product.lowStockThreshold!}
+              stock={activeStock}
+              lowStockThreshold={product.lowStockThreshold ?? undefined}
               productId={product.id}
-              productName={product.name}
+              productName={variantDisplayName}
             />
           </div>
 
@@ -280,7 +353,21 @@ export function ProductDetail({ product }: ProductDetailProps) {
               <span className="w-1 h-6 bg-primary rounded-full"></span>
               {t("product.description")}
             </h3>
-            <SafeHtml html={product.description} className="prose prose-sm max-w-none text-muted-foreground" />
+            <div className="relative rounded-xl border border-border/50 bg-background/70 p-4">
+              <div className={hasLongDescription ? "max-h-40 overflow-hidden" : ""}>
+                <SafeHtml html={product.description} className="prose prose-sm max-w-none text-muted-foreground" />
+              </div>
+              {hasLongDescription && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
+              )}
+            </div>
+            {hasLongDescription && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsDescriptionOpen(true)}>
+                  Show full description
+                </Button>
+              </div>
+            )}
           </div>
 
           <Separator className="my-6" />
@@ -308,15 +395,15 @@ export function ProductDetail({ product }: ProductDetailProps) {
                       variant="ghost"
                       size="icon"
                       onClick={increaseQuantity}
-                      disabled={product.stock <= quantity}
+                      disabled={activeStock <= quantity}
                       className="h-12 w-12 hover:bg-primary/10 hover:text-primary transition-all rounded-none"
                   >
                     <span className="text-xl font-bold">+</span>
                   </Button>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium">{product.stock} {t("product.available")}</span>
-                  {product.stock <= quantity && product.stock > 0 && (
+                  <span className="text-sm font-medium">{activeStock} {t("product.available")}</span>
+                  {activeStock <= quantity && activeStock > 0 && (
                     <span className="text-xs text-amber-600">Maximum reached</span>
                   )}
                 </div>
@@ -385,5 +472,17 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </div>
         </div>
       </div>
+      <Dialog open={isDescriptionOpen} onOpenChange={setIsDescriptionOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{product.name}</DialogTitle>
+            <DialogDescription>Full product description</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[70vh] overflow-y-auto">
+            <SafeHtml html={product.description} className="prose prose-sm max-w-none text-muted-foreground" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

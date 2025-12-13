@@ -310,6 +310,7 @@ model CartItem {
   id        String   @id @default(cuid())
   cartId    String   @map("cart_id")
   productId String   @map("product_id")
+  variantId String?  @map("variant_id")
   quantity  Int      @default(1)
   unitPrice Decimal  @map("unit_price") @db.Decimal(12, 2)
   name      String   @db.VarChar(255) // snapshot of product name
@@ -321,9 +322,10 @@ model CartItem {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
   cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
 
-  @@unique([cartId, productId, color, size])
+  @@unique([cartId, productId, variantId, color, size])
   @@index([cartId])
   @@index([productId])
+  @@index([variantId])
   @@map("cart_items")
 }
 

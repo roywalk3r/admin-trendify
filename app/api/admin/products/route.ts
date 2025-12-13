@@ -28,6 +28,19 @@ const productSchema = z.object({
   isActive: z.boolean().optional().default(true),
   isFeatured: z.boolean().optional().default(false),
   status: z.enum(["active", "inactive", "draft", "archived", "out_of_stock"]).optional().default("active"),
+  variants: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        name: z.string().min(1, "Variant name is required"),
+        sku: z.string().optional().nullable(),
+        price: z.number().positive("Variant price must be positive"),
+        stock: z.number().int().min(0, "Variant stock must be non-negative"),
+        attributes: z.record(z.string()).optional().default({}),
+      })
+    )
+    .optional()
+    .default([]),
 })
 
 export async function GET(request: NextRequest) {
@@ -101,6 +114,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = productSchema.parse(body)
 
+    const { variants, ...productData } = validatedData
+
     // Generate slug from name
     const baseSlug = validatedData.name
         .toLowerCase()
@@ -117,9 +132,20 @@ export async function POST(request: NextRequest) {
 
     const product = await prisma.product.create({
       data: {
-        ...validatedData,
+        ...productData,
         slug,
         price: validatedData.price,
+        variants: variants.length
+          ? {
+              create: variants.map((v) => ({
+                name: v.name,
+                sku: v.sku ?? null,
+                price: v.price,
+                stock: v.stock,
+                attributes: v.attributes ?? {},
+              })),
+            }
+          : undefined,
       },
       include: {
         category: {
@@ -223,7 +249,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Handle single product update
-    const { id, ...data } = productSchema.extend({ id: z.string() }).parse(body)
+    const parsed = productSchema.extend({ id: z.string() }).parse(body)
+    const { id, variants } = parsed
+    const data: any = { ...parsed }
+    delete data.id
+    delete data.variants
 
     const existingProduct = await prisma.product.findUnique({
       where: { id },
@@ -256,22 +286,77 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    const product = await prisma.product.update({
-      where: { id },
-      data: {
-        ...data,
-        slug,
-        price: data.price,
-      },
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-          },
+    const incomingIds = (variants || []).map((v) => v.id).filter(Boolean) as string[]
+    const now = new Date()
+
+    const product = await prisma.$transaction(async (tx) => {
+      await tx.product.update({
+        where: { id },
+        data: {
+          ...data,
+          slug,
+          price: data.price,
         },
-      },
+      })
+
+      await tx.productVariant.updateMany({
+        where: {
+          productId: id,
+          deletedAt: null,
+          ...(incomingIds.length ? { id: { notIn: incomingIds } } : {}),
+        },
+        data: { deletedAt: now, isActive: false },
+      })
+
+      for (const v of variants || []) {
+        const sku = typeof v.sku === "string" && v.sku.trim().length ? v.sku.trim() : null
+        const attributes = v.attributes ?? {}
+
+        if (v.id) {
+          await tx.productVariant.update({
+            where: { id: v.id },
+            data: {
+              name: v.name,
+              sku,
+              price: v.price,
+              stock: v.stock,
+              attributes,
+              deletedAt: null,
+              isActive: true,
+            },
+          })
+        } else {
+          await tx.productVariant.create({
+            data: {
+              productId: id,
+              name: v.name,
+              sku,
+              price: v.price,
+              stock: v.stock,
+              attributes,
+              isActive: true,
+            },
+          })
+        }
+      }
+
+      return tx.product.findUnique({
+        where: { id },
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          variants: { where: { deletedAt: null }, orderBy: { createdAt: "asc" } },
+        },
+      })
     })
+
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 })
+    }
 
     // Invalidate caches and revalidate tags
     try {

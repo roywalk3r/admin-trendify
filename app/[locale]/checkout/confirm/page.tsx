@@ -4,10 +4,11 @@ import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { useCartStore } from "@/lib/store/cart-store"
 import { useToast } from "@/hooks/use-toast"
+import { CheckoutSkeleton } from "@/components/ui/skeleton-loaders"
 
 export default function CheckoutConfirmPage() {
   return (
-    <Suspense fallback={<div className="container mx-auto max-w-3xl py-10 text-sm text-muted-foreground">Loading…</div>}>
+    <Suspense fallback={<CheckoutSkeleton />}>
       <CheckoutConfirmContent />
     </Suspense>
   )

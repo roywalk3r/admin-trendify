@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Plus, X, ImageIcon, Sparkles, Copy, RefreshCw } from "lucide-react";
@@ -56,9 +56,76 @@ const productSchema = z.object({
   images: z
     .array(z.string().url("Invalid image URL"))
     .min(1, "At least one image is required"),
+  variants: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        name: z.string().min(1, "Variant name is required"),
+        sku: z.string().optional().nullable(),
+        price: z.coerce.number().positive("Variant price must be positive"),
+        stock: z.coerce.number().int().nonnegative("Variant stock cannot be negative"),
+        attributes: z
+          .record(z.string())
+          .optional()
+          .default({}),
+      })
+    )
+    .optional()
+    .default([]),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
+
+function serializeAttributes(value: unknown): string {
+  if (!value || typeof value !== "object") return ""
+  return Object.entries(value as Record<string, unknown>)
+    .map(([k, v]) => `${k}=${String(v)}`)
+    .join(",")
+}
+
+function parseAttributes(raw: string): Record<string, string> {
+  const next: Record<string, string> = {}
+  for (const part of raw
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean)) {
+    const idx = part.indexOf("=")
+    if (idx === -1) continue
+    const k = part.slice(0, idx).trim()
+    const v = part.slice(idx + 1).trim()
+    if (k) next[k] = v
+  }
+  return next
+}
+
+function VariantAttributesInput({
+  value,
+  onCommit,
+}: {
+  value: unknown
+  onCommit: (next: Record<string, string>) => void
+}) {
+  const [text, setText] = useState(() => serializeAttributes(value))
+
+  useEffect(() => {
+    setText(serializeAttributes(value))
+  }, [value])
+
+  return (
+    <Input
+      placeholder='e.g., color=Red,size=L'
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault()
+          onCommit(parseAttributes(text))
+        }
+      }}
+      onBlur={() => onCommit(parseAttributes(text))}
+    />
+  )
+}
 
 interface ProductFormProps {
   initialData?: Partial<Product>;
@@ -120,9 +187,51 @@ export function ProductForm({
       stock: initialData?.stock ? Number(initialData.stock) : 0,
       categoryId: initialData?.categoryId || "",
       images: initialData?.images || [],
+      variants: Array.isArray(initialData?.variants)
+        ? initialData!.variants!.map((v: any) => ({
+            id: v?.id,
+            name: v?.name || "",
+            sku: v?.sku ?? null,
+            price: v?.price != null ? Number(v.price) : 0,
+            stock: v?.stock != null ? Number(v.stock) : 0,
+            attributes: (v?.attributes && typeof v.attributes === "object") ? Object.fromEntries(Object.entries(v.attributes).map(([k, val]) => [k, String(val)])) : {},
+          }))
+        : [],
     } as ProductFormValues, // Explicitly type the default values
     mode: "onChange",
   });
+
+  const variantsFieldArray = useFieldArray({
+    control: form.control,
+    name: "variants" as any,
+  })
+
+  // Sync form when initialData changes (edit mode async load)
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        id: initialData.id,
+        name: initialData.name || "",
+        slug: initialData.slug || "",
+        description: initialData.description || "",
+        price: initialData.price ? Number(initialData.price) : 0,
+        stock: initialData.stock ? Number(initialData.stock) : 0,
+        categoryId: initialData.categoryId || "",
+        images: initialData.images || [],
+        variants: Array.isArray(initialData?.variants)
+          ? initialData!.variants!.map((v: any) => ({
+              id: v?.id,
+              name: v?.name || "",
+              sku: v?.sku ?? null,
+              price: v?.price != null ? Number(v.price) : 0,
+              stock: v?.stock != null ? Number(v.stock) : 0,
+              attributes: (v?.attributes && typeof v.attributes === "object") ? Object.fromEntries(Object.entries(v.attributes).map(([k, val]) => [k, String(val)])) : {},
+            }))
+          : [],
+      } as ProductFormValues)
+      setImageUrls(initialData.images || [])
+    }
+  }, [initialData, form])
 
   // Debug logging for form values
   useEffect(() => {
@@ -560,6 +669,153 @@ export function ProductForm({
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Variants</CardTitle>
+              <CardDescription>
+                Add product variants (e.g., size/color). Leave empty if this product has no variants.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {variantsFieldArray.fields.length} variant(s)
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    variantsFieldArray.append({
+                      name: "",
+                      sku: null,
+                      price: 0,
+                      stock: 0,
+                      attributes: {},
+                    } as any)
+                  }
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Variant
+                </Button>
+              </div>
+
+              {variantsFieldArray.fields.length === 0 ? (
+                <div className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
+                  No variants added.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {variantsFieldArray.fields.map((vf, index) => (
+                    <div key={vf.id} className="rounded-md border p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium text-sm">Variant {index + 1}</div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => variantsFieldArray.remove(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name={`variants.${index}.name` as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Variant Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g., Large / Red" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`variants.${index}.sku` as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Variant SKU</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="Optional"
+                                  value={(field.value as any) ?? ""}
+                                  onChange={(e) => field.onChange(e.target.value || null)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`variants.${index}.price` as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Variant Price ($)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={field.value as any}
+                                  onChange={(e) => field.onChange(e.target.value)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`variants.${index}.stock` as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Variant Stock</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={field.value as any}
+                                  onChange={(e) => field.onChange(e.target.value)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name={`variants.${index}.attributes` as any}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Attributes</FormLabel>
+                            <FormDescription>
+                              Key/value attributes used for filtering (e.g., color, size).
+                            </FormDescription>
+                            <FormControl>
+                              <VariantAttributesInput value={field.value} onCommit={field.onChange} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="flex justify-end gap-4">
             <Button

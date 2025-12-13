@@ -23,7 +23,26 @@ const productSchema = z.object({
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   status: z.enum(["active", "inactive", "draft"]).default("active"),
+  variants: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        name: z.string().min(1, "Variant name is required"),
+        sku: z.string().optional().nullable(),
+        price: z.number().positive("Variant price must be positive"),
+        stock: z.number().int().min(0, "Variant stock must be non-negative"),
+        attributes: z.record(z.string()).optional().default({}),
+      })
+    )
+    .optional()
+    .default([]),
 })
+
+function normalizeSku(sku: unknown): string | null {
+  if (typeof sku !== "string") return null
+  const trimmed = sku.trim()
+  return trimmed.length ? trimmed : null
+}
 
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -64,6 +83,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     // Parse and validate request body
     const body = await req.json()
     const validatedData = productSchema.parse(body)
+
+    const { variants, ...productData } = validatedData
 
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
@@ -127,26 +148,88 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       }
     }
 
-    // Update product
-    const updatedProduct = await prisma.product.update({
-      where: { id },
-      data: validatedData,
-      include: {
-        category: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
+    const incomingIds = (variants || []).map((v) => v.id).filter(Boolean) as string[]
+    const now = new Date()
+
+    // Update product + sync variants in a transaction
+    const updatedProduct = await prisma.$transaction(async (tx) => {
+      // 1) Update scalar fields
+      await tx.product.update({
+        where: { id },
+        data: productData,
+      })
+
+      // 2) Soft-delete removed variants
+      await tx.productVariant.updateMany({
+        where: {
+          productId: id,
+          deletedAt: null,
+          ...(incomingIds.length ? { id: { notIn: incomingIds } } : {}),
+        },
+        data: { deletedAt: now, isActive: false },
+      })
+
+      // 3) Upsert incoming variants
+      for (const v of variants || []) {
+        const sku = normalizeSku(v.sku)
+        const attributes = v.attributes ?? {}
+
+        if (v.id) {
+          await tx.productVariant.update({
+            where: { id: v.id },
+            data: {
+              name: v.name,
+              sku,
+              price: v.price,
+              stock: v.stock,
+              attributes,
+              deletedAt: null,
+              isActive: true,
+            },
+          })
+        } else {
+          await tx.productVariant.create({
+            data: {
+              productId: id,
+              name: v.name,
+              sku,
+              price: v.price,
+              stock: v.stock,
+              attributes,
+              isActive: true,
+            },
+          })
+        }
+      }
+
+      // 4) Return updated product with variants
+      return tx.product.findUnique({
+        where: { id },
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+          variants: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: "asc" },
+          },
+          _count: {
+            select: {
+              reviews: true,
+              orderItems: true,
+            },
           },
         },
-        _count: {
-          select: {
-            reviews: true,
-            orderItems: true,
-          },
-        },
-      },
+      })
     })
+
+    if (!updatedProduct) {
+      return createApiResponse({ error: "Product not found", status: 404 })
+    }
 
     // Invalidate caches and revalidate tags
     try {

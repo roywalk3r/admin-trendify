@@ -56,21 +56,34 @@ export async function POST(req: NextRequest) {
         price: true,
         stock: true,
         sku: true,
+        variants: true,
       },
     })
 
-    // Validate all products exist and have sufficient stock
+    // Validate all products/variants exist and have sufficient stock
     for (const item of validatedData.items) {
       const product = products.find((p) => p.id === item.productId)
-      
       if (!product) {
         return createApiResponse({
           error: `Product ${item.productId} not found or unavailable`,
           status: 400,
         })
       }
-
-      if (product.stock < item.quantity) {
+      if (item.variantId) {
+        const variant = product.variants.find((v) => v.id === item.variantId && !v.deletedAt)
+        if (!variant) {
+          return createApiResponse({
+            error: `Variant not found for product ${product.name}`,
+            status: 400,
+          })
+        }
+        if (variant.stock < item.quantity) {
+          return createApiResponse({
+            error: `Insufficient stock for ${product.name} (${variant.name}). Available: ${variant.stock}`,
+            status: 400,
+          })
+        }
+      } else if (product.stock < item.quantity) {
         return createApiResponse({
           error: `Insufficient stock for ${product.name}. Available: ${product.stock}`,
           status: 400,
@@ -82,16 +95,21 @@ export async function POST(req: NextRequest) {
     let subtotal = 0
     const orderItems = validatedData.items.map((item) => {
       const product = products.find((p) => p.id === item.productId)!
-      const itemTotal = Number(product.price) * item.quantity
+      const variant = item.variantId
+        ? product.variants.find((v) => v.id === item.variantId && !v.deletedAt)
+        : null
+      const unitPrice = variant ? Number(variant.price) : Number(product.price)
+      const itemTotal = unitPrice * item.quantity
       subtotal += itemTotal
 
       return {
         productId: item.productId,
+        variantId: item.variantId,
         quantity: item.quantity,
-        unitPrice: product.price,
+        unitPrice: unitPrice,
         totalPrice: itemTotal,
-        productName: product.name,
-        productSku: product.sku,
+        productName: variant ? `${product.name} (${variant.name})` : product.name,
+        productSku: variant?.sku || product.sku,
       }
     })
 

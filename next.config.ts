@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
-// Build a strict but compatible Content Security Policy
-function buildCSP() {
+// Build a strict but compatible Content Security Policy with nonce support
+function buildCSP(nonce?: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   const clerkDomains = [
     "https://clerk.com",
@@ -33,8 +33,8 @@ function buildCSP() {
   ]
 
   const self = "'self'"
-  const unsafeInline = "'unsafe-inline'" // for Next.js style-injection; reduce if using CSP-nonce
-  const unsafeEval = "'unsafe-eval'" // required by Next.js in dev
+  const nonceValue = nonce ? `'nonce-${nonce}'` : ''
+  const unsafeEval = "'unsafe-eval'" // Required by Next.js in development
 
   const csp = [
     `default-src ${self}`,
@@ -42,8 +42,8 @@ function buildCSP() {
     `frame-ancestors ${self}`,
     `img-src ${self} data: blob: https:`,
     `font-src ${self} https://fonts.gstatic.com data:`,
-    `style-src ${self} ${unsafeInline} https://fonts.googleapis.com`,
-    `script-src ${self} ${unsafeInline} ${unsafeEval} ${clerkDomains.join(" ")} ${paymentDomains.join(" ")} ${googleAnalyticsDomains.join(" ")}`,
+    `style-src ${self} https://fonts.googleapis.com ${nonceValue}`,
+    `script-src ${self} ${nonceValue} ${unsafeEval} ${clerkDomains.join(" ")} ${paymentDomains.join(" ")} ${googleAnalyticsDomains.join(" ")}`,
     `worker-src ${self} blob:`,
     `connect-src ${self} ${appUrl} ${clerkDomains.join(" ")} ${appwriteDomains.join(" ")} ${paymentDomains.join(" ")} ${analyticsDomains.join(" ")} ${sentryDomains.join(" ")} ${googleAnalyticsDomains.join(" ")}`,
     `frame-src ${self} ${paymentDomains.join(" ")} ${clerkDomains.join(" ")}`,
@@ -57,6 +57,60 @@ function buildCSP() {
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  swcMinify: true,
+  compress: true,
+  poweredByHeader: false,
+  experimental: {
+    optimizePackageImports: [
+      '@radix-ui/react-icons',
+      'lucide-react',
+      'date-fns',
+      'framer-motion',
+      '@hookform/resolvers',
+      'class-variance-authority',
+      'clsx',
+      'cmdk',
+      'sonner'
+    ],
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+  },
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Optimize bundle size
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+          common: {
+            name: 'common',
+            minChunks: 2,
+            chunks: 'all',
+            enforce: true,
+          },
+        },
+      },
+    }
+
+    // Reduce bundle size by removing moment.js locales if not needed
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'moment': false,
+    }
+
+    return config
+  },
   images: {
     remotePatterns: [
       // new URL('https://fra.cloud.appwrite.io/**'),
@@ -94,7 +148,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: buildCSP(),
+            value: buildCSP(), // Will be updated by middleware with nonce
           },
           {
             key: 'X-DNS-Prefetch-Control',
