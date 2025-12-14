@@ -54,6 +54,12 @@ export function Editor({
   initialHtml?: string
   placeholder?: string
 }) {
+  const initialEditorState = editorState
+    ? editorState
+    : editorSerializedState
+      ? JSON.stringify(editorSerializedState)
+      : undefined
+
   const initialConfig: InitialConfigType = {
     namespace: "Editor",
     theme: editorTheme,
@@ -61,12 +67,7 @@ export function Editor({
     onError: (error: Error) => {
       console.error(error)
     },
-  }
-
-  if (editorState) {
-    initialConfig.editorState = editorState
-  } else if (editorSerializedState) {
-    initialConfig.editorState = JSON.stringify(editorSerializedState)
+    editorState: initialEditorState,
   }
 
   return (

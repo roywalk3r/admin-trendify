@@ -129,7 +129,7 @@ function ToolbarPlugin() {
   }
 
   const insertTable = () => {
-    editor.dispatchCommand(INSERT_TABLE_COMMAND, { rows: 3, columns: 3, includeHeaders: true })
+    editor.dispatchCommand(INSERT_TABLE_COMMAND, { rows: "3", columns: "3", includeHeaders: true })
   }
 
   return (

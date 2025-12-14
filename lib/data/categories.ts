@@ -1,17 +1,7 @@
 import prisma from "@/lib/prisma"
-import { getCache, setCache, deleteCache, deleteByPattern } from "@/lib/redis"
-
-const TTL = 300 // 5 minutes
-
-const listKey = (params: Record<string, any>) =>
-  `cache:categories:list:${Buffer.from(JSON.stringify(params)).toString("base64")}`
-const categoryKey = (id: string) => `cache:categories:${id}`
+import { prismaCache } from "@/lib/prisma-cache"
 
 export async function getCategoriesCached(params: Record<string, any>) {
-  const key = listKey(params)
-  const cached = await getCache<any>(key)
-  if (cached) return cached
-
   // Build where clause mirroring route logic
   const where: any = {}
   if (params.parentId !== undefined) where.parentId = params.parentId
@@ -64,8 +54,9 @@ export async function getCategoriesCached(params: Record<string, any>) {
       orderBy,
       skip,
       take: limit,
+      cacheStrategy: prismaCache.long(),
     }),
-    prisma.category.count({ where }),
+    prisma.category.count({ where, cacheStrategy: prismaCache.long() }),
   ])
 
   const totalPages = Math.ceil(totalCount / limit)
@@ -90,16 +81,10 @@ export async function getCategoriesCached(params: Record<string, any>) {
       totalCount,
     },
   }
-
-  await setCache(key, response, TTL)
   return response
 }
 
 export async function getCategoryByIdCached(id: string) {
-  const key = categoryKey(id)
-  const cached = await getCache<any>(key)
-  if (cached) return cached
-
   const category = await prisma.category.findUnique({
     where: { id },
     include: {
@@ -112,6 +97,7 @@ export async function getCategoryByIdCached(id: string) {
       parent: { select: { id: true, name: true, slug: true } },
       _count: { select: { products: { where: { isDeleted: false, deletedAt: null, isActive: true } }, children: true } },
     },
+    cacheStrategy: prismaCache.long(),
   })
 
   if (!category) return null
@@ -131,14 +117,11 @@ export async function getCategoryByIdCached(id: string) {
     children: (category as any).children,
     parent: (category as any).parent,
   }
-
-  await setCache(key, result, TTL)
   return result
 }
 
 export async function invalidateCategoriesLists() {
-  await deleteByPattern("cache:categories:list:*")
 }
 export async function invalidateCategory(id: string) {
-  await deleteCache(categoryKey(id))
+  void id
 }

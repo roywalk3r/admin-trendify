@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { createApiResponse, handleApiError } from "@/lib/api-utils";
+import { getCurrencyCode } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
       return createApiResponse({ status: 500, error: "Missing PAYSTACK_SECRET_KEY env" });
     }
 
-    const currency = (process.env.PAYSTACK_CURRENCY || process.env.NEXT_PUBLIC_CURRENCY || "GHS").toUpperCase();
+    const currency = await getCurrencyCode();
 
     const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) {

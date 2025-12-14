@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { validateQuery } from '@/lib/validations/helpers'
 import { productSearchSchema } from '@/lib/validations/schemas'
 import { withRateLimit } from '@/lib/rate-limit'
+import { prismaCache } from '@/lib/prisma-cache'
 
 export const GET = withRateLimit(
   { limit: 100, windowSeconds: 60 },
@@ -92,9 +93,6 @@ export const GET = withRateLimit(
         where.comparePrice = {
           not: null
         }
-        where.price = {
-          lt: prisma.product.fields.comparePrice
-        }
       }
 
       // Color and size filters (variant attributes)
@@ -141,9 +139,7 @@ export const GET = withRateLimit(
           orderBy.createdAt = 'desc'
           break
         case 'popular':
-          orderBy._count = {
-            orders: sortOrder
-          }
+          orderBy.orderItems = { _count: sortOrder }
           break
         default:
           orderBy.name = sortOrder
@@ -152,6 +148,7 @@ export const GET = withRateLimit(
       // Execute the query with pagination
       const [products, total] = await Promise.all([
         prisma.product.findMany({
+          cacheStrategy: prismaCache.short(),
           where,
           orderBy,
           skip: (page - 1) * limit,
@@ -190,7 +187,7 @@ export const GET = withRateLimit(
             _count: {
               select: {
                 reviews: true,
-                orders: true,
+                orderItems: true,
                 wishlistItems: true
               }
             },
@@ -202,14 +199,12 @@ export const GET = withRateLimit(
             }
           }
         }),
-        prisma.product.count({ where })
-      ])
+        prisma.product.count({ where, cacheStrategy: prismaCache.short() })
+      ] as const)
 
       // Calculate average rating for each product
       const productsWithRating = products.map(product => {
-        const avgRating = product.reviews.length > 0
-          ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
-          : 0
+        const avgRating = product.reviews.length > 0 ? product.reviews[0]?.rating || 0 : 0
 
         return {
           ...product,
@@ -222,6 +217,7 @@ export const GET = withRateLimit(
       // Get available filters for the UI
       const [categories, allTags, priceRange] = await Promise.all([
         prisma.category.findMany({
+          cacheStrategy: prismaCache.long(),
           where: {
             products: {
               some: {
@@ -245,10 +241,13 @@ export const GET = withRateLimit(
           }
         }),
         prisma.tag.findMany({
+          cacheStrategy: prismaCache.long(),
           where: {
             products: {
               some: {
-                status: 'active'
+                product: {
+                  status: 'active'
+                }
               }
             }
           },
@@ -258,7 +257,9 @@ export const GET = withRateLimit(
               select: {
                 products: {
                   where: {
-                    status: 'active'
+                    product: {
+                      status: 'active'
+                    }
                   }
                 }
               }
@@ -266,6 +267,7 @@ export const GET = withRateLimit(
           }
         }),
         prisma.product.aggregate({
+          cacheStrategy: prismaCache.long(),
           where: {
             status: 'active'
           },
@@ -280,6 +282,7 @@ export const GET = withRateLimit(
 
       // Extract unique colors and sizes from variants
       const allVariants = await prisma.productVariant.findMany({
+        cacheStrategy: prismaCache.long(),
         where: {
           product: {
             status: 'active'
@@ -293,20 +296,20 @@ export const GET = withRateLimit(
         }
       })
 
-      const colors = new Map<string, number>()
-      const sizes = new Map<string, number>()
+      const colorCounts = new Map<string, number>()
+      const sizeCounts = new Map<string, number>()
 
       allVariants.forEach(variant => {
         const attributes = variant.attributes as Record<string, any>
         
         if (attributes.color) {
-          const color = attributes.color
-          colors.set(color, (colors.get(color) || 0) + 1)
+          const color = String(attributes.color)
+          colorCounts.set(color, (colorCounts.get(color) || 0) + 1)
         }
         
         if (attributes.size) {
-          const size = attributes.size
-          sizes.set(size, (sizes.get(size) || 0) + 1)
+          const size = String(attributes.size)
+          sizeCounts.set(size, (sizeCounts.get(size) || 0) + 1)
         }
       })
 
@@ -316,12 +319,12 @@ export const GET = withRateLimit(
           name: cat.name,
           count: cat._count.products
         })),
-        colors: Array.from(colors.entries()).map(([name, count]) => ({
+        colors: Array.from(colorCounts.entries()).map(([name, count]) => ({
           name,
           hex: getColorHex(name), // Helper function to get hex color
           count
         })),
-        sizes: Array.from(sizes.entries()).map(([name, count]) => ({
+        sizes: Array.from(sizeCounts.entries()).map(([name, count]) => ({
           name,
           count
         })),

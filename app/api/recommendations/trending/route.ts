@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { redis } from "@/lib/redis"
 import prisma from "@/lib/prisma"
+import { prismaCache } from "@/lib/prisma-cache"
 
 export const dynamic = "force-dynamic"
 
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
     if (!trendingProductIds.length) {
       // Fallback to recent products if no trending data
       const recentProducts = await prisma.product.findMany({
+        cacheStrategy: prismaCache.short(),
         orderBy: { createdAt: "desc" },
         take: limit,
         include: { category: true },
@@ -25,6 +27,7 @@ export async function GET(request: Request) {
 
     // Fetch full product details from database
     const products = await prisma.product.findMany({
+      cacheStrategy: prismaCache.short(),
       where: {
         id: { in: trendingProductIds },
       },
@@ -32,7 +35,9 @@ export async function GET(request: Request) {
     })
 
     // Sort products in the same order as the trending IDs
-    const sortedProducts = trendingProductIds.map((id) => products.find((product) => product.id === id)).filter(Boolean)
+    const sortedProducts = trendingProductIds
+      .map((id: string) => products.find((product) => product.id === id))
+      .filter(Boolean) as Awaited<typeof products>
 
     return NextResponse.json({ products: sortedProducts })
   } catch (error) {

@@ -165,7 +165,7 @@ export default function ProductCard({
         <motion.div
             className="group relative bg-card rounded-2xl border border-muted overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
             variants={cardVariants}
-             viewport={{ once: true }}
+            viewport={{ once: true }}
             animate={isHovered ? "hover" : "rest"}
             onHoverStart={() => setIsHovered(true)}
             onHoverEnd={() => setIsHovered(false)}
@@ -173,7 +173,7 @@ export default function ProductCard({
             {/* Product Image */}
             <div className="relative aspect-square overflow-hidden bg-gray-50">
                 <motion.div variants={imageVariants} className="w-full h-full">
-                    <Link href={addLocaleToPathname(`/products/${id}`, locale)} className="block w-full h-full">
+                    <Link href={addLocaleToPathname(`/products/${id}`, locale)} className="relative block w-full h-full">
                         <Image
                             src={imgSrc || "/placeholder.svg"}
                             alt={name}

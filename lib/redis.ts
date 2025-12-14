@@ -5,14 +5,38 @@ import { logError, logDebug } from "./logger";
  * This module initializes a Redis client using Valkey and provides helper functions
  * for caching, rate limiting, and other Redis operations.
  */
-// Initialize Redis client with environment variables
-export const redis = new Valkey(process.env.VALKEY_URL || "", {
-  maxRetriesPerRequest: 3,
-  retryStrategy(times) {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  },
-});
+const redisUrl = process.env.VALKEY_URL
+
+const redisClient: any = redisUrl
+  ? new Valkey(redisUrl, {
+      maxRetriesPerRequest: 3,
+      retryStrategy(times) {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+    })
+  : null
+
+const redisStub: any = {
+  get: async () => null,
+  set: async () => "OK",
+  setex: async () => "OK",
+  del: async () => 0,
+  keys: async () => [],
+  incr: async () => 1,
+  expire: async () => 0,
+  scan: async () => ["0", []],
+  pipeline: () => ({
+    del: () => {},
+    exec: async () => [],
+  }),
+  zadd: async () => 0,
+  zincrby: async () => 0,
+  zrevrange: async () => [],
+  zremrangebyrank: async () => 0,
+}
+
+export const redis: any = redisClient || redisStub
 
 // Cache helper functions
 export async function getCache<T>(key: string): Promise<T | null> {

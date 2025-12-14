@@ -9,6 +9,7 @@ import GeminiPopover from "@/components/gemini-popover";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { UserRole } from "@/lib/auth/permissions";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -42,7 +43,7 @@ export default async function RootLayout({
     select: { role: true },
   });
 
-  if (!user || (user.role !== "admin" && user.role !== "staff")) {
+  if (!user || (user.role as unknown as string) === UserRole.CUSTOMER) {
     redirect(`/${locale}`);
   }
 

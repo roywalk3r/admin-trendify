@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic"
 
 import { auth } from "@clerk/nextjs/server"
 import prisma from "@/lib/prisma"
+import { prismaCache } from "@/lib/prisma-cache"
 
 export async function GET(request: Request) {
   try {
@@ -79,6 +80,7 @@ async function getPersonalizedRecommendations(userId: string, limit: number) {
 async function getSimilarProducts(productId: string, limit: number) {
   // Get the product's category
   const product = await prisma.product.findUnique({
+    cacheStrategy: prismaCache.long(),
     where: { id: productId },
     select: { categoryId: true },
   })
@@ -89,6 +91,7 @@ async function getSimilarProducts(productId: string, limit: number) {
 
   // Get similar products from the same category
   const similarProducts = await prisma.product.findMany({
+    cacheStrategy: prismaCache.short(),
     where: {
       categoryId: product.categoryId,
       id: { not: productId }, // Exclude the current product
@@ -106,6 +109,7 @@ async function getSimilarProducts(productId: string, limit: number) {
 async function getPopularProducts(limit: number) {
   // Get products with the most orders
   const popularProducts = await prisma.product.findMany({
+    cacheStrategy: prismaCache.short(),
     orderBy: {
       orderItems: {
         _count: "desc",

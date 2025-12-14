@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { withRateLimit } from '@/lib/rate-limit'
 
 // Fuzzy matching utility for typo tolerance
@@ -29,7 +29,7 @@ function fuzzyMatch(str: string, pattern: string): number {
 
 // Calculate relevance score for suggestions
 function calculateRelevanceScore(
-  item: { name: string; description?: string; sku?: string },
+  item: { name: string; description?: string | null; sku?: string | null },
   query: string,
   type: string
 ): number {
@@ -102,7 +102,7 @@ export const GET = withRateLimit(
           _count: {
             select: {
               reviews: true,
-              orders: true
+              orderItems: true
             }
           }
         },
@@ -135,7 +135,7 @@ export const GET = withRateLimit(
           _count: {
             select: {
               products: {
-                where: { status: 'active' }
+                where: { product: { status: 'active' } }
               }
             }
           }
@@ -155,7 +155,7 @@ export const GET = withRateLimit(
       })
 
       // Build suggestions with relevance scores
-      const suggestions = []
+      const suggestions: any[] = []
 
       // Product suggestions
       products.forEach(product => {
@@ -168,7 +168,7 @@ export const GET = withRateLimit(
           image: product.images?.[0],
           url: `/products/${product.id}`,
           score,
-          popularity: product._count.orders
+          popularity: product._count.orderItems
         })
       })
 
@@ -250,7 +250,7 @@ export const GET = withRateLimit(
 
 // Generate query completion suggestions
 function generateQuerySuggestions(query: string): string[] {
-  const suggestions = []
+  const suggestions: string[] = []
   
   // Common prefixes and suffixes
   const prefixes = ['men', 'women', 'kids', 'boys', 'girls']

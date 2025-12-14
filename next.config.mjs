@@ -49,6 +49,19 @@ function buildCSP() {
 }
 
 const nextConfig = {
+  experimental: {
+    optimizePackageImports: [
+      '@radix-ui/react-icons',
+      'lucide-react',
+      'date-fns',
+      'framer-motion',
+      '@hookform/resolvers',
+      'class-variance-authority',
+      'clsx',
+      'cmdk',
+      'sonner'
+    ],
+  },
   images: {
     remotePatterns: [
       {

@@ -10,6 +10,7 @@
 
 import { logInfo, logError } from "@/lib/logger"
 import { formatCurrency } from "@/lib/format"
+import { getCurrencyCode } from "@/lib/settings"
 // Email configuration
 // Sender strategy:
 // - In production: require FROM_EMAIL (verified domain). If missing, skip send to avoid Resend 403.
@@ -109,6 +110,7 @@ export async function sendOrderConfirmationEmail(
     estimatedDelivery?: string
   }
 ) {
+  const currencyCode = await getCurrencyCode()
   const subject = `Order Confirmation - ${orderData.orderNumber}`
   
   const html = `
@@ -168,7 +170,7 @@ export async function sendOrderConfirmationEmail(
                   ${item.image ? `<img src="${item.image}" alt="${item.name}" class="item-image" />` : ''}
                   <div class="item-details">
                     <div class="item-name">${item.name}</div>
-                    <div class="item-quantity">Quantity: ${item.quantity} × ${formatCurrency(item.price)}</div>
+                    <div class="item-quantity">Quantity: ${item.quantity} × ${formatCurrency(item.price, currencyCode)}</div>
                   </div>
                 </div>
               `).join('')}
@@ -176,19 +178,19 @@ export async function sendOrderConfirmationEmail(
               <div class="totals">
                 <div class="total-row subtotal">
                   <span>Subtotal:</span>
-                  <span>${formatCurrency(orderData.subtotal)}</span>
+                  <span>${formatCurrency(orderData.subtotal, currencyCode)}</span>
                 </div>
                 <div class="total-row tax">
                   <span>Tax:</span>
-                  <span>${formatCurrency(orderData.tax)}</span>
+                  <span>${formatCurrency(orderData.tax, currencyCode)}</span>
                 </div>
                 <div class="total-row shipping">
                   <span>Shipping:</span>
-                  <span>${formatCurrency(orderData.shipping)}</span>
+                  <span>${formatCurrency(orderData.shipping, currencyCode)}</span>
                 </div>
                 <div class="total-row final">
                   <span>Total:</span>
-                  <span>${formatCurrency(orderData.total)}</span>
+                  <span>${formatCurrency(orderData.total, currencyCode)}</span>
                 </div>
               </div>
             </div>
@@ -244,6 +246,7 @@ export async function sendAbandonedCartEmail(
     "This is your last reminder! Complete your purchase now and save 10% with code SAVE10."
   ]
 
+  const currencyCode = await getCurrencyCode()
   const subject = subjects[reminderNumber - 1]
   const message = messages[reminderNumber - 1]
   const discountCode = reminderNumber === 3 ? "SAVE10" : null
@@ -290,13 +293,13 @@ export async function sendAbandonedCartEmail(
                 ${item.image ? `<img src="${item.image}" alt="${item.name}" />` : ''}
                 <div>
                   <strong>${item.name}</strong><br />
-                  <span style="color: #666;">$${item.price.toFixed(2)}</span>
+                  <span style="color: #666;">${formatCurrency(item.price, currencyCode)}</span>
                 </div>
               </div>
             `).join('')}
             
             <div style="text-align: right; margin-top: 20px;">
-              <strong>Total: $${cartData.cartValue.toFixed(2)}</strong>
+              <strong>Total: ${formatCurrency(cartData.cartValue, currencyCode)}</strong>
             </div>
             
             <div style="text-align: center;">
@@ -328,6 +331,7 @@ export async function sendStockAlertEmail(
     image?: string
   }
 ) {
+  const currencyCode = await getCurrencyCode()
   const subject = `${product.name} is back in stock! 🎉`
   
   const html = `
@@ -359,7 +363,7 @@ export async function sendStockAlertEmail(
             ${product.image ? `<img src="${product.image}" alt="${product.name}" class="product-image" />` : ''}
             
             <div class="product-name">${product.name}</div>
-            <div class="product-price">$${product.price.toFixed(2)}</div>
+            <div class="product-price">${formatCurrency(product.price, currencyCode)}</div>
             
             <p>Don't miss out this time - stock is limited!</p>
             

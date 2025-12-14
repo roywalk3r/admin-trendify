@@ -1,29 +1,7 @@
 import prisma from "@/lib/prisma"
-import { getCache, setCache, deleteCache, deleteByPattern } from "@/lib/redis"
-
-const TTL_PRODUCT = 300 // 5 min
-const TTL_LIST = 300 // 5 min
-
-const productKey = (id: string) => `cache:products:${id}`
-const productListKey = (params: Record<string, any>) => {
-  const base = {
-    search: params.search ?? "",
-    category: params.category ?? "all",
-    status: params.status ?? "all",
-    featured: params.featured ?? "all",
-    sortBy: params.sortBy ?? "createdAt",
-    sortOrder: params.sortOrder ?? "desc",
-    page: Number(params.page ?? 1),
-    limit: Number(params.limit ?? 20),
-  }
-  return `cache:products:list:${Buffer.from(JSON.stringify(base)).toString("base64")}`
-}
+import { prismaCache } from "@/lib/prisma-cache"
 
 export async function getProductByIdCached(id: string) {
-  const key = productKey(id)
-  const cached = await getCache<any>(key)
-  if (cached) return cached
-
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
@@ -35,16 +13,12 @@ export async function getProductByIdCached(id: string) {
       },
       _count: { select: { reviews: true, orderItems: true, wishlistItems: true } },
     },
+    cacheStrategy: prismaCache.medium(),
   })
-  if (product) await setCache(key, product, TTL_PRODUCT)
   return product
 }
 
 export async function getProductsListCached(params: Record<string, any>) {
-  const key = productListKey(params)
-  const cached = await getCache<any>(key)
-  if (cached) return cached
-
   // Build where clause (same logic as route)
   const where: any = { isDeleted: false }
   if (params.search) {
@@ -61,7 +35,7 @@ export async function getProductsListCached(params: Record<string, any>) {
   if (params.sortBy === "category") orderBy.category = { name: params.sortOrder }
   else orderBy[params.sortBy || "createdAt"] = params.sortOrder || "desc"
 
-  const totalCount = await prisma.product.count({ where })
+  const totalCount = await prisma.product.count({ where, cacheStrategy: prismaCache.medium() })
   const products = await prisma.product.findMany({
     where,
     include: {
@@ -71,6 +45,7 @@ export async function getProductsListCached(params: Record<string, any>) {
     orderBy,
     skip: params.page && params.limit ? (params.page - 1) * params.limit : 0,
     take: params.limit ?? 20,
+    cacheStrategy: prismaCache.medium(),
   })
 
   const totalPages = Math.ceil(totalCount / (params.limit ?? 20))
@@ -102,15 +77,12 @@ export async function getProductsListCached(params: Record<string, any>) {
     },
     filters: params,
   }
-
-  await setCache(key, response, TTL_LIST)
   return response
 }
 
 export async function invalidateProduct(id: string) {
-  await deleteCache(productKey(id))
+  void id
 }
 
 export async function invalidateProductLists() {
-  await deleteByPattern("cache:products:list:*")
 }

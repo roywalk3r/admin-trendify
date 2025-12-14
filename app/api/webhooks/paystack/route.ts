@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { createApiResponse } from "@/lib/api-utils";
+import { finalizeOrderPayment } from "@/lib/finalize-order-payment";
 
 export const dynamic = "force-dynamic";
 
@@ -86,58 +87,42 @@ export async function POST(req: NextRequest) {
     const currency = (v.currency || "NGN").toUpperCase();
 
     if (status === "success" && paidAmount >= orderAmountKobo) {
-      const now = new Date();
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: "paid",
-          transactionId: reference,
-          currency,
-          gatewayFee: v.fees != null ? String(Number(v.fees) / 100) as any : undefined,
-          paidAt: now,
-          metadata: {
-            ...(payment.metadata as object),
-            verify: v,
-          },
-        },
-      });
-
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { paymentStatus: "paid" },
-      });
-
+      await finalizeOrderPayment({
+        orderId: order.id,
+        provider: "paystack",
+        reference,
+        outcome: "paid",
+        currency,
+        paidAmountMinor: paidAmount,
+        gatewayFeeMinor: v.fees != null ? Number(v.fees) : undefined,
+        paidAt: new Date(),
+        verifyPayload: v,
+      })
       return createApiResponse({ status: 200, data: { ok: true } });
     }
 
     if (status === "failed" || status === "abandoned") {
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: "failed",
-          failedAt: new Date(),
-          failureReason: v.gateway_response || v.message || "Payment failed",
-          transactionId: reference,
-          metadata: {
-            ...(payment.metadata as object),
-            verify: v,
-          },
-        },
-      });
+      await finalizeOrderPayment({
+        orderId: order.id,
+        provider: "paystack",
+        reference,
+        outcome: status === "abandoned" ? "abandoned" : "failed",
+        currency,
+        failureReason: v.gateway_response || v.message || "Payment failed",
+        verifyPayload: v,
+      })
       return createApiResponse({ status: 200, data: { ok: true } });
     }
 
     // Unhandled status; store verify payload for investigation
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        transactionId: reference,
-        metadata: {
-          ...(payment.metadata as object),
-          verify: v,
-        },
-      },
-    });
+    await finalizeOrderPayment({
+      orderId: order.id,
+      provider: "paystack",
+      reference,
+      outcome: "unknown",
+      currency,
+      verifyPayload: v,
+    })
 
     return createApiResponse({ status: 200, data: { ok: true } });
   } catch (err) {

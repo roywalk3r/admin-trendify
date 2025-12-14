@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
-import { useRouter } from "next/navigation"
-import { UserRole, Permission, canAccessAdminSection } from "@/lib/auth/permissions"
+import { UserRole, Permission } from "@/lib/auth/permissions"
+import { getRolePermissions, hasAnyPermission, hasAllPermissions } from "@/lib/auth/authorization"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -137,14 +137,9 @@ export function PermissionGuard({
     const checkPermissions = async () => {
       try {
         // Get user role from Clerk metadata or public metadata
-        const role = user?.publicMetadata?.role as UserRole || UserRole.CUSTOMER
+        const role = (user?.publicMetadata?.role as UserRole) || UserRole.CUSTOMER
         setUserRole(role)
-
-        // Check if user has any of the required permissions
-        const hasAny = requiredPermissions.some(permission => 
-          canAccessAdminSection(role, permission.split(':')[0])
-        )
-        setHasPermission(hasAny)
+        setHasPermission(hasAllPermissions(role, requiredPermissions))
       } catch (error) {
         console.error('Permission check failed:', error)
         setHasPermission(false)
@@ -208,12 +203,10 @@ export function AdminNavigation({ currentSection }: AdminNavigationProps) {
 
     const loadAccessibleSections = async () => {
       try {
-        const role = user?.publicMetadata?.role as UserRole || UserRole.CUSTOMER
+        const role = (user?.publicMetadata?.role as UserRole) || UserRole.CUSTOMER
         setUserRole(role)
 
-        const accessible = adminSections.filter(section => 
-          canAccessAdminSection(role, section.id)
-        )
+        const accessible = adminSections.filter((section) => hasAnyPermission(role, section.requiredPermissions))
         setAccessibleSections(accessible)
       } catch (error) {
         console.error('Failed to load admin sections:', error)
@@ -269,9 +262,9 @@ export function useAdminPermissions() {
 
     const loadPermissions = async () => {
       try {
-        const role = user?.publicMetadata?.role as UserRole || UserRole.CUSTOMER
+        const role = (user?.publicMetadata?.role as UserRole) || UserRole.CUSTOMER
         setUserRole(role)
-        setPermissions([]) // Would load actual permissions from API
+        setPermissions(getRolePermissions(role))
       } catch (error) {
         console.error('Failed to load permissions:', error)
       }
@@ -281,11 +274,13 @@ export function useAdminPermissions() {
   }, [user, isLoaded])
 
   const hasPermission = (permission: Permission) => {
-    return canAccessAdminSection(userRole, permission.split(':')[0])
+    return getRolePermissions(userRole).includes(permission)
   }
 
   const canAccessSection = (sectionId: string) => {
-    return canAccessAdminSection(userRole, sectionId)
+    const section = adminSections.find((s) => s.id === sectionId)
+    if (!section) return false
+    return hasAnyPermission(userRole, section.requiredPermissions)
   }
 
   return {

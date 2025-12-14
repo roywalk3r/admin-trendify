@@ -40,7 +40,7 @@ async function main() {
   console.log('📡 API URL:', API_URL)
   console.log('=' .repeat(60))
 
-  const results = []
+  const results: Array<{ locale: string; result: any }> = []
   for (const locale of locales) {
     const result = await seedLocale(locale)
     results.push({ locale, result })

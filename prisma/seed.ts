@@ -514,7 +514,7 @@ export async function seedDatabase() {
 
   // Create analytics events
   console.log("📊 Creating analytics events...");
-  const analyticsEvents = [];
+  const analyticsEvents: Array<Promise<any>> = [];
   for (let i = 0; i < 50; i++) {
     const randomProduct = products[Math.floor(Math.random() * products.length)];
     const randomUser = [adminUser, staffUser, ...customers][

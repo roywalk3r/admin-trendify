@@ -3,7 +3,7 @@ import { createApiResponse, handleApiError } from "@/lib/api-utils";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
-import { deleteCache, getCache, setCache } from "@/lib/redis";
+import { prismaCache } from "@/lib/prisma-cache";
 
 // Category validation schema
 const categoryUpdateSchema = z.object({
@@ -29,13 +29,6 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
   const params = await props.params;
   try {
     const { id } = params;
-
-    // Check cache first
-    const cacheKey = `category:${id}`;
-    const cachedData = await getCache(cacheKey);
-    if (cachedData) {
-      return NextResponse.json(cachedData);
-    }
 
     // Fetch category with related data
     const category = await prisma.category.findUnique({
@@ -78,6 +71,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
           },
         },
       },
+      cacheStrategy: prismaCache.long(),
     });
 
     if (!category) {
@@ -102,9 +96,6 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
       children: category.children,
       parent: category.parent,
     };
-
-    // Cache result for 5 minutes
-    await setCache(cacheKey, result, 300);
 
     return NextResponse.json(result);
   } catch (error) {
@@ -240,10 +231,6 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
       },
     });
 
-    // Invalidate caches
-    await deleteCache("categories:*");
-    await deleteCache(`category:${id}`);
-
     return createApiResponse({
       data: updatedCategory,
       status: 200,
@@ -334,8 +321,6 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
     }
 
     // Invalidate caches
-    await deleteCache("categories:*");
-    await deleteCache(`category:${id}`);
 
     return createApiResponse({
       data: { message: "Category deleted successfully", force },

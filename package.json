@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "postinstall": "prisma generate --no-engine",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
     "db:seed": "prisma db seed",
@@ -44,6 +44,7 @@
     "@lexical/markdown": "0.39.0",
     "@lexical/react": "^0.39.0",
     "@lexical/rich-text": "^0.39.0",
+    "@lexical/selection": "0.39.0",
     "@lexical/table": "0.39.0",
     "@lexical/utils": "0.39.0",
     "@prisma/client": "^6.11.1",

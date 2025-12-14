@@ -4,6 +4,7 @@ import { z } from 'zod'
 export enum UserRole {
   CUSTOMER = 'customer',
   ADMIN = 'admin',
+  STAFF = 'staff',
   SUPER_ADMIN = 'super_admin',
   MANAGER = 'manager',
   SUPPORT = 'support',
@@ -75,6 +76,28 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.ORDER_READ,
     Permission.REVIEW_READ,
     Permission.CONTENT_READ
+  ],
+
+  [UserRole.STAFF]: [
+    Permission.PRODUCT_READ,
+    Permission.PRODUCT_CREATE,
+    Permission.PRODUCT_UPDATE,
+    Permission.PRODUCT_PUBLISH,
+    Permission.CATEGORY_READ,
+    Permission.CATEGORY_CREATE,
+    Permission.CATEGORY_UPDATE,
+    Permission.ORDER_READ,
+    Permission.ORDER_UPDATE,
+    Permission.USER_READ,
+    Permission.ANALYTICS_READ,
+    Permission.SETTINGS_READ,
+    Permission.CONTENT_READ,
+    Permission.CONTENT_CREATE,
+    Permission.CONTENT_UPDATE,
+    Permission.SUPPORT_READ,
+    Permission.SUPPORT_RESPOND,
+    Permission.REVIEW_READ,
+    Permission.REVIEW_MODERATE
   ],
   
   [UserRole.CONTENT_EDITOR]: [

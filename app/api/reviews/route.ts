@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { z } from "zod"
 import { auth } from "@clerk/nextjs/server"
 import { createApiResponse, handleApiError, checkRateLimit } from "@/lib/api-utils"
+import { prismaCache } from "@/lib/prisma-cache"
 
 const listQuerySchema = z.object({
   productId: z.string(),
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest) {
 
     const [items, total] = await Promise.all([
       prisma.review.findMany({
+        cacheStrategy: prismaCache.short(),
         where: { productId, isApproved: true, deletedAt: null },
         orderBy: { createdAt: "desc" },
         skip,
@@ -45,7 +47,10 @@ export async function GET(req: NextRequest) {
           user: { select: { id: true, name: true, avatar: true } },
         },
       }),
-      prisma.review.count({ where: { productId, isApproved: true, deletedAt: null } }),
+      prisma.review.count({
+        cacheStrategy: prismaCache.short(),
+        where: { productId, isApproved: true, deletedAt: null },
+      }),
     ])
 
     // Optionally include the current user's review

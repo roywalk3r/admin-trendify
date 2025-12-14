@@ -3,7 +3,11 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  const users = await prisma.user.findMany()
+  const users = await prisma.user.findMany({
+    cacheStrategy: {
+      ttl: 60, // Cache for 60 seconds
+    },
+  })
   return NextResponse.json(users)
 }
 

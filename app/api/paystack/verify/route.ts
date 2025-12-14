@@ -5,6 +5,7 @@ import { sendOrderConfirmationEmail } from "@/lib/email"
 // Shipping validation now uses DeliveryCity/PickupLocation from DB
 import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
+import { finalizeOrderPayment } from "@/lib/finalize-order-payment"
 
 export async function GET(req: NextRequest) {
   try {
@@ -98,40 +99,28 @@ export async function GET(req: NextRequest) {
       return createApiResponse({ status: 404, error: "Order not found" })
     }
 
-    // Mark payment and order as paid when Paystack reports success
+    // Mark payment and order as paid/failed with shared finalization helper
     if (isSuccessful) {
-      await prisma.payment.upsert({
-        where: { orderId: order.id },
-        update: {
-          status: "paid",
-          amount: Number(order.totalAmount),
-          currency,
-          transactionId: tx.reference || tx.id?.toString?.() || undefined,
-          metadata: {
-            ...(order.payment?.metadata as any || {}),
-            verify: tx,
-          },
-        },
-        create: {
-          orderId: order.id,
-          method: "paystack",
-          status: "paid",
-          amount: Number(order.totalAmount),
-          currency,
-          transactionId: tx.reference || tx.id?.toString?.() || undefined,
-          metadata: { verify: tx },
-        },
+      await finalizeOrderPayment({
+        orderId: order.id,
+        provider: "paystack",
+        reference: tx.reference || tx.id?.toString?.() || reference,
+        outcome: "paid",
+        currency,
+        paidAmountMinor: tx.amount,
+        gatewayFeeMinor: tx.fees,
+        paidAt: tx.paid_at ? new Date(tx.paid_at) : new Date(),
+        verifyPayload: tx,
       })
 
-      const updated = await prisma.order.update({
+      const updated = await prisma.order.findUnique({
         where: { id: order.id },
-        data: { paymentStatus: "paid", status: order.status === "pending" ? "processing" : order.status },
         include: { payment: true, orderItems: { include: { product: { select: { images: true } } } }, user: true },
       })
 
       // Send confirmation email after payment
       try {
-        if (email) {
+        if (email && updated) {
           await sendOrderConfirmationEmail(email, {
             orderNumber: updated.orderNumber,
             customerName: updated.user?.name || (email?.split("@")[0] || "Customer"),
@@ -147,10 +136,21 @@ export async function GET(req: NextRequest) {
         console.warn("[email] order confirmation send failed", e)
       }
 
-      return createApiResponse({ status: 200, data: { ...res.data, order: updated } })
+      return createApiResponse({ status: 200, data: { ...res.data, order: updated || order } })
     }
 
     // Not successful
+    if (payStatus === "failed" || payStatus === "abandoned") {
+      await finalizeOrderPayment({
+        orderId: order.id,
+        provider: "paystack",
+        reference: tx.reference || tx.id?.toString?.() || reference,
+        outcome: payStatus === "abandoned" ? "abandoned" : "failed",
+        currency,
+        failureReason: tx.gateway_response || tx.message || "Payment failed",
+        verifyPayload: tx,
+      })
+    }
     return createApiResponse({ status: 200, data: { ...res.data, order } })
   } catch (e: any) {
     return handleApiError(e)

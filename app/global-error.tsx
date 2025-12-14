@@ -1,31 +1,51 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
-import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { AlertTriangle, RotateCw } from "lucide-react";
-
-export default function GlobalError({ error, reset }: { error: Error & { digest?: string }, reset: () => void }) {
-  useEffect(() => {
-    Sentry.captureException(error);
-  }, [error]);
-
+export default function GlobalError({ reset }: { reset: () => void }) {
   return (
     <html>
       <body>
-        <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center px-4">
-          <div className="max-w-md">
-            <AlertTriangle className="mx-auto h-16 w-16 text-destructive mb-4 animate-pulse" />
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              Something went wrong
-            </h1>
-            <p className="text-muted-foreground mb-6">
-              An unexpected error occurred. Please try again. You can try refreshing the page.
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
+            <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Something went wrong</h1>
+            <p style={{ opacity: 0.8, marginBottom: 16 }}>
+              An unexpected error occurred. Please try again.
             </p>
-            <Button onClick={() => reset()}>
-              <RotateCw className="mr-2 h-4 w-4" />
-              Try again
-            </Button>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={() => reset()}
+                style={{
+                  height: 40,
+                  padding: "0 14px",
+                  borderRadius: 8,
+                  border: "1px solid #111",
+                  background: "#111",
+                  color: "#fff",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Try again
+              </button>
+              <a
+                href="/"
+                style={{
+                  height: 40,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "0 14px",
+                  borderRadius: 8,
+                  border: "1px solid #111",
+                  color: "#111",
+                  textDecoration: "none",
+                  fontSize: 14,
+                  fontWeight: 600,
+                }}
+              >
+                Go home
+              </a>
+            </div>
           </div>
         </div>
       </body>

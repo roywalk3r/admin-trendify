@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server"
 import { type NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { createApiResponse } from "@/lib/api-utils"
+import { UserRole } from "@/lib/auth/permissions"
 
 /**
  * Check if the current user is an admin
@@ -15,7 +16,7 @@ export async function isAdmin() {
       where: { clerkId: userId },
       select: { role: true },
     })
-    return user?.role === "admin"
+    return user?.role != null && user.role !== UserRole.CUSTOMER
   } catch (error) {
     console.error("Error checking admin status:", error)
     return false
@@ -39,7 +40,7 @@ export async function adminAuthMiddleware(req: NextRequest) {
       select: { role: true },
     })
 
-    if (!user || user.role !== "admin") {
+    if (!user || user.role === UserRole.CUSTOMER) {
       return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 })
     }
 

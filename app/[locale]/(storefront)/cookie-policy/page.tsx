@@ -10,7 +10,7 @@ export default function CookiePolicyPage() {
     <div className="container max-w-4xl py-12">
       <h1 className="text-4xl font-bold mb-8">Cookie Policy</h1>
       <p className="text-muted-foreground mb-8">
-        Last updated: {new Date().toLocaleDateString()}
+        Last updated: 2025-12-14
       </p>
 
       <div className="space-y-8">

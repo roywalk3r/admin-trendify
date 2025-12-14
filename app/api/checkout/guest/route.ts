@@ -4,7 +4,6 @@ import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError, checkRateLimit } from "@/lib/api-utils"
 import { logInfo } from "@/lib/logger"
 import { nanoid } from "nanoid"
-import { sendOrderConfirmationEmail } from "@/lib/email"
 
 const guestCheckoutSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -127,9 +126,58 @@ export async function POST(req: NextRequest) {
 
     const totalAmount = beforeGatewayFee + gatewayFee
 
-    // Generate unique session ID and order number
+    // Generate unique session ID
     const sessionId = nanoid(32)
-    const orderNumber = `GUEST-${Date.now()}-${nanoid(6)}`
+
+    const origin = new URL(req.url).origin
+
+    // Create order (pending/unpaid) using the canonical order creation endpoint
+    const createOrderRes = await fetch(`${origin}/api/orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: validatedData.email,
+        items: validatedData.items,
+        shippingAddress: validatedData.shippingAddress,
+        paymentMethod: "paystack",
+        subtotal,
+        tax,
+        shipping,
+        gatewayFee,
+        currencyCode: (process.env.PAYSTACK_CURRENCY || process.env.NEXT_PUBLIC_CURRENCY || "GHS").toString().toUpperCase(),
+      }),
+      cache: "no-store",
+    })
+
+    const createOrderJson = await createOrderRes.json()
+    const orderId = createOrderJson?.data?.order?.id || createOrderJson?.data?.id
+    if (!createOrderRes.ok || !orderId) {
+      return createApiResponse({ status: 502, error: createOrderJson?.error || "Failed to create order" })
+    }
+
+    // Initialize Paystack
+    const initRes = await fetch(`${origin}/api/payments/paystack/init`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId,
+        email: validatedData.email,
+        items: orderItems.map((it) => ({
+          id: it.productId,
+          name: it.productName,
+          sku: it.productSku || null,
+          price: Number(it.unitPrice),
+          quantity: Number(it.quantity),
+          image: null,
+        })),
+      }),
+      cache: "no-store",
+    })
+
+    const initJson = await initRes.json()
+    if (!initRes.ok) {
+      return createApiResponse({ status: 502, error: initJson?.error || "Failed to initialize payment" })
+    }
 
     // Create guest session
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
@@ -140,6 +188,7 @@ export async function POST(req: NextRequest) {
         cartData: {
           items: validatedData.items,
           shippingAddress: validatedData.shippingAddress,
+          orderId,
         },
         expiresAt,
       },
@@ -148,29 +197,14 @@ export async function POST(req: NextRequest) {
     logInfo("Guest checkout initiated", {
       email: validatedData.email,
       sessionId,
-      orderNumber,
-      total: totalAmount,
-    })
-
-    // Send order confirmation email
-    await sendOrderConfirmationEmail(validatedData.email, {
-      orderNumber,
-      customerName: validatedData.shippingAddress.fullName,
-      items: orderItems.map(item => ({
-        name: item.productName,
-        quantity: item.quantity,
-        price: Number(item.unitPrice),
-      })),
-      subtotal,
-      tax,
-      shipping,
+      orderId,
       total: totalAmount,
     })
 
     return createApiResponse({
       data: {
         sessionId,
-        orderNumber,
+        orderId,
         summary: {
           subtotal,
           tax,
@@ -179,8 +213,7 @@ export async function POST(req: NextRequest) {
           total: totalAmount,
         },
         items: orderItems,
-        // Return payment initialization data
-        // This would typically include Paystack/Stripe checkout URL
+        payment: initJson?.data,
         nextStep: "payment",
       },
       status: 201,

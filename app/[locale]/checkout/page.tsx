@@ -1,5 +1,7 @@
 import CheckoutSection from "@/components/checkout/checkout-section"
 
+export const dynamic = "force-dynamic"
+
 export default function CheckoutPage() {
   // This will run on the server; do not read store here. Button reads client-side.
   return (

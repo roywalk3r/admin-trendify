@@ -209,6 +209,7 @@ export async function POST(request: NextRequest) {
     let calculatedSubtotal = 0
     const validatedItems: {
       productId: string
+      variantId?: string | null
       quantity: number
       unitPrice: number
       totalPrice: number
@@ -220,7 +221,7 @@ export async function POST(request: NextRequest) {
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
-        select: { id: true, price: true, stock: true, name: true, sku: true, isActive: true },
+        select: { id: true, price: true, stock: true, name: true, sku: true, isActive: true, variants: true },
       })
 
       if (!product) {
@@ -231,16 +232,28 @@ export async function POST(request: NextRequest) {
         return createApiResponse({ status: 400, error: `Product no longer available: ${product.name}` })
       }
 
-      if (product.stock < item.quantity) {
+      const variantId = item.variantId ? String(item.variantId) : null
+      let unitPrice = Number(product.price as unknown as Decimal)
+
+      if (variantId) {
+        const variant = product.variants.find((v: any) => v.id === variantId && !v.deletedAt)
+        if (!variant) {
+          return createApiResponse({ status: 400, error: `Variant not found for ${product.name}` })
+        }
+        if (variant.stock < item.quantity) {
+          return createApiResponse({ status: 400, error: `Insufficient stock for ${product.name} (${variant.name}). Available: ${variant.stock}` })
+        }
+        unitPrice = Number(variant.price)
+      } else if (product.stock < item.quantity) {
         return createApiResponse({ status: 400, error: `Insufficient stock for ${product.name}. Available: ${product.stock}` })
       }
 
-      const unitPrice = Number(product.price as unknown as Decimal)
       const itemTotal = unitPrice * item.quantity
       calculatedSubtotal += itemTotal
 
       validatedItems.push({
         productId: item.productId,
+        variantId,
         quantity: item.quantity,
         unitPrice,
         totalPrice: itemTotal,
@@ -354,6 +367,7 @@ export async function POST(request: NextRequest) {
         data: validatedItems.map((item) => ({
           orderId: newOrder.id,
           productId: item.productId,
+          variantId: item.variantId || null,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           totalPrice: item.totalPrice,
@@ -385,21 +399,24 @@ export async function POST(request: NextRequest) {
           method: paymentMethod || "paystack",
           amount: newOrder.totalAmount,
           status: "unpaid",
-          currency: currencyCode || "GHC",
+          currency: currencyCode || "GHS",
           gatewayFee: gatewayFee ? Number(gatewayFee) : null,
         },
       })
 
       // Reserve stock (decrement)
       for (const item of validatedItems) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              decrement: item.quantity,
-            },
-          },
-        })
+        if (item.variantId) {
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: { stock: { decrement: item.quantity } },
+          })
+        } else {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } },
+          })
+        }
       }
 
       // Increment coupon usage count if used

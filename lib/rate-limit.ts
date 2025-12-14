@@ -17,7 +17,17 @@ export function getClientIp(req: NextRequest): string {
   )
 }
 
-export function withRateLimit<T extends (req: NextRequest, ...args: any[]) => Promise<NextResponse>>(handler: T, opts: RateLimitOptions): T {
+export function withRateLimit<T extends (req: NextRequest, ...args: any[]) => Promise<NextResponse>>(handler: T): T
+export function withRateLimit<T extends (req: NextRequest, ...args: any[]) => Promise<NextResponse>>(handler: T, opts: RateLimitOptions): T
+export function withRateLimit<T extends (req: NextRequest, ...args: any[]) => Promise<NextResponse>>(opts: RateLimitOptions, handler: T): T
+export function withRateLimit<T extends (req: NextRequest, ...args: any[]) => Promise<NextResponse>>(
+  a: T | RateLimitOptions,
+  b?: RateLimitOptions | T,
+): T {
+  const defaultOpts: RateLimitOptions = { limit: 100, windowSeconds: 60 }
+  const handler = (typeof a === "function" ? a : b) as T
+  const opts = (typeof a === "function" ? (b as RateLimitOptions | undefined) : (a as RateLimitOptions)) || defaultOpts
+
   const wrapped = (async (req: NextRequest, ...args: any[]) => {
     const id = (opts.idFromRequest?.(req)) || getClientIp(req)
 

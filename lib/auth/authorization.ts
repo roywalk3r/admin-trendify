@@ -1,11 +1,31 @@
 import { UserRole, Permission, ROLE_PERMISSIONS } from './permissions'
 import { auth } from '@clerk/nextjs/server'
+import prisma from '@/lib/prisma'
 
 export class PermissionError extends Error {
   constructor(message: string, public requiredPermission: Permission) {
     super(message)
     this.name = 'PermissionError'
   }
+}
+
+function normalizeRole(role: unknown): UserRole {
+  if (typeof role !== 'string') return UserRole.CUSTOMER
+  const values = Object.values(UserRole) as string[]
+  return (values.includes(role) ? (role as UserRole) : UserRole.CUSTOMER)
+}
+
+async function getCurrentUserRole(clerkUserId: string, sessionClaimsRole?: unknown): Promise<UserRole> {
+  try {
+    const dbUser = await prisma.user.findUnique({
+      where: { clerkId: clerkUserId },
+      select: { role: true },
+    })
+    if (dbUser?.role) return normalizeRole(dbUser.role)
+  } catch {
+    // fall through
+  }
+  return normalizeRole(sessionClaimsRole)
 }
 
 /**
@@ -61,7 +81,7 @@ export function requirePermission(permission: Permission) {
         throw new PermissionError('Authentication required', permission)
       }
 
-      const userRole = sessionClaims?.role as UserRole || UserRole.CUSTOMER
+      const userRole = await getCurrentUserRole(userId, (sessionClaims as any)?.role)
       
       if (!hasPermission(userRole, permission)) {
         throw new PermissionError(
@@ -92,7 +112,7 @@ export function requireAnyPermission(permissions: Permission[]) {
         throw new PermissionError('Authentication required', permissions[0])
       }
 
-      const userRole = sessionClaims?.role as UserRole || UserRole.CUSTOMER
+      const userRole = await getCurrentUserRole(userId, (sessionClaims as any)?.role)
       
       if (!hasAnyPermission(userRole, permissions)) {
         throw new PermissionError(
@@ -123,7 +143,7 @@ export function requireAllPermissions(permissions: Permission[]) {
         throw new PermissionError('Authentication required', permissions[0])
       }
 
-      const userRole = sessionClaims?.role as UserRole || UserRole.CUSTOMER
+      const userRole = await getCurrentUserRole(userId, (sessionClaims as any)?.role)
       
       if (!hasAllPermissions(userRole, permissions)) {
         throw new PermissionError(

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { createApiResponse } from "@/lib/api-utils"
 import { logWarn } from "@/lib/logger"
+import { UserRole } from "@/lib/auth/permissions"
 
 /**
  * Middleware to verify admin access
@@ -45,6 +46,18 @@ export async function requireAdmin() {
   }
 
   if (user.role !== "admin" && user.role !== "staff") {
+    // Backwards-compatible: support legacy roles while Prisma enum expands
+    const role = user.role as unknown as string
+    const isAllowed = role !== UserRole.CUSTOMER
+    if (isAllowed) {
+      return {
+        error: false,
+        user,
+        userId: user.id,
+        role: user.role,
+      }
+    }
+
     logWarn("Unauthorized admin access attempt", {
       userId: user.id,
       email: user.email,
@@ -89,7 +102,7 @@ export async function requireSuperAdmin() {
     select: { id: true, role: true, email: true },
   })
 
-  if (!user || user.role !== "admin") {
+  if (!user || (user.role as unknown as string) !== UserRole.SUPER_ADMIN) {
     logWarn("Unauthorized super admin access attempt", {
       userId: user?.id,
       email: user?.email,

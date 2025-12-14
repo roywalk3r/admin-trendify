@@ -70,7 +70,7 @@ const LimitedCarousel = () => {
 
     const getVisibleProducts = () => {
         if (products.length === 0) return [];
-        const visible = [];
+        const visible: Array<{ id: string; image: string; name: string; category: string; price: number; position: number; originalIndex: number }> = [];
         for (let i = -1; i <= 1; i++) {
             const index = (activeIndex + i + products.length) % products.length;
             const product = products[index];

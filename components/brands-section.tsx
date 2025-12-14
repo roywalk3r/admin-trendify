@@ -82,7 +82,7 @@ export default function BrandsSection() {
                                 alt={brand.name}
                                 width={80}
                                 height={40}
-                                className="opacity-60 hover:opacity-100 transition-opacity duration-300 dark:invert"
+                                className="h-auto w-auto opacity-60 hover:opacity-100 transition-opacity duration-300 dark:invert"
                             />
                         </motion.div>
                     ))}

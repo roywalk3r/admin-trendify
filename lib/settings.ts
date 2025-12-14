@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma"
 import { defaultSettings } from "@/app/api/admin/settings/schema"
 import type { Settings } from "@/app/api/admin/settings/schema"
+import { prismaCache } from "@/lib/prisma-cache"
 
 // Helper function to safely parse JSON
 function safeJsonParse(value: any) {
@@ -24,7 +25,9 @@ export async function getSettings(): Promise<Settings> {
 
     try {
       // Get settings from database
-      const settings = await prisma.settings.findMany()
+      const settings = await prisma.settings.findMany({
+        cacheStrategy: prismaCache.long(),
+      })
 
       // Override with database settings
       if (settings && settings.length > 0) {
@@ -66,6 +69,7 @@ export async function getSettingsByType<T extends keyof Settings>(type: T): Prom
     try {
       // Get setting from database
       const setting = await prisma.settings.findUnique({
+        cacheStrategy: prismaCache.long(),
         where: { key: type },
       })
 
@@ -85,6 +89,19 @@ export async function getSettingsByType<T extends keyof Settings>(type: T): Prom
   } catch (error) {
     console.error(`Error in getSettingsByType for ${type}:`, error)
     return JSON.parse(JSON.stringify(defaultSettings[type]))
+  }
+}
+
+/**
+ * Get the active currency code from general settings
+ */
+export async function getCurrencyCode(): Promise<string> {
+  try {
+    const general = await getSettingsByType("general")
+    const code = (general as any)?.currencyCode || defaultSettings.general.currencyCode || "GHS"
+    return String(code).toUpperCase()
+  } catch {
+    return (defaultSettings.general.currencyCode || "GHS").toUpperCase()
   }
 }
 

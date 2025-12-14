@@ -1,11 +1,7 @@
-"use client"
+import NewProductPageClient from "./new-product-client"
 
-import { ProductForm } from "@/components/product-form"
+export const dynamic = "force-dynamic"
 
 export default function NewProductPage() {
-  return (
-    <div className="container py-10">
-      <ProductForm />
-    </div>
-  )
+  return <NewProductPageClient />
 }

@@ -82,16 +82,18 @@ export async function GET() {
       include: { items: true },
     })
 
-  const items = (cart?.items ?? []).map((i) => ({
-    id: i.productId,
-    variantId: i.variantId ?? undefined,
-    name: i.name,
-    price: Number(i.unitPrice),
-    quantity: i.quantity,
-    image: i.image,
-    color: i.color ?? undefined,
-      size: i.size ?? undefined,
-    }))
+    const items = (cart?.items ?? []).map((i: any) => {
+      return {
+        id: i.productId,
+        variantId: i.variantId ?? undefined,
+        name: i.name,
+        price: Number(i.unitPrice),
+        quantity: i.quantity,
+        image: i.image,
+        color: i.color ?? undefined,
+        size: i.size ?? undefined,
+      }
+    })
 
     return createApiResponse({ data: { items }, status: 200 })
   } catch (error) {
@@ -106,86 +108,88 @@ export async function POST(req: NextRequest) {
       return createApiResponse({ error: "Unauthorized", status: 401 })
     }
 
-  const body = await req.json()
-  const item = addItemSchema.parse(body) as CartItemPayload
+    const body = await req.json()
+    const item = addItemSchema.parse(body) as CartItemPayload
 
-  // ensure cart exists
-  const cart = await getOrCreateCartByClerkId(userId)
+    // ensure cart exists
+    const cart = await getOrCreateCartByClerkId(userId)
 
-  // Resolve product and optional variant
-  const product = await prisma.product.findUnique({
-    where: { id: item.id, isDeleted: false },
-    include: { variants: true },
-  })
-  if (!product) return createApiResponse({ error: "Product not found", status: 404 })
-
-  const variant = item.variantId
-    ? product.variants.find((v) => v.id === item.variantId && !v.deletedAt)
-    : null
-
-  if (item.variantId && !variant) {
-    return createApiResponse({ error: "Variant not found", status: 404 })
-  }
-
-  const unitPrice = variant ? Number(variant.price) : Number(product.price)
-  const name = variant ? `${product.name} (${variant.name})` : product.name
-  const image = product.images?.[0] || item.image
-
-  const availableStock = variant ? variant.stock : product.stock
-
-  // find existing cart item by composite keys
-  const existing = await prisma.cartItem.findFirst({
-    where: {
-      cartId: cart.id,
-      productId: item.id,
-      variantId: item.variantId ?? null,
-      color: item.color ?? null,
-      size: item.size ?? null,
-    },
-  })
-
-  const existingQty = existing ? existing.quantity : 0
-  const newQty = existingQty + item.quantity
-  if (availableStock < newQty) {
-    return createApiResponse({
-      error: `Insufficient stock. Available: ${availableStock}`,
-      status: 400,
+    // Resolve product and optional variant
+    const product = await prisma.product.findUnique({
+      where: { id: item.id, isDeleted: false },
+      include: { variants: true },
     })
-  }
+    if (!product) return createApiResponse({ error: "Product not found", status: 404 })
 
-  // find existing cart item by composite keys
-  if (existing) {
-    await prisma.cartItem.update({
-      where: { id: existing.id },
-      data: { quantity: newQty, unitPrice: unitPrice.toString(), name, image },
-    })
-  } else {
-    await prisma.cartItem.create({
-      data: {
+    const variant = item.variantId
+      ? product.variants.find((v) => v.id === item.variantId && !v.deletedAt)
+      : null
+
+    if (item.variantId && !variant) {
+      return createApiResponse({ error: "Variant not found", status: 404 })
+    }
+
+    const unitPrice = variant ? Number(variant.price) : Number(product.price)
+    const name = variant ? `${product.name} (${variant.name})` : product.name
+    const image = product.images?.[0] || item.image
+
+    const availableStock = variant ? variant.stock : product.stock
+
+    // find existing cart item by composite keys
+    const existing = await prisma.cartItem.findFirst({
+      where: {
         cartId: cart.id,
         productId: item.id,
         variantId: item.variantId ?? null,
-        quantity: item.quantity,
-        unitPrice: unitPrice.toString(),
-        name,
-        image,
         color: item.color ?? null,
         size: item.size ?? null,
-      },
+      } as any,
     })
-  }
 
-  const refreshed = await prisma.cart.findUnique({ where: { id: cart.id }, include: { items: true } })
-  const items = (refreshed?.items ?? []).map((i) => ({
-    id: i.productId,
-    variantId: i.variantId ?? undefined,
-    name: i.name,
-    price: Number(i.unitPrice),
-    quantity: i.quantity,
-    image: i.image,
-    color: i.color ?? undefined,
-      size: i.size ?? undefined,
-    }))
+    const existingQty = existing ? existing.quantity : 0
+    const newQty = existingQty + item.quantity
+    if (availableStock < newQty) {
+      return createApiResponse({
+        error: `Insufficient stock. Available: ${availableStock}`,
+        status: 400,
+      })
+    }
+
+    // find existing cart item by composite keys
+    if (existing) {
+      await prisma.cartItem.update({
+        where: { id: existing.id },
+        data: { quantity: newQty, unitPrice: unitPrice.toString(), name, image },
+      })
+    } else {
+      await prisma.cartItem.create({
+        data: {
+          cartId: cart.id,
+          productId: item.id,
+          variantId: item.variantId ?? null,
+          quantity: item.quantity,
+          unitPrice: unitPrice.toString(),
+          name,
+          image,
+          color: item.color ?? null,
+          size: item.size ?? null,
+        } as any,
+      })
+    }
+
+    const refreshed = await prisma.cart.findUnique({ where: { id: cart.id }, include: { items: true } })
+    const items = (refreshed?.items ?? []).map((i: any) => {
+      return {
+        id: i.productId,
+        variantId: i.variantId ?? undefined,
+        name: i.name,
+        price: Number(i.unitPrice),
+        quantity: i.quantity,
+        image: i.image,
+        color: i.color ?? undefined,
+        size: i.size ?? undefined,
+      }
+    })
 
     return createApiResponse({ data: { items }, status: 201 })
   } catch (error) {
@@ -224,7 +228,7 @@ export async function PATCH(req: NextRequest) {
     const availableStock = variant ? variant.stock : product.stock
 
     let item = await prisma.cartItem.findFirst({
-      where: { cartId: cart.id, productId: id, variantId: variantId ?? null, color: color ?? null, size: size ?? null },
+      where: { cartId: cart.id, productId: id, variantId: variantId ?? null, color: color ?? null, size: size ?? null } as any,
     })
     if (!item) {
       if (availableStock < quantity) {
@@ -235,13 +239,13 @@ export async function PATCH(req: NextRequest) {
           cartId: cart.id,
           productId: id,
           variantId: variantId ?? null,
-          quantity: quantity,
+          quantity,
           unitPrice: unitPrice.toString(),
           name,
           image,
           color: color ?? null,
           size: size ?? null,
-        },
+        } as any,
       })
     } else {
       if (availableStock < quantity) {
@@ -251,7 +255,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const refreshed = await prisma.cart.findUnique({ where: { id: cart.id }, include: { items: true } })
-    const items = (refreshed?.items ?? []).map((i) => ({
+    const items = (refreshed?.items ?? []).map((i: any) => ({
       id: i.productId,
       variantId: i.variantId ?? undefined,
       name: i.name,
@@ -301,10 +305,10 @@ export async function DELETE(req: NextRequest) {
         variantId: variantId ? variantId : undefined,
         color: color ? color : undefined,
         size: size ? size : undefined,
-      },
+      } as any,
     })
     const refreshed = await prisma.cart.findUnique({ where: { id: cart.id }, include: { items: true } })
-    const items = (refreshed?.items ?? []).map((i) => ({
+    const items = (refreshed?.items ?? []).map((i: any) => ({
       id: i.productId,
       variantId: i.variantId ?? undefined,
       name: i.name,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { withRateLimit } from '@/lib/rate-limit'
 import { redis } from '@/lib/redis'
 
@@ -28,24 +28,12 @@ export const GET = withRateLimit(
       const topProducts = await prisma.product.findMany({
         where: {
           status: 'active',
-          orders: {
-            some: {
-              createdAt: {
-                gte: thirtyDaysAgo
-              }
-            }
-          }
+          isActive: true,
         },
         include: {
           _count: {
             select: {
-              orders: {
-                where: {
-                  createdAt: {
-                    gte: thirtyDaysAgo
-                  }
-                }
-              },
+              orderItems: true,
               reviews: true,
               wishlistItems: true
             }
@@ -57,9 +45,7 @@ export const GET = withRateLimit(
           }
         },
         orderBy: {
-          orders: {
-            _count: 'desc'
-          }
+          orderItems: { _count: 'desc' }
         },
         take: 50
       })
@@ -72,13 +58,6 @@ export const GET = withRateLimit(
               products: {
                 where: {
                   status: 'active',
-                  orders: {
-                    some: {
-                      createdAt: {
-                        gte: thirtyDaysAgo
-                      }
-                    }
-                  }
                 }
               }
             }
@@ -99,14 +78,7 @@ export const GET = withRateLimit(
             select: {
               products: {
                 where: {
-                  status: 'active',
-                  orders: {
-                    some: {
-                      createdAt: {
-                        gte: thirtyDaysAgo
-                      }
-                    }
-                  }
+                  product: { status: 'active' }
                 }
               }
             }
@@ -121,14 +93,14 @@ export const GET = withRateLimit(
       })
 
       // Generate trending search terms
-      const trendingTerms = []
+      const trendingTerms: Array<{ term: string; type: string; popularity: number; category?: string }> = []
 
       // Add popular product names
       topProducts.slice(0, 15).forEach(product => {
         trendingTerms.push({
           term: product.name.toLowerCase(),
           type: 'product',
-          popularity: product._count.orders,
+          popularity: product._count.orderItems,
           category: product.category?.name
         })
       })
@@ -156,7 +128,7 @@ export const GET = withRateLimit(
       })
 
       // Generate compound search terms
-      const compoundTerms = []
+      const compoundTerms: Array<{ term: string; type: string; popularity: number }> = []
       
       // Category + product type combinations
       const productTypes = ['shirt', 'pants', 'shoes', 'jacket', 'dress', 'bag', 'watch', 'headphones']
@@ -183,9 +155,10 @@ export const GET = withRateLimit(
       trendingTerms.push(...seasonalTerms)
 
       // Sort by popularity and deduplicate
-      const uniqueTerms = new Map()
+      const uniqueTerms = new Map<string, { term: string; type: string; popularity: number; category?: string }>()
       trendingTerms.forEach(item => {
-        if (!uniqueTerms.has(item.term) || uniqueTerms.get(item.term).popularity < item.popularity) {
+        const existing = uniqueTerms.get(item.term)
+        if (!existing || existing.popularity < item.popularity) {
           uniqueTerms.set(item.term, item)
         }
       })

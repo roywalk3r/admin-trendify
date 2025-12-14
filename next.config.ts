@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // Build a strict but compatible Content Security Policy with nonce support
 function buildCSP(nonce?: string) {
@@ -33,6 +34,7 @@ function buildCSP(nonce?: string) {
   ]
 
   const self = "'self'"
+  const unsafeInline = "'unsafe-inline'"
   const nonceValue = nonce ? `'nonce-${nonce}'` : ''
   const unsafeEval = "'unsafe-eval'" // Required by Next.js in development
 
@@ -42,8 +44,8 @@ function buildCSP(nonce?: string) {
     `frame-ancestors ${self}`,
     `img-src ${self} data: blob: https:`,
     `font-src ${self} https://fonts.gstatic.com data:`,
-    `style-src ${self} https://fonts.googleapis.com ${nonceValue}`,
-    `script-src ${self} ${nonceValue} ${unsafeEval} ${clerkDomains.join(" ")} ${paymentDomains.join(" ")} ${googleAnalyticsDomains.join(" ")}`,
+    `style-src ${self} ${unsafeInline} https://fonts.googleapis.com ${nonceValue}`,
+    `script-src ${self} ${unsafeInline} ${nonceValue} ${unsafeEval} ${clerkDomains.join(" ")} ${paymentDomains.join(" ")} ${googleAnalyticsDomains.join(" ")}`,
     `worker-src ${self} blob:`,
     `connect-src ${self} ${appUrl} ${clerkDomains.join(" ")} ${appwriteDomains.join(" ")} ${paymentDomains.join(" ")} ${analyticsDomains.join(" ")} ${sentryDomains.join(" ")} ${googleAnalyticsDomains.join(" ")}`,
     `frame-src ${self} ${paymentDomains.join(" ")} ${clerkDomains.join(" ")}`,
@@ -55,12 +57,13 @@ function buildCSP(nonce?: string) {
   return csp
 }
 
-const nextConfig: NextConfig = {
+const nextConfig: any = {
   reactStrictMode: true,
   swcMinify: true,
   compress: true,
   poweredByHeader: false,
-  experimental: {
+  serverExternalPackages: ['pino', 'pino-pretty', 'thread-stream', 'sonic-boom', 'real-require'],
+  experimental: ({
     optimizePackageImports: [
       '@radix-ui/react-icons',
       'lucide-react',
@@ -72,16 +75,15 @@ const nextConfig: NextConfig = {
       'cmdk',
       'sonner'
     ],
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
-  },
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+  } as any),
+  webpack: (config: any, { buildId, dev, isServer, defaultLoaders, webpack }: any) => {
+    // Keep SVG imports working without Turbopack rules
+    config.module.rules.push({
+      test: /\.svg$/i,
+      issuer: /\.(ts|tsx|js|jsx)$/,
+      use: ['@svgr/webpack'],
+    })
+
     // Optimize bundle size
     config.optimization = {
       ...config.optimization,
@@ -147,6 +149,10 @@ const nextConfig: NextConfig = {
         source: '/:path*',
         headers: [
           {
+            key: 'ngrok-skip-browser-warning',
+            value: 'true'
+          },
+          {
             key: 'Content-Security-Policy',
             value: buildCSP(), // Will be updated by middleware with nonce
           },
@@ -180,9 +186,25 @@ const nextConfig: NextConfig = {
           }
         ],
       },
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: process.env.CORS_ALLOW_ORIGIN || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-Requested-With, Content-Type, Authorization' },
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+        ],
+      },
     ];
   },
 
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "aerk-org",
+  project: "javascript-nextjs",
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  automaticVercelMonitors: true
+}) as NextConfig;
