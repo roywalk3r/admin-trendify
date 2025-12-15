@@ -1,8 +1,17 @@
 import type React from "react"
 import type { Metadata } from "next"
-import {Bruno_Ace, Poppins} from "next/font/google"
+import {Bruno_Ace, Poppins, Luxurious_Script} from "next/font/google"
+import localFont from 'next/font/local'
 import "./globals.css"
 
+
+const luxuriousScript = Luxurious_Script({
+    weight: "400",
+    style: "normal",
+    subsets: ["latin"],
+    preload: true,
+    variable: "--font-lux"
+})
 const brunoAce = Bruno_Ace({
     weight: "400",
     style: "normal",
@@ -34,7 +43,7 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" suppressHydrationWarning
-              className={`${brunoAce.variable} ${poppins.variable} antialiased `}>
+              className={`${luxuriousScript.variable} ${brunoAce.variable} ${poppins.variable} antialiased `}>
                 <body className={"bg-[#f6f3f3]"}>
                   {children}
                 </body>

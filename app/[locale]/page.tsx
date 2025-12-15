@@ -15,9 +15,9 @@ export default function Home(){
             <FlashSale />
             <Category/>
             <FeaturedProducts />
-            <LimitedCarousel/>
-            <TestimonialsSection />
-            <BrandsSection />
+            {/*<LimitedCarousel/>*/}
+            {/*<TestimonialsSection />*/}
+            {/*<BrandsSection />*/}
             <NewsletterSection />
         </>
     )

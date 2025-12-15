@@ -69,122 +69,122 @@ export default function Footer() {
         >
             <div className="max-w-7xl mx-auto px-8 py-16">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {/* Brand Section */}
-                    <motion.div variants={itemVariants}>
-                        <motion.div
-                            className="flex items-center gap-2 mb-6"
-                            whileHover={{ scale: 1.05 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            <Image src="/images/logo.svg" alt="Trendify Logo" width={32} height={32} className="invert" />
-                            <h3 className="typography text-2xl">Trendify</h3>
-                        </motion.div>
-                        <p className="text-background/80 mb-6 leading-relaxed">
-                            Your ultimate destination for fashion-forward clothing and accessories. We bring you the latest trends
-                            with uncompromising quality.
-                        </p>
-                        <div className="flex gap-4">
-                            {socialIcons.map((social, index) => (
-                                <motion.a
-                                    key={social.label}
-                                    href={social.href}
-                                    className="w-10 h-10 bg-background/10 rounded-full flex items-center justify-center hover:bg-ascent transition-colors duration-300"
-                                    whileHover={{ scale: 1.1, y: -2 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    initial={{ opacity: 0, scale: 0 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: index * 0.1 + 0.5 }}
-                                >
-                                    <social.icon className="w-5 h-5" />
-                                </motion.a>
-                            ))}
-                        </div>
-                    </motion.div>
+                    {/*/!* Brand Section *!/*/}
+                    {/*<motion.div variants={itemVariants}>*/}
+                    {/*    <motion.div*/}
+                    {/*        className="flex items-center gap-2 mb-6"*/}
+                    {/*        whileHover={{ scale: 1.05 }}*/}
+                    {/*        transition={{ duration: 0.2 }}*/}
+                    {/*    >*/}
+                    {/*        <Image src="/images/logo.svg" alt="Trendify Logo" width={32} height={32} className="invert" />*/}
+                    {/*        <h3 className="typography text-2xl">Jeweled by Naa</h3>*/}
+                    {/*    </motion.div>*/}
+                    {/*    <p className="text-background/80 mb-6 leading-relaxed">*/}
+                    {/*        Your ultimate destination for fashion-forward clothing and accessories. We bring you the latest trends*/}
+                    {/*        with uncompromising quality.*/}
+                    {/*    </p>*/}
+                    {/*    <div className="flex gap-4">*/}
+                    {/*        {socialIcons.map((social, index) => (*/}
+                    {/*            <motion.a*/}
+                    {/*                key={social.label}*/}
+                    {/*                href={social.href}*/}
+                    {/*                className="w-10 h-10 bg-background/10 rounded-full flex items-center justify-center hover:bg-ascent transition-colors duration-300"*/}
+                    {/*                whileHover={{ scale: 1.1, y: -2 }}*/}
+                    {/*                whileTap={{ scale: 0.9 }}*/}
+                    {/*                initial={{ opacity: 0, scale: 0 }}*/}
+                    {/*                animate={{ opacity: 1, scale: 1 }}*/}
+                    {/*                transition={{ delay: index * 0.1 + 0.5 }}*/}
+                    {/*            >*/}
+                    {/*                <social.icon className="w-5 h-5" />*/}
+                    {/*            </motion.a>*/}
+                    {/*        ))}*/}
+                    {/*    </div>*/}
+                    {/*</motion.div>*/}
 
-                    {/* Quick Links */}
-                    <motion.div variants={itemVariants}>
-                        <h4 className="typography text-lg mb-6">{t("nav.newArrivals")}</h4>
-                        <ul className="space-y-3">
-                            {[
-                                { label: t("nav.newArrivals"), href: "/new-arrivals" },
-                                { label: t("nav.men"), href: "/men" },
-                                { label: t("nav.women"), href: "/women" },
-                                { label: t("nav.accessories"), href: "/accessories" },
-                                { label: t("nav.sale"), href: "/sale" },
-                            ].map((item, index) => (
-                                <motion.li
-                                    key={item.label}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 + 0.3 }}
-                                >
-                                    <motion.div
-                                        className="text-background/80 hover:text-background hover:text-ascent transition-colors duration-200"
-                                        whileHover={{ x: 5 }}
-                                        transition={{ duration: 0.2 }}
-                                    >
-                                        <Link href={addLocaleToPathname(item.href, locale)}>{item.label}</Link>
-                                    </motion.div>
-                                </motion.li>
-                            ))}
-                        </ul>
-                    </motion.div>
+                    {/*/!* Quick Links *!/*/}
+                    {/*<motion.div variants={itemVariants}>*/}
+                    {/*    <h4 className="typography text-lg mb-6">{t("nav.newArrivals")}</h4>*/}
+                    {/*    <ul className="space-y-3">*/}
+                    {/*        {[*/}
+                    {/*            { label: t("nav.newArrivals"), href: "/new-arrivals" },*/}
+                    {/*            { label: t("nav.men"), href: "/men" },*/}
+                    {/*            { label: t("nav.women"), href: "/women" },*/}
+                    {/*            { label: t("nav.accessories"), href: "/accessories" },*/}
+                    {/*            { label: t("nav.sale"), href: "/sale" },*/}
+                    {/*        ].map((item, index) => (*/}
+                    {/*            <motion.li*/}
+                    {/*                key={item.label}*/}
+                    {/*                initial={{ opacity: 0, x: -10 }}*/}
+                    {/*                animate={{ opacity: 1, x: 0 }}*/}
+                    {/*                transition={{ delay: index * 0.1 + 0.3 }}*/}
+                    {/*            >*/}
+                    {/*                <motion.div*/}
+                    {/*                    className="text-background/80 hover:text-background hover:text-ascent transition-colors duration-200"*/}
+                    {/*                    whileHover={{ x: 5 }}*/}
+                    {/*                    transition={{ duration: 0.2 }}*/}
+                    {/*                >*/}
+                    {/*                    <Link href={addLocaleToPathname(item.href, locale)}>{item.label}</Link>*/}
+                    {/*                </motion.div>*/}
+                    {/*            </motion.li>*/}
+                    {/*        ))}*/}
+                    {/*    </ul>*/}
+                    {/*</motion.div>*/}
 
-                    {/* Customer Service */}
-                    <motion.div variants={itemVariants}>
-                        <h4 className="typography text-lg mb-6">{t("footer.contact")}</h4>
-                        <ul className="space-y-3">
-                            {customerLinks.map((link, index) => (
-                                <motion.li
-                                    key={link.label}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 + 0.4 }}
-                                >
-                                    {link.external ? (
-                                        <motion.a
-                                            href={link.href}
-                                            className="text-background/80 hover:text-background hover:text-ascent transition-colors duration-200"
-                                            whileHover={{ x: 5 }}
-                                            transition={{ duration: 0.2 }}
-                                        >
-                                            {link.label}
-                                        </motion.a>
-                                    ) : (
-                                        <motion.div whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
-                                            <Link
-                                                href={link.href}
-                                                className="text-background/80 hover:text-background hover:text-ascent transition-colors duration-200"
-                                            >
-                                                {link.label}
-                                            </Link>
-                                        </motion.div>
-                                    )}
-                                </motion.li>
-                            ))}
-                        </ul>
-                    </motion.div>
+                    {/*/!* Customer Service *!/*/}
+                    {/*<motion.div variants={itemVariants}>*/}
+                    {/*    <h4 className="typography text-lg mb-6">{t("footer.contact")}</h4>*/}
+                    {/*    <ul className="space-y-3">*/}
+                    {/*        {customerLinks.map((link, index) => (*/}
+                    {/*            <motion.li*/}
+                    {/*                key={link.label}*/}
+                    {/*                initial={{ opacity: 0, x: -10 }}*/}
+                    {/*                animate={{ opacity: 1, x: 0 }}*/}
+                    {/*                transition={{ delay: index * 0.1 + 0.4 }}*/}
+                    {/*            >*/}
+                    {/*                {link.external ? (*/}
+                    {/*                    <motion.a*/}
+                    {/*                        href={link.href}*/}
+                    {/*                        className="text-background/80 hover:text-background hover:text-ascent transition-colors duration-200"*/}
+                    {/*                        whileHover={{ x: 5 }}*/}
+                    {/*                        transition={{ duration: 0.2 }}*/}
+                    {/*                    >*/}
+                    {/*                        {link.label}*/}
+                    {/*                    </motion.a>*/}
+                    {/*                ) : (*/}
+                    {/*                    <motion.div whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>*/}
+                    {/*                        <Link*/}
+                    {/*                            href={link.href}*/}
+                    {/*                            className="text-background/80 hover:text-background hover:text-ascent transition-colors duration-200"*/}
+                    {/*                        >*/}
+                    {/*                            {link.label}*/}
+                    {/*                        </Link>*/}
+                    {/*                    </motion.div>*/}
+                    {/*                )}*/}
+                    {/*            </motion.li>*/}
+                    {/*        ))}*/}
+                    {/*    </ul>*/}
+                    {/*</motion.div>*/}
 
                     {/* Contact Info */}
-                    <motion.div variants={itemVariants}>
-                        <h4 className="typography text-lg mb-6">Get in Touch</h4>
-                        <div className="space-y-4">
-                            {contactDetails.map((detail) => (
-                                <motion.a
-                                    key={detail.label}
-                                    href={detail.href}
-                                    className="flex items-center gap-3 text-background/80 hover:text-background transition-colors duration-200"
-                                    whileHover={{ x: 5 }}
-                                    transition={{ duration: 0.2 }}
-                                    target={detail.href.startsWith("http") ? "_blank" : undefined}
-                                    rel={detail.href.startsWith("http") ? "noreferrer" : undefined}
-                                >
-                                    <detail.icon className="w-5 h-5 text-ascent" />
-                                    <span>{detail.label}</span>
-                                </motion.a>
-                            ))}
-                        </div>
-                    </motion.div>
+                {/*    <motion.div variants={itemVariants}>*/}
+                {/*        <h4 className="typography text-lg mb-6">Get in Touch</h4>*/}
+                {/*        <div className="space-y-4">*/}
+                {/*            {contactDetails.map((detail) => (*/}
+                {/*                <motion.a*/}
+                {/*                    key={detail.label}*/}
+                {/*                    href={detail.href}*/}
+                {/*                    className="flex items-center gap-3 text-background/80 hover:text-background transition-colors duration-200"*/}
+                {/*                    whileHover={{ x: 5 }}*/}
+                {/*                    transition={{ duration: 0.2 }}*/}
+                {/*                    target={detail.href.startsWith("http") ? "_blank" : undefined}*/}
+                {/*                    rel={detail.href.startsWith("http") ? "noreferrer" : undefined}*/}
+                {/*                >*/}
+                {/*                    <detail.icon className="w-5 h-5 text-ascent" />*/}
+                {/*                    <span>{detail.label}</span>*/}
+                {/*                </motion.a>*/}
+                {/*            ))}*/}
+                {/*        </div>*/}
+                {/*    </motion.div>*/}
                 </div>
 
                 {/* Bottom Bar */}

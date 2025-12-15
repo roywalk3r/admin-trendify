@@ -97,7 +97,7 @@ export async function getCategoryByIdCached(id: string) {
       parent: { select: { id: true, name: true, slug: true } },
       _count: { select: { products: { where: { isDeleted: false, deletedAt: null, isActive: true } }, children: true } },
     },
-    cacheStrategy: prismaCache.long(),
+    // cacheStrategy: prismaCache.long(),
   })
 
   if (!category) return null

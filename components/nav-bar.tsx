@@ -127,7 +127,7 @@ export default function NavBar() {
         { name: t("nav.newArrivals"), href: "/new-arrivals" },
         { name: t("nav.men"), href: "/men" },
         { name: t("nav.women"), href: "/women" },
-        { name: t("nav.accessories"), href: "/accessories" },
+        // { name: t("nav.accessories"), href: "/accessories" },
     ]
 
     return (
@@ -145,15 +145,15 @@ export default function NavBar() {
                 {/* Logo */}
                 <Link href={addLocaleToPathname("/", locale)}>
                     <motion.div className="flex gap-2 items-center" variants={itemVariants}>
-                        <motion.div whileHover={{ rotate: 360 }} transition={{ duration: 0.6 }}>
-                            <Image src={"/images/logo.svg"} className={"dark:invert"} width={24} height={24} alt={"Logo"} />
-                        </motion.div>
+                        {/*<motion.div whileHover={{ rotate: 360 }} transition={{ duration: 0.6 }}>*/}
+                        {/*    <Image src={"/images/logo.png"} className={"dark:invert"} width={24} height={24} alt={"Logo"} />*/}
+                        {/*</motion.div>*/}
                         <motion.h1
-                            className={"typography text-xl md:text-2xl capitalize"}
+                            className={"font-lux text-xl md:text-4xl capitalize"}
                             whileHover={{ scale: 1.05 }}
                             transition={{ duration: 0.2 }}
                         >
-                            Trendify
+                            Jeweled by Naa
                         </motion.h1>
                     </motion.div>
                 </Link>
