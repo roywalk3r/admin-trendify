@@ -20,7 +20,11 @@ vi.mock('@arcjet/next', () => ({
   })),
   shield: vi.fn(),
   detectBot: vi.fn(),
-  tokenBucket: vi.fn(),
+  tokenBucket: vi.fn((config: any) => ({
+    ...config,
+    take: vi.fn(),
+    refill: vi.fn(),
+  })),
   rateLimit: vi.fn()
 }))
 

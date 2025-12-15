@@ -1,12 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import CheckoutConfirmPage from '@/app/[locale]/checkout/confirm/page'
+
+const fetchMock = vi.fn()
+vi.stubGlobal('fetch', fetchMock as any)
 
 vi.mock('next/navigation', async () => {
   const actual = await vi.importActual<any>('next/navigation')
   return {
     ...actual,
     useSearchParams: () => new URLSearchParams('reference=REF-OK'),
+    useRouter: () => ({
+      push: vi.fn(),
+      replace: vi.fn(),
+      back: vi.fn(),
+      refresh: vi.fn(),
+      prefetch: vi.fn(),
+    }),
   }
 })
 
@@ -17,13 +27,13 @@ vi.mock('@/lib/store/cart-store', () => ({
 
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }))
 
-beforeEach(() => {
-  vi.restoreAllMocks()
+afterEach(() => {
+  fetchMock.mockReset()
 })
 
 describe('CheckoutConfirmPage', () => {
   it('renders receipt on successful verification', async () => {
-    vi.spyOn(global, 'fetch' as any).mockResolvedValueOnce(new Response(JSON.stringify({
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
       data: {
         status: 'success',
         order: {
@@ -50,7 +60,7 @@ describe('CheckoutConfirmPage', () => {
   })
 
   it('shows failure when verification fails', async () => {
-    vi.spyOn(global, 'fetch' as any).mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Bad ref' }), { status: 400 }))
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Bad ref' }), { status: 400 }))
 
     render(<CheckoutConfirmPage />)
 

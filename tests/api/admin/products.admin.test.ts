@@ -1,50 +1,104 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { GET, POST, PATCH, DELETE } from '@/app/api/admin/products/route'
 
+const baseProducts = [
+  {
+    id: 'prod1',
+    name: 'Product 1',
+    slug: 'product-1',
+    price: 100,
+    stock: 10,
+    status: 'ACTIVE',
+    description: 'Default product',
+    categoryId: 'cat1',
+    variants: [],
+  },
+]
+
+let mockProducts = [...baseProducts]
+const requireAdminMock = vi.fn(async () => ({
+  userId: 'admin123',
+  role: 'ADMIN',
+  error: false,
+}))
+
 beforeEach(() => {
-  vi.resetModules()
+  mockProducts = [...baseProducts]
+  requireAdminMock.mockReset()
+  requireAdminMock.mockResolvedValue({
+    userId: 'admin123',
+    role: 'ADMIN',
+    error: false,
+  })
 })
 
 // Mock admin authentication
-vi.mock('@/lib/admin-auth', () => ({
-  requireAdmin: vi.fn(async () => ({
-    userId: 'admin123',
-    role: 'ADMIN'
-  }))
+vi.mock('@/lib/middleware/admin-auth', () => ({
+  requireAdmin: requireAdminMock,
+}))
+
+vi.mock('@/lib/data/products', () => ({
+  getProductsListCached: vi.fn(async () => ({
+    products: mockProducts,
+    total: mockProducts.length,
+    page: 1,
+    limit: mockProducts.length,
+  })),
+  invalidateProduct: vi.fn(),
+  invalidateProductLists: vi.fn(),
 }))
 
 vi.mock('@/lib/prisma', () => {
-  const mockProducts = [
-    {
-      id: 'prod1',
-      name: 'Product 1',
-      slug: 'product-1',
-      price: 100,
-      stock: 10,
-      status: 'ACTIVE'
-    }
-  ]
-
   const prisma = {
     product: {
       findMany: vi.fn(async () => mockProducts),
-      findUnique: vi.fn(async ({ where }: any) => 
-        mockProducts.find(p => p.id === where.id) || null
-      ),
-      create: vi.fn(async ({ data }: any) => ({
-        id: 'newprod',
-        ...data,
-        createdAt: new Date()
-      })),
-      update: vi.fn(async ({ where, data }: any) => ({
-        id: where.id,
-        ...data
-      })),
-      delete: vi.fn(async ({ where }: any) => ({
-        id: where.id
-      })),
-      count: vi.fn(async () => mockProducts.length)
-    }
+      findUnique: vi.fn(async ({ where }: any) => {
+        if (where?.id) return mockProducts.find((p) => p.id === where.id) || null
+        if (where?.slug) return mockProducts.find((p) => p.slug === where.slug) || null
+        return null
+      }),
+      findFirst: vi.fn(async ({ where }: any) => {
+        if (where?.slug) return mockProducts.find((p) => p.slug === where.slug) || null
+        return null
+      }),
+      create: vi.fn(async ({ data }: any) => {
+        const created = { id: 'newprod', ...data, createdAt: new Date() }
+        mockProducts.push(created)
+        return created
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const idx = mockProducts.findIndex((p) => p.id === where.id)
+        if (idx === -1) return null
+        mockProducts[idx] = { ...mockProducts[idx], ...data }
+        return mockProducts[idx]
+      }),
+      updateMany: vi.fn(async ({ where, data }: any) => {
+        const ids = where?.id?.in || []
+        let count = 0
+        mockProducts = mockProducts.map((p) => {
+          if (!ids.length || ids.includes(p.id)) {
+            count++
+            return { ...p, ...data }
+          }
+          return p
+        })
+        return { count }
+      }),
+      delete: vi.fn(async ({ where }: any) => {
+        const product = mockProducts.find((p) => p.id === where.id) || null
+        mockProducts = mockProducts.filter((p) => p.id !== where.id)
+        return product
+      }),
+      count: vi.fn(async () => mockProducts.length),
+    },
+    productVariant: {
+      updateMany: vi.fn(async () => ({})),
+      create: vi.fn(async ({ data }: any) => data),
+    },
+    orderItem: {
+      findFirst: vi.fn(async () => null),
+    },
+    $transaction: vi.fn(async (fn: any) => fn(prisma)),
   }
   return { default: prisma, prisma }
 })
@@ -80,10 +134,9 @@ describe('Admin Products API', () => {
     it('creates new product', async () => {
       const req = buildRequest('POST', {
         name: 'New Product',
-        slug: 'new-product',
         price: 150,
         description: 'A new product',
-        category: 'Electronics',
+        categoryId: 'cat1',
         stock: 20,
         images: ['image.jpg']
       })
@@ -104,7 +157,8 @@ describe('Admin Products API', () => {
     it('validates price is positive', async () => {
       const req = buildRequest('POST', {
         name: 'Product',
-        slug: 'product',
+        description: 'Test product',
+        categoryId: 'cat1',
         price: -10,
         stock: 10
       })
@@ -120,7 +174,9 @@ describe('Admin Products API', () => {
         name: 'Product',
         slug: 'existing-slug',
         price: 100,
-        stock: 10
+        stock: 10,
+        description: 'Product',
+        categoryId: 'cat1'
       })
       const res = await POST(req)
       expect(res.status).toBe(409)
@@ -132,7 +188,10 @@ describe('Admin Products API', () => {
       const req = buildRequest('PATCH', {
         id: 'prod1',
         price: 120,
-        stock: 15
+        stock: 15,
+        name: 'Product 1',
+        description: 'Updated product',
+        categoryId: 'cat1'
       })
       const res = await PATCH(req)
       expect(res.status).toBe(200)
@@ -141,7 +200,11 @@ describe('Admin Products API', () => {
     it('validates product exists', async () => {
       const req = buildRequest('PATCH', {
         id: 'nonexistent',
-        price: 100
+        price: 100,
+        stock: 1,
+        name: 'Missing',
+        description: 'Missing',
+        categoryId: 'cat1'
       })
       const res = await PATCH(req)
       expect(res.status).toBe(404)
@@ -169,8 +232,11 @@ describe('Admin Products API', () => {
 
   describe('Authorization', () => {
     it('requires admin role', async () => {
-      const { requireAdmin } = await import('@/lib/admin-auth') as any
-      requireAdmin.mockRejectedValueOnce(new Error('Unauthorized'))
+      const { requireAdmin } = await import('@/lib/middleware/admin-auth') as any
+      requireAdmin.mockResolvedValueOnce({
+        error: true,
+        response: new Response('Unauthorized', { status: 401 }),
+      })
 
       const req = buildRequest('GET')
       const res = await GET(req)

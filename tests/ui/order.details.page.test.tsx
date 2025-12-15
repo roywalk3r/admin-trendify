@@ -1,22 +1,32 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import OrderDetailsPage from '@/app/[locale]/orders/[orderNumber]/page'
+
+const fetchMock = vi.fn()
+vi.stubGlobal('fetch', fetchMock as any)
 
 vi.mock('next/navigation', async () => {
   const actual = await vi.importActual<any>('next/navigation')
   return {
     ...actual,
     useParams: () => ({ orderNumber: 'ORD-555' }),
+    useRouter: () => ({
+      push: vi.fn(),
+      replace: vi.fn(),
+      back: vi.fn(),
+      refresh: vi.fn(),
+      prefetch: vi.fn(),
+    }),
   }
 })
 
-beforeEach(() => {
-  vi.restoreAllMocks()
+afterEach(() => {
+  fetchMock.mockReset()
 })
 
 describe('OrderDetailsPage', () => {
   it('renders shipment panel and item image fallback', async () => {
-    vi.spyOn(global, 'fetch' as any).mockResolvedValueOnce(new Response(JSON.stringify({
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
       data: {
         orderNumber: 'ORD-555',
         createdAt: new Date().toISOString(),

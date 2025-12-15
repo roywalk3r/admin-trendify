@@ -1,9 +1,26 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
 
 /**
  * Performance and load tests
  * Tests for response times, caching, and optimization
  */
+
+const originalFetch = global.fetch
+
+beforeAll(() => {
+  vi.spyOn(global, 'fetch' as any).mockResolvedValue(new Response('{}', { status: 200 }))
+})
+
+afterAll(() => {
+  const spy = (global.fetch as any)
+  if (spy?.mockRestore) {
+    spy.mockRestore()
+  } else {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    global.fetch = originalFetch
+  }
+})
 
 describe('Performance Tests', () => {
   describe('Response Times', () => {

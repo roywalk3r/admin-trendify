@@ -88,7 +88,7 @@ vi.mock('@/lib/prisma', () => {
     }),
   }
 
-  return { prisma }
+  return { default: prisma, prisma }
 })
 
 // Helper to build a Request for the route

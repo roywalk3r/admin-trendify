@@ -118,11 +118,16 @@ export async function POST(request: NextRequest) {
 
     // Generate slug from name
     const baseSlug = validatedData.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
 
-    // Ensure slug is unique
+    // Ensure slug is unique, but fail fast on collision for admin clarity
+    const existingSlug = await prisma.product.findUnique({ where: { slug: baseSlug } })
+    if (existingSlug) {
+      return NextResponse.json({ error: "Slug already exists" }, { status: 409 })
+    }
+
     let slug = baseSlug
     let counter = 1
     while (await prisma.product.findUnique({ where: { slug } })) {
@@ -165,7 +170,7 @@ export async function POST(request: NextRequest) {
       revalidateTag(`product:${product.id}`, "")
     } catch {}
 
-    return NextResponse.json(product, { status: 201 })
+    return NextResponse.json({ product }, { status: 201 })
   } catch (error) {
     console.error("Error creating product:", error)
     if (error instanceof z.ZodError) {
@@ -373,5 +378,43 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Validation error", details: error.issues }, { status: 400 })
     }
     return NextResponse.json({ error: "Failed to update product(s)" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const adminCheck = await requireAdmin()
+    if (adminCheck.error) return adminCheck.response
+
+    const { id } = await request.json()
+    if (!id || typeof id !== "string") {
+      return NextResponse.json({ error: "Product ID is required" }, { status: 400 })
+    }
+
+    const product = await prisma.product.findUnique({ where: { id } })
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 })
+    }
+
+    // Prevent deleting products with order history
+    const hasOrders = await prisma.orderItem?.findFirst({
+      where: { productId: id },
+    })
+    if (hasOrders) {
+      return NextResponse.json({ error: "Cannot delete product with active orders" }, { status: 400 })
+    }
+
+    await prisma.product.delete({ where: { id } })
+    try {
+      await invalidateProduct(id)
+      await invalidateProductLists()
+      revalidateTag("products", "")
+      revalidateTag(`product:${id}`, "")
+    } catch {}
+
+    return NextResponse.json({ message: "Product deleted" }, { status: 200 })
+  } catch (error) {
+    console.error("Error deleting product:", error)
+    return NextResponse.json({ error: "Failed to delete product" }, { status: 500 })
   }
 }

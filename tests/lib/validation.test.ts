@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 // Common validation schemas used across the app
 const emailSchema = z.string().email()
-const phoneSchema = z.string().regex(/^\+?[1-9]\d{1,14}$/)
+const phoneSchema = z.string().regex(/^\+?[1-9]\d{6,14}$/)
 const passwordSchema = z.string().min(8).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
 const priceSchema = z.number().positive()
 const quantitySchema = z.number().int().positive()
