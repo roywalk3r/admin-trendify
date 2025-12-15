@@ -1,5 +1,4 @@
 import prisma from "@/lib/prisma"
-import { prismaCache } from "@/lib/prisma-cache"
 
 export async function getCategoriesCached(params: Record<string, any>) {
   // Build where clause mirroring route logic
@@ -54,9 +53,8 @@ export async function getCategoriesCached(params: Record<string, any>) {
       orderBy,
       skip,
       take: limit,
-      cacheStrategy: prismaCache.long(),
     }),
-    prisma.category.count({ where, cacheStrategy: prismaCache.long() }),
+    prisma.category.count({ where }),
   ])
 
   const totalPages = Math.ceil(totalCount / limit)
@@ -97,7 +95,6 @@ export async function getCategoryByIdCached(id: string) {
       parent: { select: { id: true, name: true, slug: true } },
       _count: { select: { products: { where: { isDeleted: false, deletedAt: null, isActive: true } }, children: true } },
     },
-    cacheStrategy: prismaCache.long(),
   })
 
   if (!category) return null

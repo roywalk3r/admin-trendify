@@ -2,6 +2,8 @@ import prisma from "@/lib/prisma"
 import { createApiResponse, handleApiError } from "@/lib/api-utils"
 import { NextRequest, NextResponse } from "next/server"
 import { prismaCache } from "@/lib/prisma-cache"
+import { invalidateProduct, invalidateProductLists } from "@/lib/data/products"
+import { revalidateTag } from "next/cache"
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -70,6 +72,13 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
         // Add other fields as needed
       },
     })
+
+    try {
+      await invalidateProduct(id)
+      await invalidateProductLists()
+      revalidateTag("products", "")
+      revalidateTag(`product:${id}`, "")
+    } catch {}
 
     return NextResponse.json(createApiResponse({ data: updatedProduct }))
   } catch (error) {

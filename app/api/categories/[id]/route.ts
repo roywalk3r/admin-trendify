@@ -3,7 +3,6 @@ import { createApiResponse, handleApiError } from "@/lib/api-utils";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
-import { prismaCache } from "@/lib/prisma-cache";
 
 // Category validation schema
 const categoryUpdateSchema = z.object({
@@ -71,7 +70,6 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
           },
         },
       },
-      cacheStrategy: prismaCache.long(),
     });
 
     if (!category) {
