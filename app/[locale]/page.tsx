@@ -6,11 +6,11 @@ import TestimonialsSection from "@/components/testimonial-section";
 import BrandsSection from "@/components/brands-section";
 import FlashSale from "@/components/flash-sale";
 import LimitedCarousel from "@/components/limited";
-
+import {HeroCarousel} from "@/components/hero-carousel";
 export default function Home(){
     return (
         <>
-          <Hero/>
+          <HeroCarousel/>
             {/* Flash Sale widget (auto-hides if disabled) */}
             <FlashSale />
             <Category/>

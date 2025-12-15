@@ -1,13 +1,24 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import Image from 'next/image';
 import { Button } from "@/components/ui/button"
+import { useParams } from "next/navigation"
 
-const slides = [
+type CarouselSlide = {
+  id: string | number
+  title: string
+  description: string
+  image: string
+  buttonText: string
+  buttonLink: string
+  color?: string
+}
+
+const fallbackSlides: CarouselSlide[] = [
   {
     id: 1,
     title: "Summer Collection 2023",
@@ -38,8 +49,56 @@ const slides = [
 ]
 
 export function HeroCarousel() {
+  const { locale } = useParams() as { locale?: string }
   const [current, setCurrent] = useState(0)
+  const [slides, setSlides] = useState<CarouselSlide[]>(fallbackSlides)
   const [autoplay, setAutoplay] = useState(true)
+
+  // Keep links locale-aware without touching styling
+  const resolveLink = useMemo(() => {
+    return (href: string) => {
+      if (!href) return `/${locale ?? ""}/products`
+      if (href.startsWith("http")) return href
+      if (href.startsWith("/")) return `/${locale ?? ""}${href}`
+      return `/${locale ?? ""}/${href}`
+    }
+  }, [locale])
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch("/api/admin/hero", { cache: "no-store" })
+        if (!res.ok) return
+        const json = await res.json()
+        const adminSlides = (json?.data?.slides as any[]) || []
+        if (!adminSlides.length) return
+
+        const mapped = adminSlides
+          .filter((s) => s.isActive !== false)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+          .map((s, idx) => ({
+            id: s.id ?? idx,
+            title: s.title || "",
+            description: s.subtitle || s.description || "",
+            image: s.imageUrl || "/placeholder.svg?height=600&width=1200&text=Hero",
+            buttonText: s.buttonText || "Shop Now",
+            buttonLink: resolveLink(s.buttonUrl || "/products"),
+            color: s.color || "bg-blue-50 dark:bg-blue-950/30",
+          })) as CarouselSlide[]
+
+        if (mounted && mapped.length) {
+          setSlides(mapped)
+          setCurrent(0)
+        }
+      } catch {
+        // silent failover to fallback slides
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [resolveLink])
 
   useEffect(() => {
     if (!autoplay) return
@@ -63,7 +122,7 @@ export function HeroCarousel() {
 
   return (
     <div className="relative w-full overflow-hidden">
-      <div className="relative h-[500px] md:h-[600px] w-full">
+      <div className="relative h-[600px] md:h-[720px] w-full">
         <AnimatePresence mode="wait">
           {slides.map(
             (slide, index) =>
@@ -100,12 +159,12 @@ export function HeroCarousel() {
                         transition={{ duration: 0.5, delay: 0.4 }}
                       >
                         <Button size="lg" asChild>
-                          <Link href={slide.buttonLink}>{slide.buttonText}</Link>
+                          <Link href={resolveLink(slide.buttonLink)}>{slide.buttonText}</Link>
                         </Button>
                       </motion.div>
                     </div>
                     <motion.div
-                      className="relative h-[300px] md:h-[400px] rounded-lg overflow-hidden"
+                      className="relative h-[420px] md:h-[560px] rounded-lg overflow-hidden"
                       initial={{ opacity: 0, x: 50 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: 0.3 }}

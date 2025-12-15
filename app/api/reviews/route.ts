@@ -22,6 +22,16 @@ const reviewSchema = z.object({
   images: z.array(z.string().url()).optional(),
 })
 
+async function resolveLocalUser(clerkUserId: string | null) {
+  if (!clerkUserId) return null
+  return prisma.user.findFirst({
+    where: {
+      OR: [{ clerkId: clerkUserId }, { id: clerkUserId }],
+    },
+    select: { id: true },
+  })
+}
+
 // GET /api/reviews?productId=...&page=1&limit=10&includeMine=1
 export async function GET(req: NextRequest) {
   try {
@@ -56,10 +66,11 @@ export async function GET(req: NextRequest) {
     // Optionally include the current user's review
     let userReview: any = null
     if (includeMine === "1" || includeMine === "true") {
-      const { userId } = await auth()
-      if (userId) {
+      const { userId: clerkUserId } = await auth()
+      const localUser = await resolveLocalUser(clerkUserId)
+      if (localUser) {
         userReview = await prisma.review.findUnique({
-          where: { userId_productId: { userId, productId } },
+          where: { userId_productId: { userId: localUser.id, productId } },
         })
       }
     }
@@ -81,9 +92,14 @@ export async function POST(req: NextRequest) {
       return createApiResponse({ error: "Too many requests", status: 429 })
     }
 
-    const { userId } = await auth()
-    if (!userId) {
+    const { userId: clerkUserId } = await auth()
+    if (!clerkUserId) {
       return createApiResponse({ error: "Unauthorized", status: 401 })
+    }
+
+    const localUser = await resolveLocalUser(clerkUserId)
+    if (!localUser) {
+      return createApiResponse({ error: "User not found", status: 404 })
     }
 
     const body = await req.json()
@@ -93,7 +109,7 @@ export async function POST(req: NextRequest) {
     const purchased = await prisma.orderItem.findFirst({
       where: {
         productId,
-        order: { userId, deletedAt: null },
+        order: { userId: localUser.id, deletedAt: null },
       },
       select: { id: true },
     })
@@ -102,9 +118,9 @@ export async function POST(req: NextRequest) {
 
     // Upsert by unique (userId, productId)
     const review = await prisma.review.upsert({
-      where: { userId_productId: { userId, productId } },
+      where: { userId_productId: { userId: localUser.id, productId } },
       create: {
-        userId,
+        userId: localUser.id,
         productId,
         rating,
         title,

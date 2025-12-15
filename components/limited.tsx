@@ -20,6 +20,7 @@ const LimitedCarousel = () => {
     const [activeIndex, setActiveIndex] = useState(0);
     const [direction, setDirection] = useState(0);
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+    const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -42,6 +43,14 @@ const LimitedCarousel = () => {
         };
 
         fetchProducts();
+    }, []);
+
+    useEffect(() => {
+        const mq = window.matchMedia("(max-width: 768px)");
+        const handler = (e: MediaQueryListEvent | MediaQueryList) => setIsMobile(e.matches);
+        handler(mq);
+        mq.addEventListener("change", handler);
+        return () => mq.removeEventListener("change", handler as any);
     }, []);
 
     const nextSlide = useCallback(() => {
@@ -70,6 +79,20 @@ const LimitedCarousel = () => {
 
     const getVisibleProducts = () => {
         if (products.length === 0) return [];
+        if (isMobile) {
+            const product = products[activeIndex];
+            return [
+                {
+                    id: product.id,
+                    image: product.images?.[0] || '/placeholder.png',
+                    name: product.name,
+                    category: product.category?.name || 'Uncategorized',
+                    price: product.price,
+                    position: 0,
+                    originalIndex: activeIndex
+                }
+            ];
+        }
         const visible: Array<{ id: string; image: string; name: string; category: string; price: number; position: number; originalIndex: number }> = [];
         for (let i = -1; i <= 1; i++) {
             const index = (activeIndex + i + products.length) % products.length;
@@ -143,11 +166,11 @@ const LimitedCarousel = () => {
                 <div className="absolute inset-0 flex items-center justify-center perspective-1000">
                     {getVisibleProducts().map((product) => {
                         const isCenter = product.position === 0;
-                        const xOffset = product.position * 360;
+                        const xOffset = isMobile ? 0 : product.position * 360;
                         const scale = isCenter ? 1 : 0.8;
                         const opacity = isCenter ? 1 : 0.4;
                         const zIndex = isCenter ? 20 : 10;
-                        const blur = isCenter ? 0 : 2;
+                        const blur = isCenter || isMobile ? 0 : 2;
 
                         return (
                             <motion.div
