@@ -1,5 +1,9 @@
+import path from "path";
 import type { NextConfig } from "next";
+import { fileURLToPath } from "url";
 import { withSentryConfig } from "@sentry/nextjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Build a strict but compatible Content Security Policy with nonce support
 function buildCSP(nonce?: string) {
@@ -76,6 +80,9 @@ const nextConfig: any = {
       'sonner'
     ],
   } as any),
+  turbopack: {
+    root: __dirname,
+  },
   webpack: (config: any, { buildId, dev, isServer, defaultLoaders, webpack }: any) => {
     // Keep SVG imports working without Turbopack rules
     config.module.rules.push({

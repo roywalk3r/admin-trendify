@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     if (!trendingProductIds.length) {
       // Fallback to recent products if no trending data
       const recentProducts = await prisma.product.findMany({
-        cacheStrategy: prismaCache.short(),
+        cacheStrategy: { ...prismaCache.short(), tags: ["products"] },
         orderBy: { createdAt: "desc" },
         take: limit,
         include: { category: true },
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
     // Fetch full product details from database
     const products = await prisma.product.findMany({
-      cacheStrategy: prismaCache.short(),
+      cacheStrategy: { ...prismaCache.short(), tags: ["products"] },
       where: {
         id: { in: trendingProductIds },
       },

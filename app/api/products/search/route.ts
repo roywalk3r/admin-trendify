@@ -146,14 +146,14 @@ export const GET = withRateLimit(
       }
 
       // Execute the query with pagination
-      const [products, total] = await Promise.all([
-        prisma.product.findMany({
-          cacheStrategy: prismaCache.short(),
-          where,
-          orderBy,
-          skip: (page - 1) * limit,
-          take: limit,
-          include: {
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        cacheStrategy: { ...prismaCache.short(), tags: ["products"] },
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
             category: {
               select: {
                 id: true,
@@ -199,7 +199,7 @@ export const GET = withRateLimit(
             }
           }
         }),
-        prisma.product.count({ where, cacheStrategy: prismaCache.short() })
+        prisma.product.count({ where, cacheStrategy: { ...prismaCache.short(), tags: ["products"] } })
       ] as const)
 
       // Calculate average rating for each product
@@ -217,7 +217,7 @@ export const GET = withRateLimit(
       // Get available filters for the UI
       const [categories, allTags, priceRange] = await Promise.all([
         prisma.category.findMany({
-          cacheStrategy: prismaCache.long(),
+          cacheStrategy: { ...prismaCache.long(), tags: ["categories"] },
           where: {
             products: {
               some: {
@@ -241,7 +241,7 @@ export const GET = withRateLimit(
           }
         }),
         prisma.tag.findMany({
-          cacheStrategy: prismaCache.long(),
+          cacheStrategy: { ...prismaCache.long(), tags: ["tags"] },
           where: {
             products: {
               some: {
@@ -267,7 +267,7 @@ export const GET = withRateLimit(
           }
         }),
         prisma.product.aggregate({
-          cacheStrategy: prismaCache.long(),
+          cacheStrategy: { ...prismaCache.long(), tags: ["products"] },
           where: {
             status: 'active'
           },
@@ -282,7 +282,7 @@ export const GET = withRateLimit(
 
       // Extract unique colors and sizes from variants
       const allVariants = await prisma.productVariant.findMany({
-        cacheStrategy: prismaCache.long(),
+        cacheStrategy: { ...prismaCache.long(), tags: ["products"] },
         where: {
           product: {
             status: 'active'

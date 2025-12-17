@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma"
 import { defaultSettings } from "@/app/api/admin/settings/schema"
 import type { Settings } from "@/app/api/admin/settings/schema"
 import { prismaCache } from "@/lib/prisma-cache"
+import { invalidateCacheTags, normalizeCacheTags } from "@/lib/prisma-accelerate"
 
 // Helper function to safely parse JSON
 function safeJsonParse(value: any) {
@@ -26,7 +27,7 @@ export async function getSettings(): Promise<Settings> {
     try {
       // Get settings from database
       const settings = await prisma.settings.findMany({
-        cacheStrategy: prismaCache.long(),
+        cacheStrategy: { ...prismaCache.long(), tags: normalizeCacheTags(["settings"]) },
       })
 
       // Override with database settings
@@ -69,7 +70,7 @@ export async function getSettingsByType<T extends keyof Settings>(type: T): Prom
     try {
       // Get setting from database
       const setting = await prisma.settings.findUnique({
-        cacheStrategy: prismaCache.long(),
+        cacheStrategy: { ...prismaCache.long(), tags: normalizeCacheTags(["settings", `settings_${type}`]) },
         where: { key: type },
       })
 
@@ -117,6 +118,7 @@ export async function updateSettings<T extends keyof Settings>(type: T, data: Se
       update: { value: data as any },
       create: { key, value: data as any },
     })
+    await invalidateCacheTags(["settings", `settings_${type}`])
 
     return true
   } catch (error) {

@@ -290,7 +290,7 @@ export async function PATCH(req: NextRequest) {
       await invalidateCategoriesLists();
       await invalidateCategory(id);
       revalidateTag("categories", "");
-      revalidateTag(`category:${id}`, "");
+      revalidateTag(`category_${id}`, "");
     } catch {}
 
     return createApiResponse({
@@ -377,7 +377,7 @@ export async function DELETE(req: NextRequest) {
       await invalidateCategoriesLists();
       await invalidateCategory(id);
       revalidateTag("categories", "");
-      revalidateTag(`category:${id}`, "");
+      revalidateTag(`category_${id}`, "");
     } catch {}
 
     return createApiResponse({

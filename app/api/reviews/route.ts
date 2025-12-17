@@ -4,6 +4,7 @@ import { z } from "zod"
 import { auth } from "@clerk/nextjs/server"
 import { createApiResponse, handleApiError, checkRateLimit } from "@/lib/api-utils"
 import { prismaCache } from "@/lib/prisma-cache"
+import { invalidateCacheTags, normalizeCacheTags } from "@/lib/prisma-accelerate"
 
 const listQuerySchema = z.object({
   productId: z.string(),
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
 
     const [items, total] = await Promise.all([
       prisma.review.findMany({
-        cacheStrategy: prismaCache.short(),
+        cacheStrategy: { ...prismaCache.short(), tags: normalizeCacheTags([`reviews_${productId}`]) },
         where: { productId, isApproved: true, deletedAt: null },
         orderBy: { createdAt: "desc" },
         skip,
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
         },
       }),
       prisma.review.count({
-        cacheStrategy: prismaCache.short(),
+        cacheStrategy: { ...prismaCache.short(), tags: normalizeCacheTags([`reviews_${productId}`]) },
         where: { productId, isApproved: true, deletedAt: null },
       }),
     ])
@@ -137,6 +138,8 @@ export async function POST(req: NextRequest) {
         isVerified, // refresh verification if status changed
       },
     })
+
+    await invalidateCacheTags([`reviews_${productId}`, `product_${productId}`, "products"])
 
     return createApiResponse({ data: review, status: 201 })
   } catch (error) {

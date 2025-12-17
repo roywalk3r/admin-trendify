@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
   const params = await props.params;
   try {
     const origin = new URL(req.url).origin
-    const res = await fetch(`${origin}/api/orders/${params.id}`, {
+    const res = await fetch(`${origin}/api/my-orders/by-id/${params.id}`, {
       method: "GET",
       headers: { Authorization: req.headers.get("authorization") || "" },
       cache: "no-store",

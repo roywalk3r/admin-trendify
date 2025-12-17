@@ -1,4 +1,8 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import {withSentryConfig} from '@sentry/nextjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function buildCSP() {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const clerkDomains = [
@@ -61,6 +65,9 @@ const nextConfig = {
       'cmdk',
       'sonner'
     ],
+  },
+  turbopack: {
+    root: __dirname,
   },
   images: {
     remotePatterns: [

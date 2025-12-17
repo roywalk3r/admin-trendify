@@ -5,6 +5,7 @@ import { z } from "zod"
 import { auth } from "@clerk/nextjs/server"
 import { withCache, getCacheKey, CACHE_TTL, CACHE_TAGS } from "@/lib/cache-helpers"
 import { prismaCache } from "@/lib/prisma-cache"
+import { invalidateProductLists } from "@/lib/data/products"
 
 // Product validation schema
 const productSchema = z.object({
@@ -89,7 +90,7 @@ export async function GET(req: NextRequest) {
       // Get products with pagination
       const [products, total] = await Promise.all([
         prisma.product.findMany({
-          cacheStrategy: prismaCache.short(),
+          cacheStrategy: { ...prismaCache.short(), tags: ["products"] },
           where,
           include: {
             category: true,
@@ -103,7 +104,7 @@ export async function GET(req: NextRequest) {
           skip,
           take: limit,
         }),
-        prisma.product.count({ where, cacheStrategy: prismaCache.short() }),
+        prisma.product.count({ where, cacheStrategy: { ...prismaCache.short(), tags: ["products"] } }),
       ])
 
       // Calculate average ratings and serialize Decimal fields
@@ -175,6 +176,10 @@ export async function POST(req: NextRequest) {
       data: validatedData,
       include: { category: true },
     })
+
+    try {
+      await invalidateProductLists()
+    } catch {}
 
     return createApiResponse({
       data: product,

@@ -3,6 +3,7 @@ import { createApiResponse, handleApiError } from "@/lib/api-utils"
 import { NextRequest, NextResponse } from "next/server"
 import { prismaCache } from "@/lib/prisma-cache"
 import { invalidateProduct, invalidateProductLists } from "@/lib/data/products"
+import { normalizeCacheTags } from "@/lib/prisma-accelerate"
 import { revalidateTag } from "next/cache"
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
     }
 
     const product = await prisma.product.findUnique({
-      cacheStrategy: prismaCache.long(),
+      cacheStrategy: { ...prismaCache.long(), tags: normalizeCacheTags(["products", `product_${id}`]) },
       where: { id },
       include: {
         category: {
@@ -77,7 +78,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
       await invalidateProduct(id)
       await invalidateProductLists()
       revalidateTag("products", "")
-      revalidateTag(`product:${id}`, "")
+      revalidateTag(`product_${id}`, "")
     } catch {}
 
     return NextResponse.json(createApiResponse({ data: updatedProduct }))

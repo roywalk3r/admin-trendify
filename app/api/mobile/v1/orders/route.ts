@@ -6,7 +6,7 @@ export async function OPTIONS(req: NextRequest) { return handleOptions(req, { cr
 
 export async function GET(req: NextRequest) { try {
   const url = new URL(req.url); const origin = url.origin; const qs = url.search
-  const res = await fetch(`${origin}/api/orders${qs}`, { method: "GET", headers: { Authorization: req.headers.get("authorization") || "" }, cache: "no-store" })
+  const res = await fetch(`${origin}/api/my-orders${qs}`, { method: "GET", headers: { Authorization: req.headers.get("authorization") || "" }, cache: "no-store" })
   const json = await res.json().catch(() => ({}))
   const out = createApiResponse({ status: res.status, data: json?.data ?? json, error: json?.error })
   return withCors(out, req, { credentials: true })

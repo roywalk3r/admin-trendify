@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma"
 import { prismaCache } from "@/lib/prisma-cache"
+import { invalidateCacheTags, normalizeCacheTags } from "@/lib/prisma-accelerate"
 
 export async function getProductByIdCached(id: string) {
   const product = await prisma.product.findUnique({
@@ -13,7 +14,7 @@ export async function getProductByIdCached(id: string) {
       },
       _count: { select: { reviews: true, orderItems: true, wishlistItems: true } },
     },
-    cacheStrategy: prismaCache.medium(),
+    cacheStrategy: { ...prismaCache.medium(), tags: normalizeCacheTags([`product_${id}`, "products"]) },
   })
   return product
 }
@@ -45,7 +46,7 @@ export async function getProductsListCached(params: Record<string, any>) {
     orderBy,
     skip: params.page && params.limit ? (params.page - 1) * params.limit : 0,
     take: params.limit ?? 20,
-    cacheStrategy: prismaCache.medium(),
+    cacheStrategy: { ...prismaCache.medium(), tags: ["products"] },
   })
 
   const totalPages = Math.ceil(totalCount / (params.limit ?? 20))
@@ -81,8 +82,9 @@ export async function getProductsListCached(params: Record<string, any>) {
 }
 
 export async function invalidateProduct(id: string) {
-  void id
+  await invalidateCacheTags([`product_${id}`, "products"])
 }
 
 export async function invalidateProductLists() {
+  await invalidateCacheTags(["products"])
 }

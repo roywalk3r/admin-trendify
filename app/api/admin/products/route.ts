@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
       await invalidateProductLists()
       await invalidateProduct(product.id)
       revalidateTag("products", "")
-      revalidateTag(`product:${product.id}`, "")
+      revalidateTag(`product_${product.id}`, "")
     } catch {}
 
     return NextResponse.json({ product }, { status: 201 })
@@ -244,7 +244,7 @@ export async function PATCH(request: NextRequest) {
         await invalidateProductLists()
         for (const pid of productIds) await invalidateProduct(pid)
         revalidateTag("products", "")
-        for (const pid of productIds) revalidateTag(`product:${pid}`, "")
+        for (const pid of productIds) revalidateTag(`product_${pid}`, "")
       } catch {}
 
       return NextResponse.json({
@@ -368,7 +368,7 @@ export async function PATCH(request: NextRequest) {
       await invalidateProduct(id)
       await invalidateProductLists()
       revalidateTag("products", "")
-      revalidateTag(`product:${id}`, "")
+      revalidateTag(`product_${id}`, "")
     } catch {}
 
     return NextResponse.json(product)
@@ -409,7 +409,7 @@ export async function DELETE(request: NextRequest) {
       await invalidateProduct(id)
       await invalidateProductLists()
       revalidateTag("products", "")
-      revalidateTag(`product:${id}`, "")
+      revalidateTag(`product_${id}`, "")
     } catch {}
 
     return NextResponse.json({ message: "Product deleted" }, { status: 200 })
