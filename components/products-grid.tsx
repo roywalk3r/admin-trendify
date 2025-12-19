@@ -4,8 +4,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import ProductCard from "./product-card"
 import { Button } from "./ui/button"
-import { Grid, List } from "lucide-react"
+import { Grid, List, Filter, SortAsc } from "lucide-react"
 import { useI18n } from "@/lib/i18n/I18nProvider"
+import { MobileFilterSheet } from "./mobile/mobile-filter-sheet"
+import { ProductGridSkeleton } from "./mobile/product-skeleton"
+import { StickyActionBar } from "./mobile/sticky-action-bar"
 // Fetch from API: /api/products
 
 type ProductsGridProps = {
@@ -30,6 +33,8 @@ export default function ProductsGrid({ categorySlug, categoryId }: ProductsGridP
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({})
 
   const apiSort = (key: typeof sortBy) => {
     switch (key) {
@@ -69,6 +74,15 @@ export default function ProductsGrid({ categorySlug, categoryId }: ProductsGridP
       else if (categories) params.set("category", categories)
       if (sizes) params.set("sizes", sizes)
       if (colors) params.set("colors", colors)
+      // Apply active filters
+      Object.entries(activeFilters).forEach(([key, value]) => {
+        if (Array.isArray(value) && value.length > 0) {
+          params.set(key, value.join(","))
+        } else if (Array.isArray(value) && value.length === 2 && key === "price") {
+          params.set("minPrice", String(value[0]))
+          params.set("maxPrice", String(value[1]))
+        }
+      })
       const res = await fetch(`/api/products?${params.toString()}`, { cache: "no-store" })
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error || `Failed: ${res.status}`)
@@ -98,7 +112,7 @@ export default function ProductsGrid({ categorySlug, categoryId }: ProductsGridP
   useEffect(() => {
     setItems([])
     fetchProducts(1, false)
-  }, [sortBy, searchParams, categorySlug, categoryId])
+  }, [sortBy, searchParams, categorySlug, categoryId, activeFilters])
 
   // sync sort with URL on mount and when URL changes externally
   useEffect(() => {
@@ -137,10 +151,76 @@ export default function ProductsGrid({ categorySlug, categoryId }: ProductsGridP
     router.push(`${pathname}?${sp.toString()}`)
   }
 
+  const handleFilterChange = (filterId: string, value: any) => {
+    setActiveFilters((prev) => ({ ...prev, [filterId]: value }))
+  }
+
+  const handleClearFilters = () => {
+    setActiveFilters({})
+  }
+
+  const handleApplyFilters = () => {
+    setIsFilterOpen(false)
+    // Refetch will happen via useEffect
+  }
+
+  // Mock filter data - replace with actual API call
+  const mockFilters = [
+    {
+      id: "categories",
+      label: "Categories",
+      type: "checkbox" as const,
+      options: [
+        { id: "electronics", label: "Electronics", count: 45 },
+        { id: "clothing", label: "Clothing", count: 32 },
+        { id: "accessories", label: "Accessories", count: 18 },
+      ],
+    },
+    {
+      id: "price",
+      label: "Price Range",
+      type: "range" as const,
+      min: 0,
+      max: 500,
+      step: 10,
+    },
+  ]
+
   return (
-    <div>
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-6 p-4 bg-card rounded-2xl border">
+    <div className="relative">
+      {/* Mobile Sticky Filter/Sort Bar */}
+      <div className="md:hidden sticky top-[var(--mobile-header-height)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="flex items-center justify-between p-3 gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFilterOpen(true)}
+            className="flex-1 h-[var(--mobile-touch-target)]"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+            {Object.keys(activeFilters).length > 0 && (
+              <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
+                {Object.keys(activeFilters).length}
+              </span>
+            )}
+          </Button>
+          <select
+            value={sortBy}
+            onChange={(e) => onSortChange(e.target.value as any)}
+            className="flex-1 h-[var(--mobile-touch-target)] px-3 border rounded-lg text-sm bg-background"
+          >
+            <option value="featured">{t("products.featured")}</option>
+            <option value="price-low">{t("products.priceLow")}</option>
+            <option value="price-high">{t("products.priceHigh")}</option>
+            <option value="name-asc">{t("products.nameAsc")}</option>
+            <option value="name-desc">{t("products.nameDesc")}</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Desktop Toolbar */}
+      <div className="hidden md:flex items-center justify-between mb-6 p-4 bg-card rounded-2xl border">
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">
             {loading ? t("products.loading") : `${t("products.showingLabel")} ${items.length} ${t("products.of")} ${total} ${t("common.products")}`}
@@ -185,17 +265,25 @@ export default function ProductsGrid({ categorySlug, categoryId }: ProductsGridP
       </div>
 
       {/* Products Grid */}
-      <motion.div
-        className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}
-        layout
-      >
-        {items.map((product, index) => (
-          <ProductCard key={`${product.id}-${index}`} {...product} index={index} />
-        ))}
-      </motion.div>
+      {loading && items.length === 0 ? (
+        <ProductGridSkeleton count={limit} />
+      ) : (
+        <motion.div
+          className={`grid gap-4 md:gap-6 ${
+            viewMode === "grid" 
+              ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" 
+              : "grid-cols-1"
+          }`}
+          layout
+        >
+          {items.map((product, index) => (
+            <ProductCard key={`${product.id}-${index}`} {...product} index={index} />
+          ))}
+        </motion.div>
+      )}
 
       {/* Load More */}
-      <div className="text-center mt-12">
+      <div className="text-center mt-8 md:mt-12">
         {items.length < total && (
           <Button
             variant="outline"
@@ -208,6 +296,17 @@ export default function ProductsGrid({ categorySlug, categoryId }: ProductsGridP
           </Button>
         )}
       </div>
+
+      {/* Mobile Filter Sheet */}
+      <MobileFilterSheet
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        filters={mockFilters}
+        activeFilters={activeFilters}
+        onFilterChange={handleFilterChange}
+        onClearAll={handleClearFilters}
+        onApply={handleApplyFilters}
+      />
     </div>
   )
 }

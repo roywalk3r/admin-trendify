@@ -259,13 +259,13 @@ export function AdminSidebar() {
 
   return (
     <>
-      <aside className="hidden lg:block sticky top-0 h-[100dvh] w-64 border-r bg-background overflow-hidden">
+      <aside className="hidden md:block sticky top-0 h-[100dvh] w-64 border-r bg-background overflow-hidden">
         <SidebarContent />
       </aside>
-      <div className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 lg:hidden">
+      <div className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 md:hidden">
         <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="lg:hidden">
+            <Button variant="outline" size="icon" className="md:hidden">
               <Menu className="h-5 w-5" />
               <span className="sr-only">Toggle Menu</span>
             </Button>

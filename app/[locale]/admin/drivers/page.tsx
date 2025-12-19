@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { Loader2, Plus, Edit2, Trash2, Truck } from "lucide-react"
+import { Loader2, Search, Plus, Edit2, Trash2, Mail, Phone, Calendar, Truck } from "lucide-react";
+import { AdminCardSkeleton, AdminTableSkeleton } from "@/components/admin/admin-skeleton";
 
 interface Driver {
   id: string
@@ -239,49 +240,106 @@ export default function AdminDriversPage() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>License</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Trips</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map(d => (
-                <TableRow key={d.id}>
-                  <TableCell className="font-medium">{d.name}</TableCell>
-                  <TableCell>
-                    <div className="text-sm">{d.phone}</div>
-                    {d.email && <div className="text-xs text-muted-foreground">{d.email}</div>}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{d.licenseNo}</TableCell>
-                  <TableCell>
-                    <div className="text-sm capitalize">{d.vehicleType}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{d.vehicleNo}</div>
-                  </TableCell>
-                  <TableCell>{d.totalTrips || d._count?.orders || 0}</TableCell>
-                  <TableCell>
-                    <Badge variant={d.isActive ? "default" : "secondary"}>{d.isActive ? "Active" : "Inactive"}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { setEditDriver(d); setOpen(true) }}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => onDelete(d.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {loading ? (
+            <>
+              <div className="hidden md:block p-4">
+                <AdminTableSkeleton rows={10} />
+              </div>
+              <div className="md:hidden">
+                <AdminCardSkeleton cards={6} />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block p-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>License</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Trips</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map(d => (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-medium">{d.name}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">{d.phone}</div>
+                      {d.email && <div className="text-xs text-muted-foreground">{d.email}</div>}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{d.licenseNo}</TableCell>
+                    <TableCell>
+                      <div className="text-sm capitalize">{d.vehicleType}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{d.vehicleNo}</div>
+                    </TableCell>
+                    <TableCell>{d.totalTrips || d._count?.orders || 0}</TableCell>
+                    <TableCell>
+                      <Badge variant={d.isActive ? "default" : "secondary"}>{d.isActive ? "Active" : "Inactive"}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => { setEditDriver(d); setOpen(true) }}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => onDelete(d.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3 p-4">
+            {filtered.map(d => (
+              <div key={d.id} className="rounded-lg border p-4 space-y-3 bg-card">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold">{d.name}</div>
+                    <div className="text-xs text-muted-foreground">{d.phone}</div>
+                    {d.email && <div className="text-xs text-muted-foreground">{d.email}</div>}
+                  </div>
+                  <Badge variant={d.isActive ? "default" : "secondary"}>{d.isActive ? "Active" : "Inactive"}</Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <div className="text-xs text-muted-foreground">License</div>
+                    <div className="font-mono text-xs">{d.licenseNo}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Vehicle</div>
+                    <div className="capitalize">{d.vehicleType}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{d.vehicleNo}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Trips</div>
+                    <div className="font-medium">{d.totalTrips || d._count?.orders || 0}</div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="outline" onClick={() => { setEditDriver(d); setOpen(true) }}>
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => onDelete(d.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

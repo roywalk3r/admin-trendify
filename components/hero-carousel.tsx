@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
@@ -53,6 +53,8 @@ export function HeroCarousel() {
   const [current, setCurrent] = useState(0)
   const [slides, setSlides] = useState<CarouselSlide[]>(fallbackSlides)
   const [autoplay, setAutoplay] = useState(true)
+  const touchStartX = useRef(0)
+  const touchEndX = useRef(0)
 
   // Keep links locale-aware without touching styling
   const resolveLink = useMemo(() => {
@@ -120,9 +122,31 @@ export function HeroCarousel() {
     setCurrent(current === 0 ? slides.length - 1 : current - 1)
   }
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return
+    const delta = touchStartX.current - touchEndX.current
+    if (delta > 40) nextSlide()
+    if (delta < -40) prevSlide()
+    touchStartX.current = 0
+    touchEndX.current = 0
+  }
+
   return (
-    <div className="relative w-full overflow-hidden">
-      <div className="relative h-[600px] md:h-[720px] w-full">
+    <div
+      className="relative w-full overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div className="relative h-[60vh] md:h-[70vh] lg:h-[80vh] min-h-[360px] w-full">
         <AnimatePresence mode="wait">
           {slides.map(
             (slide, index) =>
@@ -136,9 +160,9 @@ export function HeroCarousel() {
                   transition={{ duration: 0.5 }}
                 >
                   <div className="container px-4 md:px-6 grid md:grid-cols-2 gap-6 items-center">
-                    <div className="space-y-4">
+                    <div className="space-y-3 md:space-y-4">
                       <motion.h1
-                        className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight"
+                        className="text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
@@ -146,7 +170,7 @@ export function HeroCarousel() {
                         {slide.title}
                       </motion.h1>
                       <motion.p
-                        className="text-lg text-muted-foreground md:text-xl"
+                        className="text-base md:text-xl text-muted-foreground"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
@@ -158,13 +182,13 @@ export function HeroCarousel() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.4 }}
                       >
-                        <Button size="lg" asChild>
+                        <Button size="lg" asChild className="text-sm md:text-base px-5 md:px-6 py-3 md:py-4">
                           <Link href={resolveLink(slide.buttonLink)}>{slide.buttonText}</Link>
                         </Button>
                       </motion.div>
                     </div>
                     <motion.div
-                      className="relative h-[420px] md:h-[560px] rounded-lg overflow-hidden"
+                      className="relative h-[240px] sm:h-[320px] md:h-[440px] lg:h-[560px] rounded-lg overflow-hidden bg-background/70"
                       initial={{ opacity: 0, x: 50 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: 0.3 }}
@@ -174,7 +198,9 @@ export function HeroCarousel() {
                         alt={slide.title}
                         width={1200}
                         height={600}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover object-center"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 60vw, 50vw"
+                        priority={index === 0}
                       />
                     </motion.div>
                   </div>
@@ -187,14 +213,14 @@ export function HeroCarousel() {
       {/* Navigation Arrows */}
       <button
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm p-2 rounded-full shadow-md hover:bg-background transition-colors"
+        className="absolute left-3 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm p-2 rounded-full shadow-md hover:bg-background transition-colors hidden sm:flex"
         aria-label="Previous slide"
       >
         <ChevronLeft className="h-6 w-6" />
       </button>
       <button
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm p-2 rounded-full shadow-md hover:bg-background transition-colors"
+        className="absolute right-3 top-1/2 -translate-y-1/2 bg-background/80 backdrop-blur-sm p-2 rounded-full shadow-md hover:bg-background transition-colors hidden sm:flex"
         aria-label="Next slide"
       >
         <ChevronRight className="h-6 w-6" />

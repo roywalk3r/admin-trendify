@@ -8,7 +8,6 @@ export async function getCategoriesCached(params: Record<string, any>) {
   else if (params.parentId === "") where.parentId = null
   if (!params.includeDeleted) {
     where.deletedAt = null
-    where.isActive = true
   }
   if (params.search) {
     where.OR = [
@@ -33,7 +32,7 @@ export async function getCategoriesCached(params: Record<string, any>) {
         products: params.withProducts
           ? {
               select: { id: true, name: true, price: true, images: true, slug: true, stock: true },
-              where: { isDeleted: false, deletedAt: null, isActive: true },
+              where: { isDeleted: false, deletedAt: null },
               take: 4,
             }
           : false,
@@ -42,11 +41,11 @@ export async function getCategoriesCached(params: Record<string, any>) {
               include: {
                 _count: { select: { products: true } },
               },
-            }
+          }
           : false,
         _count: {
           select: {
-            products: { where: { isDeleted: false, deletedAt: null, isActive: true } },
+            products: { where: { isDeleted: false, deletedAt: null } },
             children: true,
           },
         },
@@ -68,7 +67,6 @@ export async function getCategoriesCached(params: Record<string, any>) {
       image: c.image,
       description: c.description,
       parentId: c.parentId,
-      isActive: c.isActive,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       _count: c._count,
@@ -90,12 +88,12 @@ export async function getCategoryByIdCached(id: string) {
     include: {
       products: {
         select: { id: true, name: true, price: true, images: true, slug: true, stock: true },
-        where: { isDeleted: false, deletedAt: null, isActive: true },
+        where: { isDeleted: false, deletedAt: null },
         take: 10,
       },
       children: { include: { _count: { select: { products: true } } } },
       parent: { select: { id: true, name: true, slug: true } },
-      _count: { select: { products: { where: { isDeleted: false, deletedAt: null, isActive: true } }, children: true } },
+      _count: { select: { products: { where: { isDeleted: false, deletedAt: null } }, children: true } },
     },
     cacheStrategy: { ttl: 300, tags: normalizeCacheTags(["categories", `category_${id}`]) },
   })
@@ -109,7 +107,6 @@ export async function getCategoryByIdCached(id: string) {
     image: category.image,
     description: category.description,
     parentId: category.parentId,
-    isActive: category.isActive,
     createdAt: category.createdAt,
     updatedAt: category.updatedAt,
     _count: category._count,

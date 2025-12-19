@@ -1,6 +1,6 @@
 "use client"
-import { motion, AnimatePresence } from "framer-motion"
-import { X, Plus, Minus, ShoppingBag, Trash2 } from "lucide-react"
+import { motion, AnimatePresence, PanInfo } from "framer-motion"
+import { X, Plus, Minus, ShoppingBag, Trash2, ChevronRight } from "lucide-react"
 import { Button } from "./ui/button"
 import Image from "next/image"
 import { useCartStore } from "@/lib/store/cart-store"
@@ -18,6 +18,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
   const { items: cartItems, removeItem, updateQuantity, subtotal, setItems } = useCartStore()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [draggedItem, setDraggedItem] = useState<string | null>(null)
   const fetchedRef = useRef(false)
   const router = useRouter()
   const { format } = useCurrency()
@@ -105,6 +106,22 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     }
   }
 
+  const handleDragEnd = (info: PanInfo, itemId: string) => {
+    const { offset, velocity } = info
+    const swipeThreshold = 50
+    
+    if (offset.x < -swipeThreshold || velocity.x < -500) {
+      // Swiped left enough, remove item
+      const item = cartItems.find(i => i.id === itemId)
+      serverRemoveItem(itemId, item?.name)
+    }
+    setDraggedItem(null)
+  }
+
+  const handleDragStart = (itemId: string) => {
+    setDraggedItem(itemId)
+  }
+
   return (
       <AnimatePresence>
         {isOpen && (
@@ -120,14 +137,14 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 
               {/* Sidebar */}
               <motion.div
-                  className="fixed right-0 top-0 h-full w-full max-w-md bg-background shadow-2xl z-[60] flex flex-col"
+                  className="fixed right-0 top-0 h-full w-full sm:w-full md:max-w-md bg-background shadow-2xl z-[60] flex flex-col"
                   initial={{ x: "100%" }}
                   animate={{ x: 0 }}
                   exit={{ x: "100%" }}
                   transition={{ type: "spring", damping: 25, stiffness: 200 }}
               >
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b">
+                <div className="flex items-center justify-between p-4 sm:p-6 border-b">
                   <div className="flex items-center gap-2">
                     <ShoppingBag className="w-5 h-5" />
                     <h2 className="typography text-lg">Shopping Cart</h2>
@@ -135,60 +152,71 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                   {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
                 </span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={onClose}>
+                  <Button variant="ghost" size="sm" onClick={onClose} className="h-[var(--mobile-touch-target)] w-[var(--mobile-touch-target)] sm:h-auto sm:w-auto">
                     <X className="w-5 h-5" />
                   </Button>
                 </div>
 
                 {/* Cart Items */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 sm:pb-6">
                   {cartItems.length === 0 ? (
                       <div className="text-center py-12">
                         <ShoppingBag className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                         <p className="text-muted-foreground">Your cart is empty</p>
-                        <Button className="mt-4" onClick={onClose}>
+                        <Button className="mt-4 h-[var(--mobile-touch-target)]" onClick={onClose}>
                           Continue Shopping
                         </Button>
                       </div>
                   ) : (
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         {cartItems.map((item) => (
                             <motion.div
                                 key={item.id}
-                                className="flex gap-4 p-4 border rounded-lg"
+                                className="relative flex gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg bg-card"
                                 layout
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
+                                drag="x"
+                                dragConstraints={{ left: 0, right: 0 }}
+                                dragElastic={0.2}
+                                onDragStart={() => handleDragStart(item.id)}
+                                onDragEnd={(_, info) => handleDragEnd(info, item.id)}
+                                style={{ x: draggedItem === item.id ? 0 : undefined }}
                             >
+                              {/* Swipe indicator */}
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                                <Trash2 className="w-4 h-4" />
+                              </div>
+                              
                               <Image
                                   src={item.image || "/placeholder.svg"}
                                   alt={item.name}
-                                  width={80}
-                                  height={80}
-                                  className="rounded-lg object-cover"
+                                  width={60}
+                                  height={60}
+                                  className="rounded-lg object-cover flex-shrink-0"
                               />
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 <h3 className="font-medium text-sm line-clamp-2">{item.name}</h3>
                                 {item.size && <p className="text-xs text-muted-foreground">Size: {item.size}</p>}
                                 {item.color && <p className="text-xs text-muted-foreground">Color: {item.color}</p>}
                                 <div className="flex items-center justify-between mt-2">
-                                  <span className="font-semibold">{format(Number(item.price))}</span>
-                                  <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-sm">{format(Number(item.price))}</span>
+                                  <div className="flex items-center gap-1">
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => serverUpdateQuantity(item.id, Math.max(1, item.quantity - 1), item.color, item.size)}
-                                        className="w-8 h-8 p-0"
+                                        className="w-7 h-7 p-0 sm:w-8 sm:h-8"
                                     >
                                       <Minus className="w-3 h-3" />
                                     </Button>
-                                    <span className="w-8 text-center">{item.quantity}</span>
+                                    <span className="w-6 sm:w-8 text-center text-sm font-medium">{item.quantity}</span>
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => serverUpdateQuantity(item.id, item.quantity + 1, item.color, item.size)}
-                                        className="w-8 h-8 p-0"
+                                        className="w-7 h-7 p-0 sm:w-8 sm:h-8"
                                     >
                                       <Plus className="w-3 h-3" />
                                     </Button>
@@ -199,7 +227,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => serverRemoveItem(item.id, item.name)}
-                                  className="text-red-500 hover:text-red-700"
+                                  className="text-red-500 hover:text-red-700 h-8 w-8 p-0 hidden sm:flex"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -209,9 +237,9 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                   )}
                 </div>
 
-                {/* Footer */}
+                {/* Footer - Sticky on Mobile */}
                 {cartItems.length > 0 && (
-                    <div className="border-t p-6 space-y-4">
+                    <div className="fixed bottom-0 left-0 right-0 sm:relative bg-background border-t p-4 sm:p-6 space-y-3 sm:space-y-4 z-10">
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span>Subtotal</span>
@@ -227,13 +255,14 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                         </div>
                       </div>
                       <Button
-                          className="w-full bg-ascent hover:bg-ascent/90"
+                          className="w-full bg-ascent hover:bg-ascent/90 h-[var(--mobile-touch-target)] sm:h-auto"
                           onClick={() => {
                             onClose()
                             router.push("/checkout")
                           }}
                       >
                         Proceed to Checkout
+                        <ChevronRight className="w-4 h-4 ml-2" />
                       </Button>
                       <p className="text-xs text-center text-muted-foreground">
                         {shipping > 0 && freeShippingMessage}

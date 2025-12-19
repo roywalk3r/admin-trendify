@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
+import { AdminCardSkeleton, AdminFilterSkeleton, AdminTableSkeleton } from "@/components/admin/admin-skeleton"
+import { adminToast } from "@/lib/admin/toast"
 import { Loader2, Star, Check, X, Trash2, MessageSquare } from "lucide-react"
 import Image from "next/image"
 
@@ -58,7 +60,7 @@ export default function AdminReviewsPage() {
 
   const handleBulkAction = async (action: "approve" | "reject" | "delete") => {
     if (selectedReviews.length === 0) {
-      toast.error("Please select reviews first")
+      adminToast.error("Please select reviews first")
       return
     }
     if (!confirm(`${action} ${selectedReviews.length} reviews?`)) return
@@ -73,11 +75,11 @@ export default function AdminReviewsPage() {
           })
         )
       )
-      toast.success(`Bulk ${action} completed`)
+      adminToast.bulkAction(action, selectedReviews.length, "review")
       setSelectedReviews([])
       loadReviews()
     } catch {
-      toast.error("Bulk action failed")
+      adminToast.error("Bulk action failed")
     }
   }
 
@@ -89,10 +91,18 @@ export default function AdminReviewsPage() {
         body: JSON.stringify({ action })
       })
       if (!res.ok) throw new Error("Action failed")
-      toast.success(`Review ${action}d`)
+      
+      if (action === "approve") {
+        adminToast.reviewApproved(1)
+      } else if (action === "reject") {
+        adminToast.reviewRejected(1)
+      } else if (action === "delete") {
+        adminToast.reviewDeleted(1)
+      }
+      
       loadReviews()
     } catch {
-      toast.error("Action failed")
+      adminToast.error("Action failed")
     }
   }
 
@@ -201,91 +211,165 @@ export default function AdminReviewsPage() {
           <CardTitle>Reviews</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedReviews.length === reviews.length && reviews.length > 0}
-                    onChange={(e) => setSelectedReviews(e.target.checked ? reviews.map(r => r.id) : [])}
-                    className="h-4 w-4"
-                  />
-                </TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Review</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reviews.map(r => (
-                <TableRow key={r.id}>
-                  <TableCell>
+          {loading ? (
+            <>
+              <div className="hidden md:block">
+                <AdminTableSkeleton rows={10} />
+              </div>
+              <div className="md:hidden">
+                <AdminCardSkeleton cards={6} />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
                     <input 
                       type="checkbox" 
-                      checked={selectedReviews.includes(r.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedReviews([...selectedReviews, r.id])
-                        } else {
-                          setSelectedReviews(selectedReviews.filter(id => id !== r.id))
-                        }
-                      }}
+                      checked={selectedReviews.length === reviews.length && reviews.length > 0}
+                      onChange={(e) => setSelectedReviews(e.target.checked ? reviews.map(r => r.id) : [])}
                       className="h-4 w-4"
+                      aria-label="Select all reviews"
                     />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 bg-muted rounded overflow-hidden">
-                        {r.product.images[0] && (
-                          <Image src={r.product.images[0]} alt={r.product.name} width={40} height={40} className="object-cover" />
-                        )}
-                      </div>
-                      <div className="text-sm">{r.product.name}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {r.title && <div className="font-medium text-sm">{r.title}</div>}
-                    {r.comment && <div className="text-xs text-muted-foreground line-clamp-2">{r.comment}</div>}
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{r.user.name || r.user.email}</div>
-                    {r.isVerified && <Badge variant="outline" className="text-xs">Verified Purchase</Badge>}
-                  </TableCell>
-                  <TableCell><StarRating rating={r.rating} /></TableCell>
-                  <TableCell className="text-sm">{new Date(r.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Badge variant={r.isApproved ? "default" : "secondary"}>
-                      {r.isApproved ? "Approved" : "Pending"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      {!r.isApproved && (
-                        <Button size="sm" variant="outline" onClick={() => handleAction(r.id, "approve")}>
-                          <Check className="h-3 w-3" />
-                        </Button>
-                      )}
-                      {r.isApproved && (
-                        <Button size="sm" variant="outline" onClick={() => handleAction(r.id, "reject")}>
-                          <X className="h-3 w-3" />
-                        </Button>
-                      )}
-                      <Button size="sm" variant="destructive" onClick={() => handleAction(r.id, "delete")}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  </TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Review</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Rating</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {reviews.length === 0 && (
-            <div className="text-center text-muted-foreground py-10">No reviews found</div>
+              </TableHeader>
+              <TableBody>
+                {reviews.map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedReviews.includes(r.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedReviews([...selectedReviews, r.id])
+                          } else {
+                            setSelectedReviews(selectedReviews.filter(id => id !== r.id))
+                          }
+                        }}
+                        className="h-4 w-4"
+                        aria-label={`Select review by ${r.user.name || r.user.email}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 bg-muted rounded overflow-hidden">
+                          {r.product.images[0] && (
+                            <Image src={r.product.images[0]} alt={r.product.name} width={40} height={40} className="object-cover" />
+                          )}
+                        </div>
+                        <div className="text-sm">{r.product.name}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {r.title && <div className="font-medium text-sm">{r.title}</div>}
+                      {r.comment && <div className="text-xs text-muted-foreground line-clamp-2">{r.comment}</div>}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{r.user.name || r.user.email}</div>
+                      {r.isVerified && <Badge variant="outline" className="text-xs">Verified Purchase</Badge>}
+                    </TableCell>
+                    <TableCell><StarRating rating={r.rating} /></TableCell>
+                    <TableCell className="text-sm">{new Date(r.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Badge variant={r.isApproved ? "default" : "secondary"}>
+                        {r.isApproved ? "Approved" : "Pending"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        {!r.isApproved && (
+                          <Button size="sm" variant="outline" onClick={() => handleAction(r.id, "approve")}>
+                            <Check className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {r.isApproved && (
+                          <Button size="sm" variant="outline" onClick={() => handleAction(r.id, "reject")}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                        <Button size="sm" variant="destructive" onClick={() => handleAction(r.id, "delete")}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {reviews.length === 0 && (
+              <div className="text-center text-muted-foreground py-10">No reviews found</div>
+            )}
+          </div>
+
+          {/* Mobile card list */}
+          <div className="md:hidden space-y-3 p-4">
+            {reviews.length === 0 && (
+              <div className="text-center text-muted-foreground py-6 text-sm">No reviews found</div>
+            )}
+            {reviews.map(r => (
+              <div key={r.id} className="rounded-lg border p-4 space-y-3 bg-card">
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-muted rounded overflow-hidden">
+                      {r.product.images[0] && (
+                        <Image src={r.product.images[0]} alt={r.product.name} width={48} height={48} className="object-cover" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold line-clamp-1">{r.product.name}</div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <StarRating rating={r.rating} />
+                        <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Badge variant={r.isApproved ? "default" : "secondary"} className="shrink-0">
+                    {r.isApproved ? "Approved" : "Pending"}
+                  </Badge>
+                </div>
+
+                {(r.title || r.comment) && (
+                  <div className="space-y-1">
+                    {r.title && <div className="font-medium text-sm">{r.title}</div>}
+                    {r.comment && <div className="text-sm text-muted-foreground line-clamp-3">{r.comment}</div>}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">{r.user.name || r.user.email}</div>
+                  <div className="flex gap-2">
+                    {!r.isApproved && (
+                      <Button size="sm" variant="outline" onClick={() => handleAction(r.id, "approve")}>
+                        <Check className="h-3 w-3" />
+                      </Button>
+                    )}
+                    {r.isApproved && (
+                      <Button size="sm" variant="outline" onClick={() => handleAction(r.id, "reject")}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                    <Button size="sm" variant="destructive" onClick={() => handleAction(r.id, "delete")}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+            </>
           )}
         </CardContent>
       </Card>

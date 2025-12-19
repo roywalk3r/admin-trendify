@@ -4,14 +4,24 @@ import CategoryItem from "./category-item"
 import type { Variants } from "framer-motion"
 import { useApi } from "@/lib/hooks/use-api"
 import { useI18n } from "@/lib/i18n/I18nProvider"
+import { Button } from "./ui/button"
 
 export default function Category() {
     const { t } = useI18n()
 
-    // Fetch categories from backend API. We avoid passing parentId due to API filtering semantics.
-    const { data, isLoading, error } = useApi(`/api/categories?limit=16&sortBy=name&sortOrder=asc`)
-    const categories = (data as Array<any>) || []
-// console.log(data, "Categories")
+    // Fetch a small set of categories for home (6 max)
+    const { data, isLoading, error } = useApi(`/api/categories?page=1&limit=6&sortBy=name&sortOrder=asc`)
+    const categories = ((data as any)?.data?.data
+        || (data as any)?.data?.categories
+        || (data as any)?.data
+        || (data as any)?.categories
+        || (Array.isArray(data) ? data : [])
+    ).slice ? ((data as any)?.data?.data
+        || (data as any)?.data?.categories
+        || (data as any)?.data
+        || (data as any)?.categories
+        || (Array.isArray(data) ? data : [])
+    ).slice(0, 6) : []
     const containerVariants: Variants = {
         hidden: { opacity: 0 },
         visible: {
@@ -71,7 +81,7 @@ export default function Category() {
 
             {/* Grid */}
             <motion.div
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-6"
+                className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6"
                 variants={containerVariants}
             >
                 {/* Loading skeletons */}
@@ -94,6 +104,14 @@ export default function Category() {
                     />
                 ))}
             </motion.div>
+
+            <div className="flex justify-center mt-8">
+                <Button asChild variant="outline">
+                    <a href="/categories">
+                        Browse categories
+                    </a>
+                </Button>
+            </div>
         </motion.div>
     )
 }

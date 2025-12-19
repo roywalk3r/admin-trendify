@@ -1,11 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ShoppingCart, Heart, Star, Share2, Truck, Shield, RotateCcw, CheckCircle } from "lucide-react"
+import { ShoppingCart, Heart, Star, Share2, Truck, Shield, RotateCcw, CheckCircle, Plus, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { AppwriteGallery } from "@/components/appwrite/appwrite-gallery"
+import { MobileProductGallery } from "@/components/mobile/mobile-product-gallery"
+import { MobileAccordion, MobileAccordionItem } from "@/components/mobile/mobile-accordion"
+import { StickyActionBar } from "@/components/mobile/sticky-action-bar"
 import { useProductView } from "@/hooks/use-product-view"
 import { useCartStore } from "@/lib/store/cart-store"
 import { useSettings } from "@/lib/contexts/settings-context"
@@ -18,6 +21,7 @@ import StockBadge from "@/components/product/stock-badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
 
 interface ProductDetailProps {
   product: Product & {
@@ -199,11 +203,17 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
   return (
     <>
-      <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 min-w-0 max-w-full overflow-hidden">
         {/* Product Images */}
-        <div className="space-y-6">
-          <div className="rounded-2xl overflow-hidden border border-border/50 shadow-lg">
+        <div className="space-y-6 min-w-0 flex-1">
+          {/* Desktop: Original Gallery */}
+          <div className="hidden lg:block rounded-2xl overflow-hidden border border-border/50 shadow-lg">
             <AppwriteGallery images={product.images} productName={product.name} />
+          </div>
+          
+          {/* Mobile: New Gallery */}
+          <div className="lg:hidden">
+            <MobileProductGallery images={product.images} productName={product.name} />
           </div>
 
           {/* Product Tags */}
@@ -219,7 +229,22 @@ export function ProductDetail({ product }: ProductDetailProps) {
         </div>
 
         {/* Product Information */}
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0 flex-1 overflow-x-hidden">
+          {/* Mobile Trust Badges */}
+          <div className="lg:hidden grid grid-cols-3 gap-2 text-center">
+            <div className="flex flex-col items-center gap-1 p-2">
+              <Truck className="h-5 w-5 text-primary" />
+              <span className="text-xs text-muted-foreground">Free Shipping</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 p-2">
+              <Shield className="h-5 w-5 text-primary" />
+              <span className="text-xs text-muted-foreground">Secure Payment</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 p-2">
+              <RotateCcw className="h-5 w-5 text-primary" />
+              <span className="text-xs text-muted-foreground">Easy Returns</span>
+            </div>
+          </div>
           {/* Header */}
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-4">
@@ -268,33 +293,128 @@ export function ProductDetail({ product }: ProductDetailProps) {
             </div>
           </div>
 
-          {/* Pricing */}
-          <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl p-6 border border-primary/20">
-            <div className="space-y-3">
-              <div className="flex items-baseline gap-3 flex-wrap">
-                <span className="text-4xl lg:text-5xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  {settings?.currencySymbol || "$"}
-                  {activePrice.toFixed(2)}
-                </span>
+          {/* Mobile Add to Cart Section (shown above accordions) */}
+          <div className="lg:hidden">
+            {/* Pricing */}
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl p-4 border border-primary/20">
+              <div className="space-y-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-primary">
+                    {settings?.currencySymbol || "$"}
+                    {activePrice.toFixed(2)}
+                  </span>
+                  {hasDiscount && (
+                    <span className="text-sm text-muted-foreground line-through">
+                      {settings?.currencySymbol || "$"}
+                      {Number(product.comparePrice).toFixed(2)}
+                    </span>
+                  )}
+                </div>
                 {hasDiscount && (
-                    <>
-                      <span className="text-xl text-muted-foreground line-through font-medium">
-                        {settings?.currencySymbol || "$"}
-                        {Number(product.comparePrice).toFixed(2)}
-                      </span>
-                      <Badge variant="destructive" className="text-sm px-3 py-1 rounded-full animate-pulse">
-                        {discountPercentage}% OFF
-                      </Badge>
-                    </>
+                  <Badge variant="destructive" className="text-xs">
+                    {discountPercentage}% OFF
+                  </Badge>
                 )}
               </div>
-              {settings?.taxRate && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <CheckCircle className="h-4 w-4" />
-                    {t("product.taxIncluded")}
-                  </p>
-              )}
             </div>
+
+            {/* Stock Status */}
+            <div className="flex items-center justify-between">
+              <StockBadge
+                stock={activeStock}
+                lowStockThreshold={product.lowStockThreshold ?? undefined}
+                productId={product.id}
+                productName={variantDisplayName}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShare}
+                className="text-muted-foreground"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Variant Selection */}
+            {variants.length > 0 && (
+              <div className="space-y-2">
+                <Label className="font-semibold">Choose a variant</Label>
+                <Select
+                  value={selectedVariant?.id ?? ""}
+                  onValueChange={(val) => {
+                    setSelectedVariantId(val)
+                    setQuantity(1)
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select variant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {variants.map((variant: any) => {
+                      const attrs = variant.attributes || {}
+                      const attrLabel = Object.keys(attrs)
+                        .map((key) => `${key}: ${attrs[key]}`)
+                        .join(" • ")
+                      return (
+                        <SelectItem key={variant.id} value={variant.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{variant.name || "Variant"}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {attrLabel || "Attributes"}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Quantity & Add to Cart */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center border rounded-lg">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={decreaseQuantity}
+                  disabled={quantity <= 1}
+                  className="h-10 w-10 rounded-none"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <span className="w-12 text-center font-semibold">{quantity}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={increaseQuantity}
+                  disabled={activeStock <= quantity}
+                  className="h-10 w-10 rounded-none"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button
+                onClick={handleAddToCart}
+                disabled={isOutOfStock}
+                className="flex-1 h-[var(--mobile-touch-target)]"
+                size="lg"
+              >
+                {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+              </Button>
+            </div>
+
+            {/* Wishlist */}
+            <Button
+              variant="outline"
+              onClick={toggleWishlist}
+              disabled={wishlistLoading}
+              className="w-full h-[var(--mobile-touch-target)]"
+            >
+              <Heart className={cn("h-4 w-4 mr-2", inWishlist && "fill-red-500 text-red-500")} />
+              {inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+            </Button>
           </div>
 
           {/* Variant selection */}
@@ -347,33 +467,82 @@ export function ProductDetail({ product }: ProductDetailProps) {
             />
           </div>
 
-          {/* Description */}
-          <div className="space-y-3">
-            <h3 className="font-bold text-xl flex items-center gap-2">
-              <span className="w-1 h-6 bg-primary rounded-full"></span>
-              {t("product.description")}
-            </h3>
-            <div className="relative rounded-xl border border-border/50 bg-background/70 p-4">
-              <div className={hasLongDescription ? "max-h-40 overflow-hidden" : ""}>
-                <SafeHtml html={product.description} className="prose prose-sm max-w-none text-muted-foreground" />
-              </div>
-              {hasLongDescription && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
-              )}
-            </div>
-            {hasLongDescription && (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsDescriptionOpen(true)}>
-                  Show full description
-                </Button>
-              </div>
-            )}
+          {/* Mobile Accordions */}
+          <div className="lg:hidden">
+            <MobileAccordion>
+              {/* Description Accordion */}
+              <MobileAccordionItem title="Description" defaultOpen>
+                <div className="space-y-3">
+                  <SafeHtml html={product.description} className="prose prose-sm max-w-none text-muted-foreground" />
+                </div>
+              </MobileAccordionItem>
+
+              {/* Shipping & Returns Accordion */}
+              <MobileAccordionItem title="Shipping & Returns">
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <Truck className="h-4 w-4 text-primary mt-0.5" />
+                    <div>
+                      <p className="font-medium">Free Shipping</p>
+                      <p className="text-muted-foreground">On orders over $50</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <RotateCcw className="h-4 w-4 text-primary mt-0.5" />
+                    <div>
+                      <p className="font-medium">30-Day Returns</p>
+                      <p className="text-muted-foreground">Easy returns, no questions asked</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Shield className="h-4 w-4 text-primary mt-0.5" />
+                    <div>
+                      <p className="font-medium">Secure Payment</p>
+                      <p className="text-muted-foreground">SSL encrypted transactions</p>
+                    </div>
+                  </div>
+                </div>
+              </MobileAccordionItem>
+
+              {/* Reviews Accordion */}
+              <MobileAccordionItem title={`Reviews (${product.reviewCount || 0})`}>
+                <div className="space-y-4">
+                  {/* Rating Summary */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className="h-5 w-5"
+                          fill={star <= Math.round(product.averageRating || 0) ? "#facc15" : "none"}
+                          stroke={star <= Math.round(product.averageRating || 0) ? "#facc15" : "currentColor"}
+                        />
+                      ))}
+                    </div>
+                    <div>
+                      <span className="font-semibold">
+                        {product.averageRating ? product.averageRating.toFixed(1) : "0.0"}
+                      </span>
+                      <span className="text-sm text-muted-foreground ml-1">
+                        ({product.reviewCount || 0} reviews)
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Reviews List - Placeholder */}
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Reviews will be loaded here</p>
+                    <Button variant="outline" size="sm" className="mt-2">
+                      View All Reviews
+                    </Button>
+                  </div>
+                </div>
+              </MobileAccordionItem>
+            </MobileAccordion>
           </div>
 
-          <Separator className="my-6" />
-
-          {/* Quantity Selection */}
-          <div className="space-y-4">
+          {/* Desktop Quantity Selection & Actions */}
+          <div className="hidden lg:block space-y-4">
             <div className="space-y-3">
               <label className="font-semibold text-base flex items-center gap-2">
                 <span className="w-1 h-5 bg-primary rounded-full"></span>
@@ -443,8 +612,8 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
           <Separator className="my-6" />
 
-          {/* Features */}
-          <div className="space-y-4">
+          {/* Desktop Features */}
+          <div className="hidden lg:block space-y-4">
             <h3 className="font-bold text-xl flex items-center gap-2">
               <span className="w-1 h-6 bg-primary rounded-full"></span>
               {t("product.whyChoose")}
@@ -472,6 +641,51 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </div>
         </div>
       </div>
+      {/* Mobile Sticky Add to Cart Bar */}
+      <div className="lg:hidden">
+        <StickyActionBar position="bottom">
+          <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center border rounded-lg">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={decreaseQuantity}
+                disabled={quantity <= 1}
+                className="h-8 w-8 rounded-none"
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="w-8 text-center text-sm font-semibold">{quantity}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={increaseQuantity}
+                disabled={activeStock <= quantity}
+                className="h-8 w-8 rounded-none"
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+            <Button
+              onClick={handleAddToCart}
+              disabled={isOutOfStock}
+              className="flex-1 h-10 text-sm font-semibold"
+            >
+              {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+            </Button>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleWishlist}
+            disabled={wishlistLoading}
+            className="h-10 w-10"
+          >
+            <Heart className={cn("h-4 w-4", inWishlist && "fill-red-500 text-red-500")} />
+          </Button>
+        </StickyActionBar>
+      </div>
+
       <Dialog open={isDescriptionOpen} onOpenChange={setIsDescriptionOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>

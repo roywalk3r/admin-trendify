@@ -74,7 +74,7 @@ export default function CheckoutSection() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 md:space-y-6">
       <AddressPicker selectedId={addressId} onChange={setAddressId} />
       
       <CouponInput 
@@ -83,16 +83,43 @@ export default function CheckoutSection() {
         onCouponRemoved={handleCouponRemoved}
       />
       
-      <div className="rounded-md border p-4 space-y-3">
+      <div className="rounded-md border p-4 sm:p-6 space-y-3 sm:space-y-4">
         <DeliveryOptions value={delivery} onChange={setDelivery} />
-        <div className="text-sm text-muted-foreground">{t("checkout.shippingFee")}: <span className="font-medium text-foreground">{format(Number(shippingFee || 0))}</span></div>
-        {discount > 0 && (
-          <div className="text-sm text-green-600">Discount: <span className="font-medium">-{format(Number(discount || 0))}</span></div>
-        )}
-        <div className="text-sm text-muted-foreground">{t("checkout.gatewayFee")}: <span className="font-medium text-foreground">{format(Number(gatewayFee || 0))}</span></div>
-        <div className="flex justify-between text-sm pt-1 border-t mt-1"><span className="text-muted-foreground">{t("checkout.estimatedTotal")}</span><span className="font-medium text-foreground">{format(Number(estimatedTotal || 0))}</span></div>
+        
+        {/* Mobile-friendly price breakdown */}
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Subtotal</span>
+            <span className="font-medium">{format(Number(subtotal() || 0))}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">{t("checkout.shippingFee")}</span>
+            <span className="font-medium">{format(Number(shippingFee || 0))}</span>
+          </div>
+          {discount > 0 && (
+            <div className="flex justify-between items-center text-green-600">
+              <span>Discount</span>
+              <span className="font-medium">-{format(Number(discount || 0))}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">{t("checkout.gatewayFee")}</span>
+            <span className="font-medium">{format(Number(gatewayFee || 0))}</span>
+          </div>
+          <div className="flex justify-between items-center pt-2 border-t">
+            <span className="font-semibold">{t("checkout.estimatedTotal")}</span>
+            <span className="font-bold text-lg">{format(Number(estimatedTotal || 0))}</span>
+          </div>
+        </div>
       </div>
-      <CheckoutButton addressId={addressId || undefined} delivery={delivery} shippingFee={shippingFee} couponCode={couponCode} discount={discount} />
+      
+      <CheckoutButton 
+        addressId={addressId || undefined} 
+        delivery={delivery} 
+        shippingFee={shippingFee} 
+        couponCode={couponCode} 
+        discount={discount} 
+      />
     </div>
   )
 }

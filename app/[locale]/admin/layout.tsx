@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { UserRole } from "@/lib/auth/permissions";
+import AdminLayoutClient from "./layout-client";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -20,8 +21,6 @@ export const metadata: Metadata = {
   title: "Trendify | Admin",
   description: "Manage Your store front",
 };
-
-
 
 export default async function RootLayout({
   children,
@@ -47,20 +46,5 @@ export default async function RootLayout({
     redirect(`/${locale}`);
   }
 
-  return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full">
-          <AdminSidebar />
-          <SidebarInset className="flex-1">
-            <div className="container p-6 mx-auto">{children}</div>
-          </SidebarInset>
-          <div className="fixed bottom-6 right-6">
-            <GeminiPopover />
-          </div>
-        </div>
-        <Toaster />
-      </SidebarProvider>
-    </ThemeProvider>
-  );
+  return <AdminLayoutClient>{children}</AdminLayoutClient>;
 }

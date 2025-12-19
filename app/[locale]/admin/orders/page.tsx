@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Loader2, Filter, X } from "lucide-react";
 import { toast } from "sonner";
+import { AdminCardSkeleton, AdminTableSkeleton } from "@/components/admin/admin-skeleton";
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -262,54 +263,104 @@ export default function OrdersPage() {
         <CardHeader>
           <CardTitle>All Orders</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {loading ? (
-            <div className="flex justify-center items-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <>
+              <div className="hidden md:block p-4">
+                <AdminTableSkeleton rows={10} />
+              </div>
+              <div className="md:hidden">
+                <AdminCardSkeleton cards={6} />
+              </div>
+            </>
           ) : orders.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No orders found</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block p-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order ID</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">
+                          #{order.id.substring(0, 8)}
+                        </TableCell>
+                        <TableCell>{formatDate(order.createdAt)}</TableCell>
+                        <TableCell>{order.user?.email || "N/A"}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(order.status)}>
+                            {order.status.charAt(0).toUpperCase() +
+                              order.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={getPaymentStatusColor(order.paymentStatus)}
+                          >
+                            {order.paymentStatus.charAt(0).toUpperCase() +
+                              order.paymentStatus.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(Number(order.totalAmount))}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/admin/orders/${order.id}`)}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-3 p-4">
                 {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">
-                      #{order.id.substring(0, 8)}
-                    </TableCell>
-                    <TableCell>{formatDate(order.createdAt)}</TableCell>
-                    <TableCell>{order.user?.email || "N/A"}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(order.status)}>
-                        {order.status.charAt(0).toUpperCase() +
-                          order.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={getPaymentStatusColor(order.paymentStatus)}
-                      >
-                        {order.paymentStatus.charAt(0).toUpperCase() +
-                          order.paymentStatus.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(Number(order.totalAmount))}
-                    </TableCell>
-                    <TableCell className="text-right">
+                  <div key={order.id} className="rounded-lg border p-4 space-y-3 bg-card">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-semibold">#{order.id.substring(0, 8)}</div>
+                        <div className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Badge className={getStatusColor(order.status)}>
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </Badge>
+                        <Badge className={getPaymentStatusColor(order.paymentStatus)}>
+                          {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="text-sm">
+                      <span className="font-medium">Customer: </span>
+                      <span>{order.user?.email || "N/A"}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="text-base font-semibold">
+                        {formatCurrency(Number(order.totalAmount))}
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
@@ -317,11 +368,11 @@ export default function OrdersPage() {
                       >
                         View
                       </Button>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

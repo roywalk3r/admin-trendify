@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
       "/api/mobile/v1/wishlist": { get: { summary: "Get wishlist" }, post: { summary: "Add to wishlist" }, delete: { summary: "Remove from wishlist" } },
       "/api/mobile/v1/orders": { get: { summary: "List orders" }, post: { summary: "Create order" } },
       "/api/mobile/v1/orders/{id}": { get: { summary: "Get order by id" } },
+      "/api/mobile/v1/coupons/validate": { get: { summary: "Validate coupon and compute discount" } },
       "/api/mobile/v1/returns": { get: { summary: "List returns" }, post: { summary: "Create return" } },
       "/api/mobile/v1/returns/{id}": { get: { summary: "Get return by id" } },
       "/api/mobile/v1/reviews": { get: { summary: "List reviews" }, post: { summary: "Create review" } },
@@ -30,6 +31,9 @@ export async function GET(req: NextRequest) {
       "/api/mobile/v1/stock-alerts": { post: { summary: "Subscribe stock alerts" } },
       "/api/mobile/v1/payments/init": { post: { summary: "Initialize payment" } },
       "/api/mobile/v1/payments/verify": { post: { summary: "Verify payment" } },
+      "/api/mobile/v1/payments/transactions": { get: { summary: "List payment transactions" } },
+      "/api/mobile/v1/delivery/cities": { get: { summary: "List active delivery cities" } },
+      "/api/mobile/v1/delivery/cities/{id}/pickup-locations": { get: { summary: "List active pickup locations for city" } },
     },
   }
   const res = NextResponse.json(spec, { status: 200 })
