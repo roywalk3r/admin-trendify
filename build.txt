@@ -9,3 +9,219 @@
      · optimizePackageImports
 
    Creating an optimized production build ...
+ ✓ Compiled successfully in 2.9min
+   Running TypeScript ...
+   Collecting page data using 5 workers ...
+   Generating static pages using 5 workers (0/88) ...
+   Generating static pages using 5 workers (22/88) 
+   Generating static pages using 5 workers (44/88) 
+   Generating static pages using 5 workers (66/88) 
+ ✓ Generating static pages using 5 workers (88/88) in 3.5s
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)
+┌ ○ /_not-found
+├ ƒ /[locale]
+├ ƒ /[locale]/accessories
+├ ƒ /[locale]/admin
+├ ƒ /[locale]/admin/abandoned-carts
+├ ƒ /[locale]/admin/ai-dashboard
+├ ƒ /[locale]/admin/analytics
+├ ƒ /[locale]/admin/analytics/search
+├ ƒ /[locale]/admin/audit
+├ ƒ /[locale]/admin/categories
+├ ƒ /[locale]/admin/coupons
+├ ƒ /[locale]/admin/debug
+├ ƒ /[locale]/admin/debug/admin-debug
+├ ƒ /[locale]/admin/debug/all
+├ ƒ /[locale]/admin/debug/products
+├ ƒ /[locale]/admin/delivery
+├ ƒ /[locale]/admin/delivery-cities
+├ ƒ /[locale]/admin/drivers
+├ ƒ /[locale]/admin/guests
+├ ƒ /[locale]/admin/hero
+├ ƒ /[locale]/admin/media
+├ ƒ /[locale]/admin/orders
+├ ƒ /[locale]/admin/orders/[id]
+├ ƒ /[locale]/admin/products
+├ ƒ /[locale]/admin/products/[id]
+├ ƒ /[locale]/admin/products/[id]/edit
+├ ƒ /[locale]/admin/products/low-stock
+├ ƒ /[locale]/admin/products/new
+├ ƒ /[locale]/admin/refunds
+├ ƒ /[locale]/admin/returns
+├ ƒ /[locale]/admin/reviews
+├ ƒ /[locale]/admin/seed
+├ ƒ /[locale]/admin/settings
+├ ƒ /[locale]/admin/stock-alerts
+├ ƒ /[locale]/admin/users
+├ ƒ /[locale]/admin/users/[id]
+├ ƒ /[locale]/categories
+├ ƒ /[locale]/categories/[slug]
+├ ƒ /[locale]/checkout
+├ ƒ /[locale]/checkout/confirm
+├ ƒ /[locale]/checkout/failed
+├ ƒ /[locale]/checkout/success
+├ ƒ /[locale]/cookie-policy
+├ ƒ /[locale]/men
+├ ƒ /[locale]/new-arrivals
+├ ƒ /[locale]/orders/[orderNumber]
+├ ƒ /[locale]/orders/[orderNumber]/track
+├ ƒ /[locale]/privacy-policy
+├ ƒ /[locale]/products
+├ ƒ /[locale]/products/[id]
+├ ƒ /[locale]/profile
+├ ƒ /[locale]/sale
+├ ƒ /[locale]/search
+├ ƒ /[locale]/sign-in/[[...sign-in]]
+├ ƒ /[locale]/terms-of-service
+├ ƒ /[locale]/user-profile/[[...user-profile]]
+├ ƒ /[locale]/women
+├ ○ /admin/reviews
+├ ƒ /api/admin/abandoned-carts
+├ ƒ /api/admin/abandoned-carts/[id]
+├ ƒ /api/admin/ai/inventory-analysis
+├ ƒ /api/admin/ai/pricing-strategy
+├ ƒ /api/admin/ai/product-description
+├ ƒ /api/admin/ai/review-moderation
+├ ƒ /api/admin/ai/seo-optimization
+├ ƒ /api/admin/analytics/ai-usage
+├ ƒ /api/admin/audit
+├ ƒ /api/admin/audit/export
+├ ƒ /api/admin/bulk
+├ ƒ /api/admin/chat
+├ ƒ /api/admin/check
+├ ƒ /api/admin/coupons
+├ ƒ /api/admin/coupons/[id]
+├ ƒ /api/admin/dashboard
+├ ƒ /api/admin/data/dashboard-stats
+├ ƒ /api/admin/debug
+├ ƒ /api/admin/delivery-cities
+├ ƒ /api/admin/delivery-cities/[id]
+├ ƒ /api/admin/delivery/cities
+├ ƒ /api/admin/delivery/cities/[id]
+├ ƒ /api/admin/delivery/locations
+├ ƒ /api/admin/delivery/locations/[id]
+├ ƒ /api/admin/drivers
+├ ƒ /api/admin/drivers/[id]
+├ ƒ /api/admin/export
+├ ƒ /api/admin/fix-schema
+├ ƒ /api/admin/guests
+├ ƒ /api/admin/guests/[id]
+├ ƒ /api/admin/hero
+├ ƒ /api/admin/orders
+├ ƒ /api/admin/orders/[id]
+├ ƒ /api/admin/products
+├ ƒ /api/admin/products/[id]
+├ ƒ /api/admin/products/bulk
+├ ƒ /api/admin/refunds
+├ ƒ /api/admin/refunds/[id]
+├ ƒ /api/admin/reports/low-stock
+├ ƒ /api/admin/returns
+├ ƒ /api/admin/returns/[id]
+├ ƒ /api/admin/reviews
+├ ƒ /api/admin/reviews/[id]
+├ ƒ /api/admin/reviews/[id]/approve
+├ ƒ /api/admin/reviews/pending
+├ ƒ /api/admin/seed
+├ ƒ /api/admin/settings
+├ ƒ /api/admin/stock-alerts
+├ ƒ /api/admin/stock-alerts/trigger
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[id]
+├ ƒ /api/analytics/product-view
+├ ƒ /api/analytics/search
+├ ƒ /api/cart
+├ ƒ /api/cart/sync
+├ ƒ /api/categories
+├ ƒ /api/categories/[id]
+├ ƒ /api/checkout/guest
+├ ƒ /api/coupons/validate
+├ ƒ /api/cron/abandoned-carts
+├ ƒ /api/cron/release-stock
+├ ƒ /api/hero
+├ ƒ /api/i18n/preseed
+├ ƒ /api/i18n/status
+├ ƒ /api/i18n/translate
+├ ƒ /api/mobile/v1/auth/push-token
+├ ƒ /api/mobile/v1/auth/session
+├ ƒ /api/mobile/v1/cart
+├ ƒ /api/mobile/v1/categories
+├ ƒ /api/mobile/v1/checkout/guest
+├ ƒ /api/mobile/v1/coupons/validate
+├ ƒ /api/mobile/v1/delivery/cities
+├ ƒ /api/mobile/v1/delivery/cities/[id]/pickup-locations
+├ ƒ /api/mobile/v1/hero
+├ ƒ /api/mobile/v1/newsletter
+├ ƒ /api/mobile/v1/openapi.json
+├ ƒ /api/mobile/v1/orders
+├ ƒ /api/mobile/v1/orders/[id]
+├ ƒ /api/mobile/v1/payments/init
+├ ƒ /api/mobile/v1/payments/transactions
+├ ƒ /api/mobile/v1/payments/verify
+├ ƒ /api/mobile/v1/products
+├ ƒ /api/mobile/v1/products/[id]
+├ ƒ /api/mobile/v1/profile
+├ ƒ /api/mobile/v1/profile/addresses
+├ ƒ /api/mobile/v1/profile/addresses/[id]
+├ ƒ /api/mobile/v1/returns
+├ ƒ /api/mobile/v1/returns/[id]
+├ ƒ /api/mobile/v1/reviews
+├ ƒ /api/mobile/v1/reviews/[id]
+├ ƒ /api/mobile/v1/search
+├ ƒ /api/mobile/v1/shipping/fee
+├ ƒ /api/mobile/v1/stock-alerts
+├ ƒ /api/mobile/v1/wishlist
+├ ƒ /api/my-orders
+├ ƒ /api/my-orders/[orderNumber]
+├ ƒ /api/my-orders/by-id/[id]
+├ ƒ /api/newsletter
+├ ƒ /api/openapi
+├ ƒ /api/orders
+├ ƒ /api/orders/[id]
+├ ƒ /api/orders/[id]/status
+├ ƒ /api/payments
+├ ƒ /api/payments/paystack/init
+├ ƒ /api/payments/verify
+├ ƒ /api/paystack/initialize
+├ ƒ /api/paystack/verify
+├ ƒ /api/products
+├ ƒ /api/products/[id]
+├ ƒ /api/products/search
+├ ƒ /api/profile
+├ ƒ /api/profile/addresses
+├ ƒ /api/profile/addresses/[id]
+├ ƒ /api/public/settings
+├ ƒ /api/recommendations
+├ ƒ /api/recommendations/trending
+├ ƒ /api/returns
+├ ƒ /api/returns/[id]
+├ ƒ /api/reviews
+├ ƒ /api/reviews/[id]
+├ ƒ /api/reviews/[id]/helpful
+├ ƒ /api/sale
+├ ƒ /api/search/assist
+├ ƒ /api/search/query
+├ ƒ /api/search/suggest
+├ ƒ /api/search/suggestions
+├ ƒ /api/search/trending
+├ ƒ /api/settings
+├ ƒ /api/shipping/fee
+├ ƒ /api/shipping/options
+├ ƒ /api/stock-alerts
+├ ƒ /api/upload
+├ ƒ /api/users
+├ ƒ /api/webhooks/clerk
+├ ƒ /api/webhooks/paystack
+├ ƒ /api/wishlist
+├ ƒ /editor-00
+├ ○ /robots.txt
+└ ○ /sitemap.xml
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

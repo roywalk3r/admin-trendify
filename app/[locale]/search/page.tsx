@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Star, Search } from "lucide-react"
+import { useCurrency } from "@/lib/contexts/settings-context"
 
 export default function SearchPage() {
   return (
@@ -14,6 +15,7 @@ export default function SearchPage() {
 }
 
 function SearchContent() {
+  const { format } = useCurrency()
   const params = useSearchParams()
   const router = useRouter()
   const initialQ = params.get("q") || ""
@@ -201,7 +203,7 @@ function SearchContent() {
                       <Image src={p.image} alt={p.name} width={96} height={96} className="rounded-md object-cover" />
                       <div className="flex-1">
                         <div className="font-medium group-hover:underline line-clamp-1">{p.name}</div>
-                        <div className="text-ascent font-semibold">${p.price}</div>
+                        <div className="text-ascent font-semibold">{format(p.price)}</div>
                         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                           {p.category && <span className="px-2 py-0.5 rounded-full bg-muted-foreground/10">{p.category}</span>}
                           <span className="flex items-center gap-1">

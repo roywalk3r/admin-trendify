@@ -28,8 +28,21 @@ export async function GET(request: NextRequest) {
         filename = `orders-export-${new Date().toISOString().split("T")[0]}`
         break
       case "users":
+      case "customers":
         data = await DataExporter.exportUsers()
-        filename = `users-export-${new Date().toISOString().split("T")[0]}`
+        filename = `customers-export-${new Date().toISOString().split("T")[0]}`
+        break
+      case "inventory":
+        data = await DataExporter.exportInventory()
+        filename = `inventory-export-${new Date().toISOString().split("T")[0]}`
+        break
+      case "low-stock":
+        data = await DataExporter.exportLowStock()
+        filename = `low-stock-alert-${new Date().toISOString().split("T")[0]}`
+        break
+      case "revenue":
+        data = await DataExporter.exportRevenue({ startDate: searchParams.get('startDate'), endDate: searchParams.get('endDate') })
+        filename = `revenue-report-${new Date().toISOString().split("T")[0]}`
         break
       default:
         return apiError("Invalid export type", 400)

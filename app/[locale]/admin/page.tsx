@@ -12,6 +12,7 @@ import AdminDashboardStats from "@/components/admin/dashboard-stats"
 import AdminRecentOrders from "@/components/admin/recent-orders"
 import AdminTopProducts from "@/components/admin/top-products"
 import AdminSalesChart from "@/components/admin/sales-chart"
+import AnalyticsContent, { AnalyticsLoading } from "@/components/admin/analytics-content"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -133,111 +134,9 @@ export default function AdminDashboardPage() {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">$45,231.89</div>
-                <p className="text-xs text-muted-foreground">
-                  +20.1% from last month
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Orders</CardTitle>
-                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">+2,350</div>
-                <p className="text-xs text-muted-foreground">
-                  +180 from last month
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">+573</div>
-                <p className="text-xs text-muted-foreground">
-                  +19% from last month
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">3.2%</div>
-                <p className="text-xs text-muted-foreground">
-                  +0.5% from last month
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sales Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
-                  <AdminSalesChart />
-                </Suspense>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Products</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
-                  <AdminTopProducts />
-                </Suspense>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Category Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">Electronics</p>
-                    <p className="text-xs text-muted-foreground">234 sales</p>
-                  </div>
-                  <div className="text-sm font-medium">$12,345</div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">Clothing</p>
-                    <p className="text-xs text-muted-foreground">189 sales</p>
-                  </div>
-                  <div className="text-sm font-medium">$8,920</div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">Home & Kitchen</p>
-                    <p className="text-xs text-muted-foreground">156 sales</p>
-                  </div>
-                  <div className="text-sm font-medium">$6,780</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <Suspense fallback={<AnalyticsLoading />}>
+            <AnalyticsContent />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-4">

@@ -5,11 +5,12 @@ import { useApi } from "@/lib/hooks/use-api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Users, Package, ShoppingCart, DollarSign } from "lucide-react"
+import { useCurrency } from "@/lib/contexts/settings-context"
 
 export default function AdminDashboardStats() {
   const { data, isLoading } = useApi<any>("/api/admin/dashboard")
   const [mounted, setMounted] = useState(false)
-
+  const { format } = useCurrency();
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -24,8 +25,6 @@ export default function AdminDashboardStats() {
     totalOrders: 0,
     totalRevenue: 0,
   }
-  console.log("stats", stats)
-  console.log("data", data)
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -45,7 +44,7 @@ export default function AdminDashboardStats() {
           <Package className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.totalProducts}</div>
+          <div className="text-2xl font-bold">{stats?.totalProducts}</div>
           <p className="text-xs text-muted-foreground">Products available in store</p>
         </CardContent>
       </Card>
@@ -65,7 +64,7 @@ export default function AdminDashboardStats() {
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">${Number(stats?.totalRevenue).toFixed(2)}</div>
+          <div className="text-2xl font-bold">{format(Number(stats?.totalRevenue ?? 0))}</div>
           <p className="text-xs text-muted-foreground">Revenue from all orders</p>
         </CardContent>
       </Card>

@@ -108,6 +108,62 @@ export default function ProductsGrid({ categorySlug, categoryId }: ProductsGridP
     }
   }
 
+  // Load real filter data
+  useEffect(() => {
+    const loadFilters = async () => {
+      try {
+        const res = await fetch('/api/filters')
+        if (res.ok) {
+          const data = await res.json()
+          const filters = [
+            {
+              id: "categories",
+              label: "Categories",
+              type: "checkbox" as const,
+              options: data.data.categories || [],
+            },
+            {
+              id: "price",
+              label: "Price Range",
+              type: "range" as const,
+              min: data.data.priceRange?.min || 0,
+              max: data.data.priceRange?.max || 1000,
+              step: 10,
+            },
+            {
+              id: "sizes",
+              label: "Sizes",
+              type: "checkbox" as const,
+              options: data.data.sizes || [],
+            },
+            {
+              id: "colors",
+              label: "Colors",
+              type: "color" as const,
+              options: data.data.colors || [],
+            },
+            {
+              id: "brands",
+              label: "Brands",
+              type: "checkbox" as const,
+              options: data.data.brands || [],
+            },
+            {
+              id: "rating",
+              label: "Rating",
+              type: "checkbox" as const,
+              options: data.data.ratings || [],
+            },
+          ]
+          setMockFilters(filters)
+        }
+      } catch (error) {
+        console.error('Failed to load filters:', error)
+      }
+    }
+    loadFilters()
+  }, [])
+
   // initial + on sort change
   useEffect(() => {
     setItems([])
@@ -165,26 +221,7 @@ export default function ProductsGrid({ categorySlug, categoryId }: ProductsGridP
   }
 
   // Mock filter data - replace with actual API call
-  const mockFilters = [
-    {
-      id: "categories",
-      label: "Categories",
-      type: "checkbox" as const,
-      options: [
-        { id: "electronics", label: "Electronics", count: 45 },
-        { id: "clothing", label: "Clothing", count: 32 },
-        { id: "accessories", label: "Accessories", count: 18 },
-      ],
-    },
-    {
-      id: "price",
-      label: "Price Range",
-      type: "range" as const,
-      min: 0,
-      max: 500,
-      step: 10,
-    },
-  ]
+  const [mockFilters, setMockFilters] = useState<any[]>([])
 
   return (
     <div className="relative">
