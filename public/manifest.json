@@ -537,7 +537,7 @@
       "label": "Mobile view of Trendify storefront"
     },
     {
-      "src": "/screenshot-desktop.png", 
+      "src": "/desktop_screenshot.png", 
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",

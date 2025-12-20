@@ -44,6 +44,16 @@ function getRateLimitConfig(pathname: string) {
 export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl
 
+  // Allow PWA assets through without locale redirects
+  if (
+    pathname === "/manifest.json" ||
+    pathname === "/sw.js" ||
+    pathname === "/sw.js.map" ||
+    pathname.startsWith("/workbox-")
+  ) {
+    return NextResponse.next()
+  }
+
   // Normalize dev host so browser origin matches Appwrite CORS (allows localhost only)
   if (req.nextUrl.hostname === "127.0.0.1" || req.nextUrl.hostname === "::1") {
     const url = req.nextUrl.clone()

@@ -8,6 +8,7 @@ import { CookieConsentBanner } from "@/components/cookie-consent"
 import { Analytics } from "@/components/analytics"
 import { Toaster } from "@/components/ui/toaster"
 import React from "react"
+import type { Metadata } from "next"
 
 // Define the expected type for the resolved params
 // This MUST match what Next.js's LayoutProps<"/[locale]"> expects
@@ -19,6 +20,17 @@ interface LocaleParams {
 interface LayoutProps {
   children: React.ReactNode;
   params: Promise<LocaleParams>; // params is a Promise
+}
+
+export const metadata: Metadata = {
+  applicationName: "Trendify",
+  icons: {
+    apple: "/apple-touch-icon.png",
+    icon: [
+      { url: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
 }
 
 export default async function LocaleLayout({ children, params }: LayoutProps) {
