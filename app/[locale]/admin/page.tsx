@@ -12,7 +12,7 @@ import AdminDashboardStats from "@/components/admin/dashboard-stats"
 import AdminRecentOrders from "@/components/admin/recent-orders"
 import AdminTopProducts from "@/components/admin/top-products"
 import AdminSalesChart from "@/components/admin/sales-chart"
-import AnalyticsContent, { AnalyticsLoading } from "@/components/admin/analytics-content"
+// import AnalyticsContent, { AnalyticsLoading } from "@/components/admin/analytics-content"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -92,7 +92,7 @@ export default function AdminDashboardPage() {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          {/* <TabsTrigger value="analytics">Analytics</TabsTrigger> */}
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
 
@@ -133,11 +133,11 @@ export default function AdminDashboardPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-4">
+        {/* <TabsContent value="analytics" className="space-y-4">
           <Suspense fallback={<AnalyticsLoading />}>
             <AnalyticsContent />
           </Suspense>
-        </TabsContent>
+        </TabsContent> */}
 
         <TabsContent value="reports" className="space-y-4">
           <Card>

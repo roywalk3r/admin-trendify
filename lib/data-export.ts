@@ -5,31 +5,30 @@ export class DataExporter {
   static async exportProducts(filters?: any) {
     const products = await prisma.product.findMany({
       where: {
-        status: { not: 'deleted' },
         ...filters,
       },
       include: {
         category: true,
         reviews: {
-          where: { approved: true }
+          where: { isApproved: true }
         },
-        items: {
-          where: {
-            order: {
-              status: { not: 'cancelled' }
-            }
-          },
+        orderItems: {
           select: {
             quantity: true,
-            price: true
+            unitPrice: true,
+            totalPrice: true,
+            order: {
+              select: { status: true }
+            }
           }
         }
       },
     })
 
     return products.map((product) => {
-      const totalSold = product.items.reduce((sum, item) => sum + item.quantity, 0)
-      const totalRevenue = product.items.reduce((sum, item) => sum + (item.quantity * Number(item.price)), 0)
+      const filteredItems = product.orderItems.filter((item) => item.order?.status !== 'canceled')
+      const totalSold = filteredItems.reduce((sum, item) => sum + item.quantity, 0)
+      const totalRevenue = filteredItems.reduce((sum, item) => sum + Number(item.totalPrice ?? 0), 0)
       const avgRating = product.reviews.length > 0
         ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
         : 0
@@ -39,8 +38,9 @@ export class DataExporter {
         "Name": product.name,
         "SKU": product.sku || "N/A",
         "Category": product.category?.name || "N/A",
-        "Price": product.price,
-        "Original Price": product.originalPrice || "N/A",
+        "Price": Number(product.price),
+        "Compare Price": product.comparePrice ? Number(product.comparePrice) : null,
+        "Cost Price": product.costPrice ? Number(product.costPrice) : null,
         "Stock": product.stock,
         "Status": product.status,
         "Total Sold": totalSold,
@@ -63,18 +63,8 @@ export class DataExporter {
             name: true
           }
         },
-        items: {
-          include: {
-            product: {
-              select: {
-                name: true,
-                sku: true
-              }
-            }
-          }
-        },
+        orderItems: true,
         shippingAddress: true,
-        billingAddress: true
       },
     })
 
@@ -86,12 +76,11 @@ export class DataExporter {
       "Status": order.status,
       "Payment Status": order.paymentStatus,
       "Subtotal": order.subtotal,
-      "Shipping Fee": order.shippingFee,
+      "Shipping": order.shipping,
       "Tax": order.tax,
-      "Total": order.total,
-      "Items Count": order.items.length,
+      "Total": order.totalAmount,
+      "Items Count": order.orderItems.length,
       "Shipping Address": `${order.shippingAddress?.street || ''}, ${order.shippingAddress?.city || ''}, ${order.shippingAddress?.country || ''}`,
-      "Billing Address": `${order.billingAddress?.street || ''}, ${order.billingAddress?.city || ''}, ${order.billingAddress?.country || ''}`
     }))
   }
 
@@ -103,21 +92,21 @@ export class DataExporter {
       include: {
         orders: {
           where: {
-            status: { not: 'cancelled' }
+            status: { not: 'canceled' }
           }
         },
         reviews: {
-          where: { approved: true }
+          where: { isApproved: true }
         },
         wishlist: {
-          select: { id: true }
+          include: { items: true }
         }
       },
     })
 
     return users.map((user) => {
       const totalOrders = user.orders.length
-      const totalSpent = user.orders.reduce((sum, order) => sum + Number(order.total), 0)
+      const totalSpent = user.orders.reduce((sum, order) => sum + Number(order.totalAmount), 0)
       const avgOrderValue = totalOrders > 0 ? totalSpent / totalOrders : 0
       const avgRating = user.reviews.length > 0
         ? user.reviews.reduce((sum, r) => sum + r.rating, 0) / user.reviews.length
@@ -135,7 +124,7 @@ export class DataExporter {
         "Average Order Value": avgOrderValue,
         "Reviews Count": user.reviews.length,
         "Average Rating": Number(avgRating.toFixed(2)),
-        "Wishlist Items": user.wishlist.length,
+        "Wishlist Items": user.wishlist?.items?.length ?? 0,
         "Status": user.status || "active"
       }
     })
@@ -158,10 +147,10 @@ export class DataExporter {
         },
         createdAt: true,
         updatedAt: true,
-        items: {
+        orderItems: {
           where: {
             order: {
-              status: { not: 'cancelled' }
+              status: { not: 'canceled' }
             }
           },
           select: {
@@ -176,7 +165,7 @@ export class DataExporter {
     })
 
     return products.map((product) => {
-      const lastSale = product.items[0]
+      const lastSale = product.orderItems[0]
       const daysSinceLastSale = lastSale
         ? Math.floor((new Date().getTime() - lastSale.createdAt.getTime()) / (1000 * 60 * 60 * 24))
         : null
@@ -187,7 +176,7 @@ export class DataExporter {
         "SKU": product.sku || "N/A",
         "Category": product.category?.name || "N/A",
         "Current Stock": product.stock,
-        "Price": product.price,
+        "Price": Number(product.price),
         "Status": product.status,
         "Last Sale Date": lastSale ? format(lastSale.createdAt, "yyyy-MM-dd") : "Never",
         "Days Since Last Sale": daysSinceLastSale || "N/A",
@@ -219,10 +208,10 @@ export class DataExporter {
             name: true
           }
         },
-        items: {
+        orderItems: {
           where: {
             order: {
-              status: { not: 'cancelled' }
+              status: { not: 'canceled' }
             },
             createdAt: {
               gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
@@ -238,7 +227,7 @@ export class DataExporter {
     })
 
     return products.map((product) => {
-      const recentSales = product.items.reduce((sum, item) => sum + item.quantity, 0)
+      const recentSales = product.orderItems.reduce((sum, item) => sum + item.quantity, 0)
       const avgDailySales = recentSales / 30
       const daysUntilOutOfStock = avgDailySales > 0 && product.stock > 0
         ? Math.floor(product.stock / avgDailySales)
@@ -264,22 +253,22 @@ export class DataExporter {
     const { startDate, endDate } = filters || {}
     const orders = await prisma.order.findMany({
       where: {
-        status: { not: 'cancelled' },
+        status: { not: 'canceled' },
         ...(startDate && { createdAt: { gte: new Date(startDate) } }),
         ...(endDate && { createdAt: { lte: new Date(endDate) } })
       },
       select: {
         createdAt: true,
-        total: true,
+        totalAmount: true,
         subtotal: true,
-        shippingFee: true,
+        shipping: true,
         tax: true,
         status: true,
         paymentStatus: true,
-        items: {
+        orderItems: {
           select: {
             quantity: true,
-            price: true
+            totalPrice: true
           }
         }
       },
@@ -308,10 +297,10 @@ export class DataExporter {
       const dayData = revenueByDate.get(date)!
       dayData["Orders Count"] += 1
       dayData["Gross Revenue"] += Number(order.subtotal)
-      dayData["Shipping Revenue"] += Number(order.shippingFee || 0)
+      dayData["Shipping Revenue"] += Number(order.shipping || 0)
       dayData["Tax Revenue"] += Number(order.tax || 0)
-      dayData["Net Revenue"] += Number(order.total)
-      dayData["Items Sold"] += order.items.reduce((sum, item) => sum + item.quantity, 0)
+      dayData["Net Revenue"] += Number(order.totalAmount)
+      dayData["Items Sold"] += order.orderItems.reduce((sum, item) => sum + item.quantity, 0)
     })
 
     // Calculate AOV for each day

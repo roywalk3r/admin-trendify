@@ -28,17 +28,17 @@ export async function GET(req: NextRequest) {
         orders: {
           where: {
             createdAt: { gte: from, lte: to },
-            status: { not: "cancelled" }
+            status: { not: "canceled" }
           },
           select: {
             id: true,
-            total: true,
+            totalAmount: true,
             createdAt: true,
             status: true,
-            items: {
+            orderItems: {
               select: {
                 quantity: true,
-                price: true
+                totalPrice: true,
               }
             }
           }
@@ -47,14 +47,15 @@ export async function GET(req: NextRequest) {
           select: {
             id: true,
             rating: true,
-            approved: true,
+            isApproved: true,
             createdAt: true
           }
         },
         wishlist: {
           select: {
             id: true,
-            createdAt: true
+            createdAt: true,
+            items: true
           }
         }
       },
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest) {
 
       // Customer activity
       const orderCount = customer.orders.length
-      const customerRevenue = customer.orders.reduce((sum, order) => sum + Number(order.total), 0)
+      const customerRevenue = customer.orders.reduce((sum, order) => sum + Number(order.totalAmount ?? 0), 0)
       
       totalOrders += orderCount
       totalRevenue += customerRevenue
@@ -117,7 +118,7 @@ export async function GET(req: NextRequest) {
       customer.orders.forEach(order => {
         const orderDay = order.createdAt.toISOString().slice(0, 10)
         ordersByDay.set(orderDay, (ordersByDay.get(orderDay) || 0) + 1)
-        revenueByDay.set(orderDay, (revenueByDay.get(orderDay) || 0) + Number(order.total))
+        revenueByDay.set(orderDay, (revenueByDay.get(orderDay) || 0) + Number(order.totalAmount ?? 0))
       })
 
       // Top customers
@@ -201,9 +202,9 @@ export async function GET(req: NextRequest) {
         signUpDate: c.createdAt,
         lastLogin: c.lastLoginAt,
         ordersCount: c.orders.length,
-        totalSpent: c.orders.reduce((sum, o) => sum + Number(o.total), 0),
-        reviewsCount: c.reviews.filter(r => r.approved).length,
-        wishlistItems: c.wishlist.length
+        totalSpent: c.orders.reduce((sum, o) => sum + Number(o.totalAmount ?? 0), 0),
+        reviewsCount: c.reviews.filter(r => r.isApproved).length,
+        wishlistItems: c.wishlist?.items?.length ?? 0
       }))
 
     return createApiResponse({

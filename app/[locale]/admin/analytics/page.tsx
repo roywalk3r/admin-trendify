@@ -4,8 +4,10 @@ import { useState } from "react"
 import { useApi } from "@/lib/hooks/use-api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, Users, ShoppingBag, DollarSign } from "lucide-react"
+import { useCurrency } from "@/lib/contexts/settings-context"
 import {
   BarChart,
   Bar,
@@ -25,6 +27,7 @@ import {
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState("month")
   const { data, isLoading } = useApi<any>("/api/admin/dashboard")
+  const { format, symbol } = useCurrency()
 
   // Colors for charts
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"]
@@ -34,11 +37,15 @@ export default function AnalyticsPage() {
     if (!data?.salesByMonth) return []
 
     return data.salesByMonth
-      .map((item: any) => ({
-        name: new Date(item.month).toLocaleDateString("en-US", { month: "short" }),
-        revenue: Number.parseFloat(item.revenue),
-        orders: Number.parseInt(item.orders),
-      }))
+      .map((item: any) => {
+        const monthDate = new Date(item.month)
+        return {
+          name: monthDate.toLocaleDateString("en-US", { month: "short" }),
+          revenue: Number.parseFloat(item.revenue),
+          orders: Number.parseInt(item.orders),
+          monthDate,
+        }
+      })
       .reverse()
   }
 
@@ -84,20 +91,53 @@ export default function AnalyticsPage() {
   }
 
   const salesData = formatSalesData()
+  const filteredSalesData = (() => {
+    const length = salesData.length
+    if (timeRange === "week") return salesData.slice(Math.max(0, length - 1)) // latest point
+    if (timeRange === "month") return salesData.slice(Math.max(0, length - 3)) // latest quarter
+    return salesData // year (all)
+  })()
+
+  const rangeTotals = filteredSalesData.reduce(
+    (acc, item) => ({
+      revenue: acc.revenue + (item.revenue || 0),
+      orders: acc.orders + (item.orders || 0),
+    }),
+    { revenue: 0, orders: 0 }
+  )
   const userRoleData = formatUserRoleData()
   const topProductsData = formatTopProductsData()
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-        <Tabs value={timeRange} onValueChange={setTimeRange}>
-          <TabsList>
-            <TabsTrigger value="week">Week</TabsTrigger>
-            <TabsTrigger value="month">Month</TabsTrigger>
-            <TabsTrigger value="year">Year</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
+          <Tabs value={timeRange} onValueChange={setTimeRange}>
+            <TabsList>
+              <TabsTrigger value="week">Week</TabsTrigger>
+              <TabsTrigger value="month">Month</TabsTrigger>
+              <TabsTrigger value="year">Year</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => (window.location.href = "/api/admin/export?type=orders&format=csv")}>
+            Export Orders
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => (window.location.href = "/api/admin/export?type=revenue&format=csv")}>
+            Revenue Report
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => (window.location.href = "/api/admin/export?type=products&format=csv")}>
+            Export Products
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => (window.location.href = "/api/admin/export?type=customers&format=csv")}>
+            Export Customers
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => (window.location.href = "/api/admin/export?type=low-stock&format=csv")}>
+            Low Stock
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -107,8 +147,8 @@ export default function AnalyticsPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${Number(data?.totalRevenue)?.toFixed(2) || "0.00"}</div>
-            <p className="text-xs text-muted-foreground">+2.5% from last month</p>
+            <div className="text-2xl font-bold">{format(rangeTotals.revenue || 0)}</div>
+            <p className="text-xs text-muted-foreground">Filtered by {timeRange}</p>
           </CardContent>
         </Card>
         <Card>
@@ -117,8 +157,8 @@ export default function AnalyticsPage() {
             <ShoppingBag className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data?.totalOrders || 0}</div>
-            <p className="text-xs text-muted-foreground">+12% from last month</p>
+            <div className="text-2xl font-bold">{rangeTotals.orders || 0}</div>
+            <p className="text-xs text-muted-foreground">Filtered by {timeRange}</p>
           </CardContent>
         </Card>
         <Card>
@@ -156,16 +196,16 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[350px]">
-              {salesData.length > 0 ? (
+              {filteredSalesData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={salesData}>
+                  <BarChart data={filteredSalesData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
                     <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                    <Tooltip />
+                    <Tooltip formatter={(value) => [format(Number(value)), "Revenue"]} />
                     <Legend />
-                    <Bar yAxisId="left" dataKey="revenue" name="Revenue ($)" fill="#8884d8" />
+                    <Bar yAxisId="left" dataKey="revenue" name={`Revenue (${symbol})`} fill="#8884d8" />
                     <Bar yAxisId="right" dataKey="orders" name="Orders" fill="#82ca9d" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -224,15 +264,15 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="h-[350px]">
-              {salesData.length > 0 ? (
+              {filteredSalesData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={salesData}>
+                  <LineChart data={filteredSalesData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip formatter={(value) => [format(Number(value)), "Revenue"]} />
                     <Legend />
-                    <Line type="monotone" dataKey="revenue" name="Revenue ($)" stroke="#8884d8" activeDot={{ r: 8 }} />
+                    <Line type="monotone" dataKey="revenue" name={`Revenue (${symbol})`} stroke="#8884d8" activeDot={{ r: 8 }} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (

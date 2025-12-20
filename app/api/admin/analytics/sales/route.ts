@@ -21,20 +21,21 @@ export async function GET(req: NextRequest) {
     const orders = await prisma.order.findMany({
       where: {
         createdAt: { gte: from, lte: to },
-        status: { not: "cancelled" }
+        status: { not: "canceled" }
       },
       select: {
-        total: true,
+        totalAmount: true,
         subtotal: true,
-        shippingFee: true,
+        shipping: true,
         tax: true,
         status: true,
         paymentStatus: true,
         createdAt: true,
-        items: {
+        orderItems: {
           select: {
             quantity: true,
-            price: true,
+            totalPrice: true,
+            unitPrice: true,
             product: {
               select: {
                 id: true,
@@ -66,20 +67,20 @@ export async function GET(req: NextRequest) {
     const ordersByDay = new Map<string, number>()
 
     orders.forEach(order => {
-      const orderTotal = Number(order.total) || 0
+      const orderTotal = Number(order.totalAmount ?? 0)
       totalRevenue += orderTotal
-      totalItems += order.items.reduce((sum, item) => sum + item.quantity, 0)
+      totalItems += order.orderItems.reduce((sum, item) => sum + item.quantity, 0)
 
       // Status counts
       statusCounts.set(order.status, (statusCounts.get(order.status) || 0) + 1)
       paymentStatusCounts.set(order.paymentStatus, (paymentStatusCounts.get(order.paymentStatus) || 0) + 1)
 
       // Top products
-      order.items.forEach(item => {
+      order.orderItems.forEach(item => {
         const productId = item.product.id
         const productName = item.product.name
         const quantity = item.quantity
-        const revenue = quantity * Number(item.price)
+        const revenue = Number(item.totalPrice ?? quantity * Number(item.unitPrice ?? 0))
 
         if (topProducts.has(productId)) {
           const existing = topProducts.get(productId)!
@@ -103,8 +104,8 @@ export async function GET(req: NextRequest) {
     const firstHalf = orders.filter(o => o.createdAt < midPoint)
     const secondHalf = orders.filter(o => o.createdAt >= midPoint)
     
-    const firstHalfRevenue = firstHalf.reduce((sum, o) => sum + Number(o.total), 0)
-    const secondHalfRevenue = secondHalf.reduce((sum, o) => sum + Number(o.total), 0)
+    const firstHalfRevenue = firstHalf.reduce((sum, o) => sum + Number(o.totalAmount ?? 0), 0)
+    const secondHalfRevenue = secondHalf.reduce((sum, o) => sum + Number(o.totalAmount ?? 0), 0)
     const revenueGrowth = firstHalfRevenue > 0 ? ((secondHalfRevenue - firstHalfRevenue) / firstHalfRevenue) * 100 : 0
 
     // Format time series
@@ -135,11 +136,11 @@ export async function GET(req: NextRequest) {
     const recentOrders = orders.slice(0, 10).map(order => ({
       id: order.id,
       date: order.createdAt,
-      total: Number(order.total),
+      total: Number(order.totalAmount ?? 0),
       status: order.status,
       paymentStatus: order.paymentStatus,
       customerEmail: order.user?.email || 'Guest',
-      itemCount: order.items.length
+      itemCount: order.orderItems.length
     }))
 
     return createApiResponse({

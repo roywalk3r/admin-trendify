@@ -36,7 +36,8 @@ export async function GET(req: NextRequest) {
         id: true,
         name: true,
         price: true,
-        originalPrice: true,
+        comparePrice: true,
+        costPrice: true,
         stock: true,
         status: true,
         category: {
@@ -48,10 +49,11 @@ export async function GET(req: NextRequest) {
         images: true,
         createdAt: true,
         updatedAt: true,
-        items: {
+        orderItems: {
           select: {
             quantity: true,
-            price: true,
+            unitPrice: true,
+            totalPrice: true,
             order: {
               select: {
                 status: true,
@@ -63,7 +65,7 @@ export async function GET(req: NextRequest) {
         reviews: {
           select: {
             rating: true,
-            approved: true
+            isApproved: true
           }
         }
       }
@@ -110,10 +112,10 @@ export async function GET(req: NextRequest) {
       // Calculate sales
       let totalSold = 0
       let totalRevenue = 0
-      product.items.forEach(item => {
-        if (item.order.status !== 'cancelled') {
+      product.orderItems.forEach(item => {
+        if (item.order.status !== 'canceled') {
           totalSold += item.quantity
-          totalRevenue += item.quantity * Number(item.price)
+          totalRevenue += Number(item.totalPrice ?? item.quantity * Number(item.unitPrice ?? 0))
         }
       })
 
@@ -141,7 +143,7 @@ export async function GET(req: NextRequest) {
     let approvedRatings = 0
     products.forEach(product => {
       product.reviews.forEach(review => {
-        if (review.approved) {
+        if (review.isApproved) {
           totalRatings += review.rating
           approvedRatings++
         }

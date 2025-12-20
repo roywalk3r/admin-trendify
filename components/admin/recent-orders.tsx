@@ -14,11 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Package, CreditCard, Eye } from "lucide-react";
+import { useCurrency } from "@/lib/contexts/settings-context";
 
 export default function AdminRecentOrders() {
   const { data, isLoading } = useApi<any>("/api/admin/dashboard");
   const [mounted, setMounted] = useState(false);
-
+const {format} = useCurrency()
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -108,7 +109,7 @@ export default function AdminRecentOrders() {
                     {order.paymentStatus}
                   </span>
                 </TableCell>
-                <TableCell>${Number(order.totalAmount)?.toFixed(2)}</TableCell>
+                <TableCell>{format(Number(order.totalAmount ?? 0))}</TableCell>
                 <TableCell>
                   {new Date(order.createdAt).toLocaleDateString()}
                 </TableCell>

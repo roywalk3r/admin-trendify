@@ -6,11 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Package, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useCurrency } from "@/lib/contexts/settings-context"
 
 export default function AdminTopProducts() {
   const { data, isLoading } = useApi<any>("/api/admin/dashboard")
   const [mounted, setMounted] = useState(false)
-
+const {format} = useCurrency()
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -36,7 +37,7 @@ console.log(topProducts)
                 <p className="font-medium leading-none">{item.product?.name || "Unknown Product"}</p>
                 <p className="text-sm text-muted-foreground">{item.totalSold} units sold</p>
               </div>
-              <div className="font-medium">${Number(item.product?.price)?.toFixed(2) || "0.00"}</div>
+              <div className="font-medium">{format(Number(item.product?.price)  ) || "0.00"}</div>
             </div>
           ))}
 
