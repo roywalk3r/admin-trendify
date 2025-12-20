@@ -184,11 +184,6 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                                 onDragEnd={(_, info) => handleDragEnd(info, item.id)}
                                 style={{ x: draggedItem === item.id ? 0 : undefined }}
                             >
-                              {/* Swipe indicator */}
-                              <div className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                <Trash2 className="w-4 h-4" />
-                              </div>
-                              
                               <Image
                                   src={item.image || "/placeholder.svg"}
                                   alt={item.name}
