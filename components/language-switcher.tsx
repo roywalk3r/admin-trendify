@@ -79,7 +79,7 @@ export default function LanguageSwitcher() {
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild aria-haspopup="menu" aria-expanded={open}>
           <Button variant="outline" size="sm" aria-label="Change language" type="button">
-            Language: {currentLocale?.toUpperCase() || "EN"} {loading ? "…" : ""}
+            {currentLocale?.toUpperCase() || "EN"} {loading ? "…" : ""}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={6} className="z-[9999] bg-background text-foreground" forceMount>
