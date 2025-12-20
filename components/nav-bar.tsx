@@ -32,7 +32,11 @@ export default function NavBar() {
   const [isWishlistOpen, setIsWishlistOpen] = useState(false)
   const [wishlistCount, setWishlistCount] = useState(0)
   const cartItems = useCartStore((s) => s.items)
-  const cartCount = useMemo(() => cartItems.reduce((n, it) => n + it.quantity, 0), [cartItems])
+  const cartHydrated = useCartStore((s) => s.hydrated)
+  const cartCount = useMemo(() => {
+    if (!cartHydrated) return 0
+    return cartItems.reduce((n, it) => n + it.quantity, 0)
+  }, [cartHydrated, cartItems])
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10)

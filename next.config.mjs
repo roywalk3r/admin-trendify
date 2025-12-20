@@ -23,6 +23,9 @@ function buildCSP() {
   const analyticsDomains = [
     'https://vitals.vercel-insights.com',
   ]
+  const turnstileDomains = [
+    'https://challenges.cloudflare.com',
+  ]
   const sentryDomains = [
     'https://*.ingest.de.sentry.io',
     'https://*.ingest.sentry.io',
@@ -43,10 +46,10 @@ function buildCSP() {
     `img-src ${self} data: blob: https:`,
     `font-src ${self} https://fonts.gstatic.com data:`,
     `style-src ${self} ${unsafeInline} https://fonts.googleapis.com`,
-    `script-src ${self} ${unsafeInline} ${unsafeEval} ${clerkDomains.join(' ')} ${paymentDomains.join(' ')} ${googleAnalyticsDomains.join(' ')}`,
+    `script-src ${self} ${unsafeInline} ${unsafeEval} ${clerkDomains.join(' ')} ${paymentDomains.join(' ')} ${googleAnalyticsDomains.join(' ')} ${turnstileDomains.join(' ')}`,
     `worker-src ${self} blob:`,
-    `connect-src ${self} ${appUrl} ${clerkDomains.join(' ')} ${appwriteDomains.join(' ')} ${paymentDomains.join(' ')} ${analyticsDomains.join(' ')} ${sentryDomains.join(' ')} ${googleAnalyticsDomains.join(' ')}`,
-    `frame-src ${self} ${paymentDomains.join(' ')} ${clerkDomains.join(' ')}`,
+    `connect-src ${self} ${appUrl} ${clerkDomains.join(' ')} ${appwriteDomains.join(' ')} ${paymentDomains.join(' ')} ${analyticsDomains.join(' ')} ${sentryDomains.join(' ')} ${googleAnalyticsDomains.join(' ')} ${turnstileDomains.join(' ')}`,
+    `frame-src ${self} ${paymentDomains.join(' ')} ${clerkDomains.join(' ')} ${turnstileDomains.join(' ')}`,
     `form-action ${self}`,
     `object-src 'none'`,
     `upgrade-insecure-requests`,

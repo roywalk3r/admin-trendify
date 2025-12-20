@@ -70,7 +70,8 @@ export function HeroCarousel() {
     let mounted = true
     ;(async () => {
       try {
-        const res = await fetch("/api/admin/hero", { cache: "no-store" })
+        // Prefer cache to avoid repeated slow loads; API should set short revalidate
+        const res = await fetch("/api/admin/hero", { cache: "force-cache" })
         if (!res.ok) return
         const json = await res.json()
         const adminSlides = (json?.data?.slides as any[]) || []
