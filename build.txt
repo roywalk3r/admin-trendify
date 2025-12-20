@@ -1,0 +1,11 @@
+
+> trendify@1.1.0 build /home/rseann/projects/Nextjs/trendify
+> next build --webpack
+
+   ▲ Next.js 16.0.8 (webpack)
+   - Environments: .env
+   - Experiments (use with caution):
+     · clientTraceMetadata
+     · optimizePackageImports
+
+   Creating an optimized production build ...

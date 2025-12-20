@@ -1,19 +1,31 @@
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
-import { Gem
-iniPopover } from "@/components/gemini-popover";
+import  GeminiPopover  from "@/components/gemini-popover";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { auth } from "@/lib/auth";
-import { UserRole } from "@trendify/prisma";
-import { redirect } from "next/navigation";
+ import { UserRole } from "@/lib/auth/permissions";
+import prisma from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
+ import { redirect } from "next/navigation";
 
 export default async function AdminLayoutMobile({
   children,
-}: {
+  params,
+}: Readonly<{
   children: React.ReactNode;
-}) {
-  const session = await auth();
-  const user = session?.user;
+  params: Promise<{ locale: string }>;
+}>) {
+  const { locale } = await params;
+
+  // Server-side admin/staff protection
+  const { userId } = await auth();
+  if (!userId) {
+    redirect(`/${locale}/sign-in`);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    select: { role: true },
+  });
 
   if (!user || (user.role as unknown as string) === UserRole.CUSTOMER) {
     redirect(`/${locale}`);
