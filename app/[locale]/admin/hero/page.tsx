@@ -168,7 +168,6 @@ export default function HeroManagementPage() {
   );
 
   useEffect(() => {
-    console.log(slidesResponse);
     if (slidesResponse?.slides) {
       setSlides(slidesResponse.slides);
     }

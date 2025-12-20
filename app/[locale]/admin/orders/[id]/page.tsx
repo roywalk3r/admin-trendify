@@ -233,12 +233,16 @@ export default function OrderDetailsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Order #{order.id.substring(0, 8)}</h1>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold leading-tight">Order #{order.id.substring(0, 8)}</h1>
           <p className="text-muted-foreground">Placed on {formatDate(order.createdAt)}</p>
         </div>
-        <Button variant="outline" onClick={() => router.push("/admin/orders")}>
+        <Button
+          className="self-start md:self-auto"
+          variant="outline"
+          onClick={() => router.push("/admin/orders")}
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Orders
         </Button>
@@ -273,36 +277,38 @@ export default function OrderDetailsPage() {
 
               <Separator />
 
-              <div>
-                <h3 className="font-semibold mb-4">Order Items</h3>
+              <div className="space-y-3">
+                <h3 className="font-semibold mb-1">Order Items</h3>
                 {order.orderItems && order.orderItems.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
-                        <TableHead className="text-right">Quantity</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {order.orderItems.map((item: any) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">
-                            {item.product?.name || `Product ${item.productId?.substring(0, 8)}`}
-                          </TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.product?.price)}</TableCell>
-                          <TableCell className="text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(
-                              (typeof item.product?.price === "string" ? Number.parseFloat(item.product?.price) : item.product?.price) *
-                                item.quantity,
-                            )}
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-[600px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Product</TableHead>
+                          <TableHead className="text-right">Price</TableHead>
+                          <TableHead className="text-right">Quantity</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {order.orderItems.map((item: any) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium break-words">
+                              {item.product?.name || `Product ${item.productId?.substring(0, 8)}`}
+                            </TableCell>
+                            <TableCell className="text-right">{formatCurrency(item.product?.price)}</TableCell>
+                            <TableCell className="text-right">{item.quantity}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(
+                                (typeof item.product?.price === "string" ? Number.parseFloat(item.product?.price) : item.product?.price) *
+                                  item.quantity,
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 ) : (
                   <p className="text-muted-foreground">No items found for this order.</p>
                 )}
@@ -310,7 +316,7 @@ export default function OrderDetailsPage() {
 
               <Separator />
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>

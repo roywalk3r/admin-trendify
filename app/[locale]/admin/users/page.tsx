@@ -98,7 +98,7 @@ export default function AdminUsersPage() {
 
   const handleUpdateUser = () => {
     if (editingUser && role) {
-      console.log("Updating user with role:", role);
+      //console.log("Updating user with role:", role);
       updateUser({
         id: editingUser.id,
         role: role.toLowerCase(), // Ensure role is lowercase to match schema
@@ -130,7 +130,7 @@ export default function AdminUsersPage() {
 
   const users = data?.users || [];
   const pagination = data?.pagination || { total: 0, pages: 1 };
-  console.log(data);
+  //console.log(data);
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

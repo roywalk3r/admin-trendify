@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import {withSentryConfig} from '@sentry/nextjs';
+import nextPWA from 'next-pwa';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function buildCSP() {
@@ -52,7 +53,7 @@ function buildCSP() {
   ].join('; ')
 }
 
-const nextConfig = {
+const baseConfig = {
   experimental: {
     optimizePackageImports: [
       '@radix-ui/react-icons',
@@ -74,12 +75,20 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'cloud.appwrite.io',
-        pathname: '**',
+        port: '',
+        pathname: '/v1/storage/buckets/**',
       },
       {
         protocol: 'https',
         hostname: 'fra.cloud.appwrite.io',
-        pathname: '/**',
+        port: '',
+        pathname: '/v1/storage/buckets/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'trendify-admin.vercel.app',
+        port: '',
+        pathname: '/images/**',
       },
       {
         protocol: 'https',
@@ -121,6 +130,64 @@ const nextConfig = {
     ]
   },
 }
+
+// Support both ESM/CJS default export shapes
+const withPWA = (nextPWA.default || nextPWA)({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  skipWaiting: true,
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'google-fonts',
+        expiration: {
+          maxEntries: 4,
+          maxAgeSeconds: 365 * 24 * 60 * 60 // 1 year
+        }
+      }
+    },
+    {
+      urlPattern: /^https:\/\/cloud\.appwrite\.io\/.*/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'appwrite-images',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+        }
+      }
+    },
+    {
+      urlPattern: /\/api\/products/,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'api-products',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 5 * 60 // 5 minutes
+        }
+      }
+    },
+    {
+      urlPattern: ({ request }) => request.destination === 'image',
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'images',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+        }
+      }
+    }
+  ]
+})
+
+const nextConfig = withPWA({
+  ...baseConfig,
+})
 
 export default withSentryConfig(nextConfig, {
   // For all available options, see:

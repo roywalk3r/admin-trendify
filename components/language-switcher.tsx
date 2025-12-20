@@ -69,7 +69,7 @@ export default function LanguageSwitcher() {
   if (!allLocales || allLocales.length <= 1) {
     return (
       <Button variant="outline" size="sm" disabled>
-        Language: {currentLocale?.toUpperCase() || "EN"}
+        {currentLocale?.toUpperCase() || "EN"}
       </Button>
     )
   }

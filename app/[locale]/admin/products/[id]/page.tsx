@@ -45,7 +45,7 @@ export default function ProductViewPage() {
     const fetchProduct = async () => {
       try {
         setIsLoading(true)
-        console.log(`Fetching product with ID: ${params.id}`)
+        //console.log(`Fetching product with ID: ${params.id}`)
         const response = await fetch(`/api/admin/products/${params.id}`)
 
         if (!response.ok) {
@@ -53,7 +53,7 @@ export default function ProductViewPage() {
         }
 
         const data = await response.json()
-        console.log("Product data received:", data)
+        //console.log("Product data received:", data)
 
         if (data.data) {
           setProduct(data.data)

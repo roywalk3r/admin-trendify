@@ -13,13 +13,24 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Package, CreditCard, Eye } from "lucide-react";
+import { Package, CreditCard, Eye, MoreVertical } from "lucide-react";
 import { useCurrency } from "@/lib/contexts/settings-context";
+import MobileAdminTable from "@/components/admin/mobile/mobile-admin-table";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function AdminRecentOrders() {
   const { data, isLoading } = useApi<any>("/api/admin/dashboard");
   const [mounted, setMounted] = useState(false);
-const {format} = useCurrency()
+  const { format } = useCurrency();
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -59,18 +70,119 @@ const {format} = useCurrency()
     }
   };
 
+  const columns = [
+    {
+      key: "id",
+      label: "Order ID",
+      render: (value: string) => (
+        <span className="font-medium">{value.substring(0, 8)}</span>
+      )
+    },
+    {
+      key: "customer",
+      label: "Customer",
+      render: (value: any, row: any) => (
+        <span>{row.user?.name || row.user?.email || "N/A"}</span>
+      )
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (value: string) => (
+        <Badge className={getStatusBadgeColor(value)}>
+          <Package className="h-3 w-3 mr-1" />
+          {value}
+        </Badge>
+      )
+    },
+    {
+      key: "paymentStatus",
+      label: "Payment",
+      render: (value: string) => (
+        <Badge className={getPaymentBadgeColor(value)}>
+          <CreditCard className="h-3 w-3 mr-1" />
+          {value}
+        </Badge>
+      )
+    },
+    {
+      key: "totalAmount",
+      label: "Total",
+      render: (value: number) => (
+        <span className="font-medium">{format(Number(value ?? 0))}</span>
+      )
+    },
+    {
+      key: "createdAt",
+      label: "Date",
+      render: (value: string) => (
+        <span>{new Date(value).toLocaleDateString()}</span>
+      )
+    }
+  ];
+
+  const actions = [
+    {
+      label: "View Details",
+      icon: Eye,
+      onClick: (order: any) => {
+        // Navigate to order details
+        window.location.href = `/admin/orders/${order.id}`;
+      }
+    }
+  ];
+
+  const filters = [
+    {
+      key: "status",
+      label: "Order Status",
+      options: [
+        { value: "pending", label: "Pending" },
+        { value: "processing", label: "Processing" },
+        { value: "shipped", label: "Shipped" },
+        { value: "delivered", label: "Delivered" },
+        { value: "cancelled", label: "Cancelled" }
+      ]
+    },
+    {
+      key: "paymentStatus",
+      label: "Payment Status",
+      options: [
+        { value: "pending", label: "Pending" },
+        { value: "paid", label: "Paid" },
+        { value: "failed", label: "Failed" },
+        { value: "refunded", label: "Refunded" }
+      ]
+    }
+  ];
+
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        <MobileAdminTable
+          data={recentOrders}
+          columns={columns}
+          actions={actions}
+          title="Recent Orders"
+          searchPlaceholder="Search orders..."
+          filters={filters}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <Table>
+    <div className="w-full overflow-x-auto">
+      <Table className="min-w-[900px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Order ID</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Payment</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead className="min-w-[120px]">Order ID</TableHead>
+            <TableHead className="min-w-[180px]">Customer</TableHead>
+            <TableHead className="min-w-[140px]">Status</TableHead>
+            <TableHead className="min-w-[140px]">Payment</TableHead>
+            <TableHead className="min-w-[120px]">Total</TableHead>
+            <TableHead className="min-w-[160px]">Date</TableHead>
+            <TableHead className="min-w-[140px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -86,38 +198,40 @@ const {format} = useCurrency()
                 <TableCell className="font-medium">
                   {order.id.substring(0, 8)}
                 </TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   {order.user?.name || order.user?.email || "N/A"}
                 </TableCell>
                 <TableCell>
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(
-                      order.status
-                    )}`}
-                  >
+                  <Badge className={getStatusBadgeColor(order.status)}>
                     <Package className="h-3 w-3 mr-1" />
                     {order.status}
-                  </span>
+                  </Badge>
                 </TableCell>
                 <TableCell>
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPaymentBadgeColor(
-                      order.paymentStatus
-                    )}`}
-                  >
+                  <Badge className={getPaymentBadgeColor(order.paymentStatus)}>
                     <CreditCard className="h-3 w-3 mr-1" />
                     {order.paymentStatus}
-                  </span>
+                  </Badge>
                 </TableCell>
-                <TableCell>{format(Number(order.totalAmount ?? 0))}</TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">{format(Number(order.totalAmount ?? 0))}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   {new Date(order.createdAt).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm">
-                    <Eye className="h-4 w-4 mr-1" />
-                    View
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => window.location.href = `/admin/orders/${order.id}`}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))

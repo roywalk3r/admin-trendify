@@ -36,6 +36,7 @@ interface ReviewListProps {
 export function ReviewList({ productId, currentUserId }: ReviewListProps) {
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<"reviews" | "write">("reviews")
   const [stats, setStats] = useState<{
     averageRating: number
     totalReviews: number
@@ -154,7 +155,7 @@ export function ReviewList({ productId, currentUserId }: ReviewListProps) {
       </div>
 
       {/* Tabs for Reviews and Write Review */}
-      <Tabs defaultValue="reviews" className="w-full">
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "reviews" | "write")} className="w-full">
         <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
           <TabsTrigger value="reviews" className="gap-2">
             <MessageSquare className="h-4 w-4" />
@@ -174,10 +175,7 @@ export function ReviewList({ productId, currentUserId }: ReviewListProps) {
                 <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="font-semibold text-lg mb-2">No reviews yet</h3>
                 <p className="text-muted-foreground mb-6">Be the first to share your experience!</p>
-                <Button variant="default" onClick={() => {
-                  const tabButton = document.querySelector('[value="write"]') as HTMLButtonElement
-                  tabButton?.click()
-                }}>
+                <Button variant="default" onClick={() => setActiveTab("write")}>
                   <Star className="mr-2 h-4 w-4" />
                   Write the First Review
                 </Button>
@@ -280,9 +278,7 @@ export function ReviewList({ productId, currentUserId }: ReviewListProps) {
                     toast.success("Review submitted successfully!", {
                       description: "Thank you for sharing your feedback.",
                     })
-                    // Switch back to reviews tab
-                    const reviewsTab = document.querySelector('[value="reviews"]') as HTMLButtonElement
-                    reviewsTab?.click()
+                    setActiveTab("reviews")
                   }}
                 />
               ) : (

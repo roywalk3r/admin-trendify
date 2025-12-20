@@ -14,17 +14,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -47,3 +48,31 @@ jobs:
           NEXT_DISABLE_SENTRY: 1
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           CORS_ALLOW_ORIGIN: http://localhost:3000
+
+      - name: Run Tests
+        run: pnpm test:ci
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+      - name: Lighthouse CI
+        run: |
+          pnpm dlx @lhci/cli autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          CORS_ALLOW_ORIGIN: http://localhost:3000
+
+      - name: Bundle Analysis
+        run: |
+          pnpm dlx @next/bundle-analyzer
+          du -sh .next/static/chunks/*.js | head -20
+        continue-on-error: true
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false

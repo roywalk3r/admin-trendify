@@ -373,8 +373,8 @@ export function ProductDetail({ product }: ProductDetailProps) {
             )}
 
             {/* Quantity & Add to Cart */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center border rounded-lg">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex items-center border rounded-lg w-full sm:w-auto">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -398,7 +398,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
               <Button
                 onClick={handleAddToCart}
                 disabled={isOutOfStock}
-                className="flex-1 h-[var(--mobile-touch-target)]"
+                className="w-full sm:flex-1 h-[var(--mobile-touch-target)] text-base font-semibold rounded-lg shadow-sm"
                 size="lg"
               >
                 {isOutOfStock ? "Out of Stock" : "Add to Cart"}
