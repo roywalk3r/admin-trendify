@@ -1,7 +1,7 @@
 import { motion } from "framer-motion"
 import { Plus, Heart } from "lucide-react"
 import { useCurrency } from "@/lib/contexts/settings-context"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useCartStore } from "@/lib/store/cart-store"
 import { useToast } from "@/hooks/use-toast"
 import { useUser } from "@clerk/nextjs"
@@ -23,10 +23,14 @@ const LimitedCard = ({ id, image, name, category, price, isActive }: LimitedCard
     const [isWishlistLoading, setIsWishlistLoading] = useState(false)
     const addToCartStore = useCartStore((s) => s.addItem)
     const { isSignedIn } = useUser()
+    const fetchedWishlistRef = useRef(false)
     const { toast } = useToast()
     const imgSrc = image
 
     useEffect(() => {
+        if (!isSignedIn) return
+        if (fetchedWishlistRef.current) return
+        fetchedWishlistRef.current = true
         let mounted = true
         const check = async () => {
             try {
@@ -41,7 +45,7 @@ const LimitedCard = ({ id, image, name, category, price, isActive }: LimitedCard
         return () => {
             mounted = false
         }
-    }, [id])
+    }, [id, isSignedIn])
 
     const handleAddToCart = async () => {
         addToCartStore({ id, name, price: Number(price), quantity: 1, image: imgSrc })

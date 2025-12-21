@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import type { Variants } from "framer-motion"
 import Image, { type StaticImageData } from "next/image"
@@ -48,6 +48,7 @@ export default function ProductCard({
     const addToCartStore = useCartStore((s) => s.addItem)
     // We'll only sync to server if signed in
     const { isSignedIn } = useUser()
+    const fetchedWishlistRef = useRef(false)
     const { toast } = useToast()
     const { format } = useCurrency()
     const cardVariants: Variants = {
@@ -86,6 +87,9 @@ export default function ProductCard({
 
     // initialize wishlist heart state from server
     useEffect(() => {
+        if (!isSignedIn) return
+        if (fetchedWishlistRef.current) return
+        fetchedWishlistRef.current = true
         let mounted = true
         const check = async () => {
             try {
@@ -100,7 +104,7 @@ export default function ProductCard({
         return () => {
             mounted = false
         }
-    }, [id])
+    }, [id, isSignedIn])
 
     const handleAddToCart = async () => {
         // optimistic local add

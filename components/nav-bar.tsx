@@ -32,11 +32,7 @@ export default function NavBar() {
   const [isWishlistOpen, setIsWishlistOpen] = useState(false)
   const [wishlistCount, setWishlistCount] = useState(0)
   const cartItems = useCartStore((s) => s.items)
-  const cartHydrated = useCartStore((s) => s.hydrated)
-  const cartCount = useMemo(() => {
-    if (!cartHydrated) return 0
-    return cartItems.reduce((n, it) => n + it.quantity, 0)
-  }, [cartHydrated, cartItems])
+  const cartCount = useMemo(() => cartItems.reduce((n, it) => n + it.quantity, 0), [cartItems])
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10)
@@ -228,7 +224,7 @@ export default function NavBar() {
                     </motion.div>
 
                     {/* Action Icons */}
-                    <motion.div className={"flex gap-3 items-center"}>
+                    <motion.div className={"flex gap-3 items-center"} variants={itemVariants}>
                         <motion.button
                             whileHover={{ scale: 1.1, y: -2 }}
                             whileTap={{ scale: 0.9 }}
@@ -236,9 +232,11 @@ export default function NavBar() {
                             onClick={() => setIsWishlistOpen(true)}
                         >
                             <HeartIcon className={"text-[#8A6163] w-5 h-5"} />
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                {wishlistCount}
-              </span>
+                            {wishlistCount > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                                    {wishlistCount}
+                                </span>
+                            )}
                         </motion.button>
                         <motion.button
                             whileHover={{ scale: 1.1, y: -2 }}
@@ -247,9 +245,11 @@ export default function NavBar() {
                             onClick={() => setIsCartOpen(true)}
                         >
                             <ShoppingBag className={"text-[#8A6163] w-5 h-5"} />
-                            <span className="absolute -top-1 -right-1 bg-ascent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                {cartCount}
-              </span>
+                            {cartCount > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-ascent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                                    {cartCount}
+                                </span>
+                            )}
                         </motion.button>
                         <motion.div whileHover={{ scale: 1.1 }} className="cursor-pointer">
                             <SignedIn>
@@ -257,9 +257,9 @@ export default function NavBar() {
                                     <UserButton.MenuItems>
                                         <UserButton.Action
                                             label="Basic Profile"
-                                            labelIcon={< User2Icon/>}
+                                            labelIcon={<User2Icon />}
                                             onClick={() => router.push(addLocaleToPathname("/profile", locale))}
-                                         />
+                                        />
                                     </UserButton.MenuItems>
                                 </UserButton>
                             </SignedIn>
@@ -294,9 +294,11 @@ export default function NavBar() {
                         onClick={() => setIsCartOpen(true)}
                     >
                         <ShoppingBag className={"text-[#8A6163] w-5 h-5"} />
-                        <span className="absolute -top-1 -right-1 bg-ascent text-white text-xs w-4 h-4 rounded-full flex items-center justify-center text-[10px]">
-              2
-            </span>
+                        {cartCount > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-ascent text-white text-xs w-4 h-4 rounded-full flex items-center justify-center text-[10px]">
+                                {cartCount}
+                            </span>
+                        )}
                     </motion.button>
                     <motion.button
                         whileHover={{ scale: 1.1 }}

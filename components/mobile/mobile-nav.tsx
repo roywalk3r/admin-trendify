@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Menu, X, Search, ShoppingCart, Heart, User, Home, Grid3X3, Package, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -22,13 +22,17 @@ export default function MobileNav({ className }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [wishlistCount, setWishlistCount] = useState(0)
-  const { items } = useCartStore()
+  const items = useCartStore((s) => s.items)
+  const hydrated = useCartStore((s) => s.hydrated)
   const { isSignedIn, user } = useUser()
   const { t } = useI18n()
   const pathname = usePathname() || "/"
   const locale = getLocaleFromPathname(pathname)
 
-  const cartItemCount = items.reduce((total, item) => total + item.quantity, 0)
+  const cartItemCount = useMemo(
+    () => (hydrated ? items.reduce((total, item) => total + item.quantity, 0) : 0),
+    [hydrated, items],
+  )
 
   // Navigation items
   const navItems = [

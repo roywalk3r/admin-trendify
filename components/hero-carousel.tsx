@@ -7,6 +7,7 @@ import Link from "next/link"
 import Image from 'next/image';
 import { Button } from "@/components/ui/button"
 import { useParams } from "next/navigation"
+import { useApi } from "@/lib/hooks/use-api"
 
 type CarouselSlide = {
   id: string | number
@@ -23,7 +24,7 @@ const fallbackSlides: CarouselSlide[] = [
     id: 1,
     title: "Summer Collection 2023",
     description: "Discover our latest arrivals for the summer season. Fresh styles for every occasion.",
-    image: "/placeholder.svg?height=600&width=1200&text=Summer+Collection",
+    image: "/images/hero2.jpg",
     buttonText: "Shop Now",
     buttonLink: "/products?category=summer",
     color: "bg-blue-50 dark:bg-blue-950/30",
@@ -32,7 +33,7 @@ const fallbackSlides: CarouselSlide[] = [
     id: 2,
     title: "Premium Electronics",
     description: "Explore our range of high-quality electronics. The latest tech at competitive prices.",
-    image: "/placeholder.svg?height=600&width=1200&text=Premium+Electronics",
+    image: "/modern-smartphones.png",
     buttonText: "Discover More",
     buttonLink: "/products?category=electronics",
     color: "bg-purple-50 dark:bg-purple-950/30",
@@ -41,7 +42,7 @@ const fallbackSlides: CarouselSlide[] = [
     id: 3,
     title: "Home Essentials",
     description: "Transform your living space with our curated collection of home essentials.",
-    image: "/placeholder.svg?height=600&width=1200&text=Home+Essentials",
+    image: "/smart-home-devices.png",
     buttonText: "View Collection",
     buttonLink: "/products?category=home",
     color: "bg-amber-50 dark:bg-amber-950/30",
@@ -52,6 +53,7 @@ export function HeroCarousel() {
   const { locale } = useParams() as { locale?: string }
   const [current, setCurrent] = useState(0)
   const [slides, setSlides] = useState<CarouselSlide[]>(fallbackSlides)
+  const [loading, setLoading] = useState(true)
   const [autoplay, setAutoplay] = useState(true)
   const touchStartX = useRef(0)
   const touchEndX = useRef(0)
@@ -66,42 +68,28 @@ export function HeroCarousel() {
     }
   }, [locale])
 
+  const { data } = useApi<{ slides?: any[] }>("/api/hero", { enabled: true })
+
   useEffect(() => {
-    let mounted = true
-    ;(async () => {
-      try {
-        // Prefer cache to avoid repeated slow loads; API should set short revalidate
-        const res = await fetch("/api/admin/hero", { cache: "force-cache" })
-        if (!res.ok) return
-        const json = await res.json()
-        const adminSlides = (json?.data?.slides as any[]) || []
-        if (!adminSlides.length) return
+    if (!data) return
+    const adminSlides = (data.slides as any[]) || []
+    const mapped = adminSlides
+      .filter((s) => s.isActive !== false)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((s, idx) => ({
+        id: s.id ?? idx,
+        title: s.title || "",
+        description: s.subtitle || s.description || "",
+        image: s.imageUrl || "/placeholder.svg?height=600&width=1200&text=Hero",
+        buttonText: s.buttonText || "Shop Now",
+        buttonLink: resolveLink(s.buttonUrl || "/products"),
+        color: s.color || "bg-blue-50 dark:bg-blue-950/30",
+      })) as CarouselSlide[]
 
-        const mapped = adminSlides
-          .filter((s) => s.isActive !== false)
-          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-          .map((s, idx) => ({
-            id: s.id ?? idx,
-            title: s.title || "",
-            description: s.subtitle || s.description || "",
-            image: s.imageUrl || "/placeholder.svg?height=600&width=1200&text=Hero",
-            buttonText: s.buttonText || "Shop Now",
-            buttonLink: resolveLink(s.buttonUrl || "/products"),
-            color: s.color || "bg-blue-50 dark:bg-blue-950/30",
-          })) as CarouselSlide[]
-
-        if (mounted && mapped.length) {
-          setSlides(mapped)
-          setCurrent(0)
-        }
-      } catch {
-        // silent failover to fallback slides
-      }
-    })()
-    return () => {
-      mounted = false
-    }
-  }, [resolveLink])
+    setSlides(mapped.length ? mapped : fallbackSlides)
+    setCurrent(0)
+    setLoading(false)
+  }, [data, resolveLink])
 
   useEffect(() => {
     if (!autoplay) return

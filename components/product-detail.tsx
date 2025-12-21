@@ -372,8 +372,8 @@ export function ProductDetail({ product }: ProductDetailProps) {
               </div>
             )}
 
-            {/* Quantity & Add to Cart */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {/* Quantity (actions handled by sticky bar to avoid duplicate buttons) */}
+            <div className="flex flex-col gap-3 sm:flex-row space-y-2 sm:items-center">
               <div className="flex items-center border rounded-lg w-full sm:w-auto">
                 <Button
                   variant="ghost"
@@ -395,26 +395,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              <Button
-                onClick={handleAddToCart}
-                disabled={isOutOfStock}
-                className="w-full sm:flex-1 h-[var(--mobile-touch-target)] text-base font-semibold rounded-lg shadow-sm"
-                size="lg"
-              >
-                {isOutOfStock ? "Out of Stock" : "Add to Cart"}
-              </Button>
             </div>
-
-            {/* Wishlist */}
-            <Button
-              variant="outline"
-              onClick={toggleWishlist}
-              disabled={wishlistLoading}
-              className="w-full h-[var(--mobile-touch-target)]"
-            >
-              <Heart className={cn("h-4 w-4 mr-2", inWishlist && "fill-red-500 text-red-500")} />
-              {inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
-            </Button>
           </div>
 
           {/* Variant selection */}
@@ -580,7 +561,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="hidden lg:flex flex-col lg:flex-row gap-3">
               <Button
                   onClick={handleAddToCart}
                   disabled={isOutOfStock}
