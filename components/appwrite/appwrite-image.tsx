@@ -9,6 +9,7 @@ interface AppwriteImageProps {
   alt: string
   width?: number
   height?: number
+  fill?: boolean
   className?: string
   priority?: boolean
   objectFit?: "contain" | "cover" | "fill" | "none" | "scale-down"
@@ -19,6 +20,7 @@ export function AppwriteImage({
   alt,
   width = 500,
   height = 500,
+  fill = false,
   className = "",
   priority = false,
   objectFit = "cover",
@@ -48,8 +50,10 @@ export function AppwriteImage({
   // Use a placeholder for local development if needed
   const imageSrc = src.startsWith("/") ? src : src
 
+  const containerStyle = fill ? { width: "100%", height: "100%" } : { width, height }
+
   return (
-    <div className="relative" style={{ width, height }}>
+    <div className="relative" style={containerStyle}>
       {isLoading && <Skeleton className="absolute inset-0 w-full h-full" />}
 
       {error ? (
@@ -60,8 +64,7 @@ export function AppwriteImage({
         <Image
           src={imageSrc || "/placeholder.svg"}
           alt={alt}
-          width={width}
-          height={height}
+          {...(fill ? { fill: true } : { width, height })}
           className={className}
           loading={"eager"}
           style={{ objectFit }}

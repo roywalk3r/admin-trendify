@@ -249,7 +249,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-3 flex-1">
-                <h1 className="text-3xl lg:text-4xl font-black leading-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text">
+                <h1 className="text-xl sm:text-3xl lg:text-4xl font-black leading-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text">
                   {product.name}
                 </h1>
                 {product.category && (
@@ -326,14 +326,6 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 productId={product.id}
                 productName={variantDisplayName}
               />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleShare}
-                className="text-muted-foreground"
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
             </div>
 
             {/* Variant Selection */}
@@ -372,30 +364,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
               </div>
             )}
 
-            {/* Quantity (actions handled by sticky bar to avoid duplicate buttons) */}
-            <div className="flex flex-col gap-3 sm:flex-row space-y-2 sm:items-center">
-              <div className="flex items-center border rounded-lg w-full sm:w-auto">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={decreaseQuantity}
-                  disabled={quantity <= 1}
-                  className="h-10 w-10 rounded-none"
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="w-12 text-center font-semibold">{quantity}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={increaseQuantity}
-                  disabled={activeStock <= quantity}
-                  className="h-10 w-10 rounded-none"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            {/* Quantity handled by sticky bar */}
           </div>
 
           {/* Variant selection */}
@@ -438,8 +407,8 @@ export function ProductDetail({ product }: ProductDetailProps) {
             </div>
           )}
 
-          {/* Stock Status */}
-          <div className="space-y-2">
+          {/* Stock Status (desktop) */}
+          <div className="hidden lg:block space-y-2">
             <StockBadge
               stock={activeStock}
               lowStockThreshold={product.lowStockThreshold ?? undefined}

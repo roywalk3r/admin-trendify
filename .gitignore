@@ -37,3 +37,6 @@ coverage/
 auth.json
 playwright-report/
 test-results/
+
+# zsh cache artifacts
+.zsh-cache/

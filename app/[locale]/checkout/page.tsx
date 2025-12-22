@@ -9,7 +9,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-background">
       {/* Mobile Progress Header */}
       <div className="sticky top-[var(--mobile-header-height)] z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b md:hidden">
-        <CheckoutProgress currentStep={1} />
+        <CheckoutProgress currentStep={2} />
       </div>
       
       <div className="container mx-auto max-w-3xl py-6 sm:py-10 px-4 sm:px-0">

@@ -137,7 +137,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 
               {/* Sidebar */}
               <motion.div
-                  className="fixed right-0 top-0 h-full w-full sm:w-full md:max-w-md bg-background shadow-2xl z-[60] flex flex-col"
+                  className="fixed right-0 top-0 h-full w-full sm:w-full md:max-w-md bg-background shadow-2xl z-[60] flex flex-col min-h-0"
                   initial={{ x: "100%" }}
                   animate={{ x: 0 }}
                   exit={{ x: "100%" }}
@@ -158,7 +158,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                 </div>
 
                 {/* Cart Items */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 sm:pb-6">
+                <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-4 sm:pb-6">
                   {cartItems.length === 0 ? (
                       <div className="text-center py-12">
                         <ShoppingBag className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -234,7 +234,10 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
 
                 {/* Footer - Sticky on Mobile */}
                 {cartItems.length > 0 && (
-                    <div className="fixed bottom-0 left-0 right-0 sm:relative bg-background border-t p-4 sm:p-6 space-y-3 sm:space-y-4 z-10">
+                    <div
+                      className="sticky bottom-0 left-0 right-0 sm:relative bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t p-4 sm:p-6 space-y-3 sm:space-y-4 z-10"
+                      style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+                    >
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span>Subtotal</span>

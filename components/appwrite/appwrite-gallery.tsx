@@ -30,10 +30,10 @@ export function AppwriteGallery({ images, productName, className = "" }: Appwrit
         <AppwriteImage
           src={selectedImage}
           alt={`${productName} - main image`}
-          width={800}
-          height={800}
+          fill
+          objectFit="contain"
           priority
-          className="w-full h-full"
+          className="w-full h-full object-contain"
         />
       </div>
 

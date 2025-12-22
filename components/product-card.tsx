@@ -227,7 +227,7 @@ export default function ProductCard({
 
                 {/* Hover Overlay */}
                 <motion.div
-                    className="absolute inset-0 bg-black/20 flex items-center justify-center gap-2"
+                    className="absolute inset-0 bg-black/20 flex items-center justify-center gap-2 pointer-events-none group-hover:pointer-events-auto"
                     variants={overlayVariants}
                 >
                     <motion.div
