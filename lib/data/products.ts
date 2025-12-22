@@ -1,8 +1,20 @@
 import prisma from "@/lib/prisma"
-import { prismaCache } from "@/lib/prisma-cache"
-import { invalidateCacheTags, normalizeCacheTags } from "@/lib/prisma-accelerate"
+import { getCache, setCache, deleteCache, deleteByPattern } from "@/lib/redis"
+
+const TTL_SECONDS = 300 // 5 minutes
+
+const productsListCacheKey = (params: Record<string, any>) => {
+  const key = JSON.stringify(params)
+  return `cache:products:list:${Buffer.from(key).toString('base64').substring(0, 32)}`
+}
+
+const productCacheKey = (id: string) => `cache:products:${id}`
 
 export async function getProductByIdCached(id: string) {
+  const key = productCacheKey(id)
+  const cached = await getCache<any>(key)
+  if (cached) return cached
+
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
@@ -14,12 +26,19 @@ export async function getProductByIdCached(id: string) {
       },
       _count: { select: { reviews: true, orderItems: true, wishlistItems: true } },
     },
-    cacheStrategy: { ...prismaCache.medium(), tags: normalizeCacheTags([`product_${id}`, "products"]) },
   })
+
+  if (product) {
+    await setCache(key, product, TTL_SECONDS)
+  }
   return product
 }
 
 export async function getProductsListCached(params: Record<string, any>) {
+  const key = productsListCacheKey(params)
+  const cached = await getCache<any>(key)
+  if (cached) return cached
+
   // Build where clause (same logic as route)
   const where: any = { isDeleted: false }
   if (params.search) {
@@ -36,7 +55,7 @@ export async function getProductsListCached(params: Record<string, any>) {
   if (params.sortBy === "category") orderBy.category = { name: params.sortOrder }
   else orderBy[params.sortBy || "createdAt"] = params.sortOrder || "desc"
 
-  const totalCount = await prisma.product.count({ where, cacheStrategy: prismaCache.medium() })
+  const totalCount = await prisma.product.count({ where })
   const products = await prisma.product.findMany({
     where,
     include: {
@@ -46,7 +65,6 @@ export async function getProductsListCached(params: Record<string, any>) {
     orderBy,
     skip: params.page && params.limit ? (params.page - 1) * params.limit : 0,
     take: params.limit ?? 20,
-    cacheStrategy: { ...prismaCache.medium(), tags: ["products"] },
   })
 
   const totalPages = Math.ceil(totalCount / (params.limit ?? 20))
@@ -78,13 +96,18 @@ export async function getProductsListCached(params: Record<string, any>) {
     },
     filters: params,
   }
+
+  await setCache(key, response, TTL_SECONDS)
   return response
 }
 
 export async function invalidateProduct(id: string) {
-  await invalidateCacheTags([`product_${id}`, "products"])
+  await deleteCache(productCacheKey(id))
+  // Also invalidate list caches
+  await invalidateProductLists()
 }
 
 export async function invalidateProductLists() {
-  await invalidateCacheTags(["products"])
+  // Delete all product list caches using pattern matching
+  await deleteByPattern("cache:products:list:*")
 }

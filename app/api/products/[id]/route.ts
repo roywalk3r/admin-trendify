@@ -77,8 +77,6 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
     try {
       await invalidateProduct(id)
       await invalidateProductLists()
-      revalidateTag("products", "")
-      revalidateTag(`product_${id}`, "")
     } catch {}
 
     return NextResponse.json(createApiResponse({ data: updatedProduct }))

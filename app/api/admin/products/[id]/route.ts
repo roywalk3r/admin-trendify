@@ -231,12 +231,10 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       return createApiResponse({ error: "Product not found", status: 404 })
     }
 
-    // Invalidate caches and revalidate tags
+    // Invalidate caches
     try {
       await invalidateProduct(id)
       await invalidateProductLists()
-      revalidateTag("products", "")
-      revalidateTag(`product_${id}`, "")
     } catch {}
 
     return createApiResponse({
@@ -307,12 +305,10 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
       })
     }
 
-    // Invalidate caches and revalidate tags
+    // Invalidate caches
     try {
       await invalidateProduct(id)
       await invalidateProductLists()
-      revalidateTag("products", "")
-      revalidateTag(`product_${id}`, "")
     } catch {}
 
     return createApiResponse({

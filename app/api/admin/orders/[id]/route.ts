@@ -168,11 +168,9 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       }
     }
 
-    // Invalidate caches and revalidate tags for consumers using Next cache tags
+    // Invalidate order cache
     try {
       await invalidateOrderCache(id)
-      revalidateTag("orders", "")
-      revalidateTag(`order:${id}`, "")
     } catch {}
 
     return createApiResponse({ status: 200, data: updatedOrder })

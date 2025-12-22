@@ -1,11 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,22 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,26 +32,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { AppwriteMediaBrowser } from "@/components/appwrite/appwrite-media-browser";
-import { AppwriteImage } from "@/components/appwrite/appwrite-image";
-import {
   Plus,
   Edit,
   Trash2,
   MoreHorizontal,
   FolderTree,
-  ImageIcon,
   Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useApi, useApiMutation } from "@/lib/hooks/use-api";
+import { CategoryFormModal } from "@/components/admin/category-form-modal";
+import { AppwriteImage } from "@/components/appwrite/appwrite-image";
+import { Input } from "@/components/ui/input";
 
 interface Category {
   id: string;
@@ -97,18 +69,6 @@ interface CategoriesResponse {
   data: Category[];
 }
 
-const categorySchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1, "Category name is required"),
-  slug: z.string().optional(),
-  image: z.string().optional(),
-  description: z.string().optional(),
-  parentId: z.string().optional(),
-  isActive: z.boolean(),
-});
-
-type CategoryFormValues = z.infer<typeof categorySchema>;
-
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -117,9 +77,8 @@ export default function AdminCategoriesPage() {
     null
   );
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showMediaBrowser, setShowMediaBrowser] = useState(false);
-  const [activeForm, setActiveForm] = useState<"create" | "edit">("create");
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   const {
     data: categoriesResponse,
@@ -139,7 +98,6 @@ export default function AdminCategoriesPage() {
         toast.success("Category created successfully");
         refetch();
         setIsCreating(false);
-        createForm.reset();
       },
       onError: (error) => {
         toast.error(`Error creating category: ${error}`);
@@ -152,7 +110,7 @@ export default function AdminCategoriesPage() {
         toast.success("Category updated successfully");
         refetch();
         setIsEditing(false);
-        editForm.reset();
+        setEditingCategory(null);
       },
       onError: (error) => {
         toast.error(`Error updating category: ${error}`);
@@ -160,7 +118,7 @@ export default function AdminCategoriesPage() {
     });
 
   const { mutate: deleteCategory, isLoading: isDeletingCategory } =
-    useApiMutation(`/api/categories/${categoryToDelete?.id}`, "DELETE", {
+    useApiMutation(`/api/categories?id=${categoryToDelete?.id}`, "DELETE", {
       onSuccess: () => {
         toast.success("Category deleted successfully");
         refetch();
@@ -178,79 +136,17 @@ export default function AdminCategoriesPage() {
       },
     });
 
-  const createForm = useForm<CategoryFormValues>({
-    resolver: zodResolver(categorySchema),
-    defaultValues: {
-      name: "",
-      slug: "",
-      image: "",
-      description: "",
-      parentId: "",
-      isActive: true,
-    },
-  });
-
-  const editForm = useForm<CategoryFormValues>({
-    resolver: zodResolver(categorySchema),
-    defaultValues: {
-      id: "",
-      name: "",
-      slug: "",
-      image: "",
-      description: "",
-      parentId: "",
-      isActive: true,
-    },
-  });
-
-  const onCreateSubmit = (data: CategoryFormValues) => {
-    const slug = generateSlug(data.name);
-    const submitData = {
-      ...data,
-      slug,
-      image: data.image || undefined,
-      description: data.description || undefined,
-      parentId: data.parentId && data.parentId !== "" ? data.parentId : null,
-    };
-    createCategory(submitData);
-  };
-
-  const onEditSubmit = (data: CategoryFormValues) => {
-    const slug = generateSlug(data.name);
-    const submitData = {
-      ...data,
-      slug,
-      image: data.image || undefined,
-      description: data.description || undefined,
-      parentId: data.parentId && data.parentId !== "" ? data.parentId : null,
-    };
-    updateCategory(submitData);
-  };
-
-  const handleImageUpload = (urls: string[], form: any) => {
-    if (urls.length > 0) {
-      form.setValue("image", urls[0]);
-    }
-  };
-
-  const handleMediaSelect = (urls: string[], form: any) => {
-    if (urls.length > 0) {
-      form.setValue("image", urls[0]);
-    }
-    setShowMediaBrowser(false);
-  };
-
   const handleEditCategory = (category: Category) => {
-    editForm.reset({
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      image: category.image || "",
-      description: category.description || "",
-      parentId: category.parentId || "",
-      isActive: category.isActive,
-    });
+    setEditingCategory(category);
     setIsEditing(true);
+  };
+
+  const handleCreateSubmit = (data: any) => {
+    createCategory(data);
+  };
+
+  const handleEditSubmit = (data: any) => {
+    updateCategory(data);
   };
 
   const handleDeleteCategory = () => {
@@ -269,25 +165,6 @@ export default function AdminCategoriesPage() {
   const filteredCategories = categories.filter((category: Category) =>
     category.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const getAvailableParents = () => {
-    const editingId = editForm.getValues("id");
-    if (!editingId) return categories;
-
-    // Filter out the current category and its descendants to prevent circular references
-    const filterDescendants = (
-      cats: Category[],
-      excludeId: string
-    ): Category[] => {
-      return cats.filter((cat) => {
-        if (cat.id === excludeId) return false;
-        if (cat.parentId === excludeId) return false;
-        return true;
-      });
-    };
-
-    return filterDescendants(categories, editingId);
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -334,350 +211,32 @@ export default function AdminCategoriesPage() {
             {categories.length} categories total
           </p>
         </div>
-        <Dialog
-          open={isCreating}
-          onOpenChange={(open) => {
-            setIsCreating(open);
-            if (!open) createForm.reset();
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Category
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create Category</DialogTitle>
-              <DialogDescription>
-                Add a new category to organize your products.
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...createForm}>
-              <form
-                onSubmit={createForm.handleSubmit(onCreateSubmit)}
-                className="space-y-4"
-              >
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={createForm.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter category name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="parentId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Parent Category</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select parent category" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">
-                              No Parent (Top Level)
-                            </SelectItem>
-                            {categories.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={createForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter category description"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="space-y-2">
-                  <Label>Category Image</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setActiveForm("create");
-                        setShowMediaBrowser(true);
-                      }}
-                      className="flex-1"
-                    >
-                      <ImageIcon className="mr-2 h-4 w-4" />
-                      {createForm.watch("image")
-                        ? "Change Image"
-                        : "Select Image"}
-                    </Button>
-                    {createForm.watch("image") && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => createForm.setValue("image", "")}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                  {createForm.watch("image") && (
-                    <div className="mt-2">
-                      <AppwriteImage
-                        src={createForm.watch("image") || ""}
-                        alt="Category preview"
-                        width={200}
-                        height={100}
-                        className="rounded border object-cover"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <FormField
-                  control={createForm.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Active</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="checkbox"
-                          checked={field.value}
-                          onChange={(e) => field.onChange(e.target.checked)}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsCreating(false)}
-                    disabled={isCreatingCategory}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isCreatingCategory}>
-                    {isCreatingCategory ? "Creating..." : "Create"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsCreating(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Category
+        </Button>
       </div>
 
-      <Dialog
+      {/* Create Category Modal */}
+      <CategoryFormModal
+        open={isCreating}
+        onOpenChange={setIsCreating}
+        mode="create"
+        categories={categories}
+        onSubmit={handleCreateSubmit}
+        isLoading={isCreatingCategory}
+      />
+
+      {/* Edit Category Modal */}
+      <CategoryFormModal
         open={isEditing}
-        onOpenChange={(open) => {
-          setIsEditing(open);
-          if (!open) editForm.reset();
-        }}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
-            <DialogDescription>
-              Update the category details below.
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...editForm}>
-            <form
-              onSubmit={editForm.handleSubmit(onEditSubmit)}
-              className="space-y-4"
-            >
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter category name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="parentId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Parent Category</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select parent category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">
-                            No Parent (Top Level)
-                          </SelectItem>
-                          {getAvailableParents().map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={editForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter category description"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="space-y-2">
-                <Label>Category Image</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setActiveForm("edit");
-                      setShowMediaBrowser(true);
-                    }}
-                    className="flex-1"
-                  >
-                    <ImageIcon className="mr-2 h-4 w-4" />
-                    {editForm.watch("image") ? "Change Image" : "Select Image"}
-                  </Button>
-                  {editForm.watch("image") && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => editForm.setValue("image", "")}
-                    >
-                      Remove
-                    </Button>
-                  )}
-                </div>
-                {editForm.watch("image") && (
-                  <div className="mt-2">
-                    <AppwriteImage
-                      src={editForm.watch("image") || ""}
-                      alt="Category preview"
-                      width={200}
-                      height={100}
-                      className="rounded border object-cover"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <FormField
-                control={editForm.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Active</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="checkbox"
-                        checked={field.value}
-                        onChange={(e) => field.onChange(e.target.checked)}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditing(false)}
-                  disabled={isUpdatingCategory}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isUpdatingCategory}>
-                  {isUpdatingCategory ? "Updating..." : "Update"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {showMediaBrowser && (
-        <Dialog open={showMediaBrowser} onOpenChange={setShowMediaBrowser}>
-          <DialogContent className="max-w-2xl h-auto">
-            <DialogHeader>
-              <DialogTitle>Select Category Image</DialogTitle>
-              <AppwriteMediaBrowser
-                onSelect={(urls) =>
-                  handleMediaSelect(
-                    urls,
-                    activeForm === "create" ? createForm : editForm
-                  )
-                }
-              />
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
-      )}
+        onOpenChange={setIsEditing}
+        mode="edit"
+        category={editingCategory || undefined}
+        categories={categories}
+        onSubmit={handleEditSubmit}
+        isLoading={isUpdatingCategory}
+      />
 
       <Card>
         <CardHeader>

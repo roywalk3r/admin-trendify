@@ -3,7 +3,6 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { defaultSettings } from "@/app/api/admin/settings/schema"
 import { prismaCache } from "@/lib/prisma-cache"
-import { normalizeCacheTags } from "@/lib/prisma-accelerate"
 
 function safeParse(val: any) {
   try {
@@ -19,10 +18,8 @@ export async function GET() {
       flashSale: { ...defaultSettings.flashSale },
     }
 
-    const records = await prisma.settings.findMany({
-      cacheStrategy: { ...prismaCache.long(), tags: normalizeCacheTags(["settings", "settings_flashSale"]) },
-      where: { key: { in: ["flashSale"] } },
-    })
+     const records = await prisma.settings.findMany({ where: { key: { in: ["flashSale"] } } })
+
     for (const setting of records) {
       const parsed = safeParse(setting.value)
       if (parsed) data[setting.key] = parsed

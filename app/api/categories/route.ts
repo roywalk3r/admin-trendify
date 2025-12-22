@@ -20,6 +20,7 @@ const categorySchema = z.object({
   image: z.string().url("Invalid image URL").optional(),
   description: z.string().optional(),
   parentId: z.string().nullable().optional(),
+  isActive: z.boolean(),
 });
 
 // Query params validation schema
@@ -146,10 +147,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Invalidate category lists and revalidate tags
+    // Invalidate categories cache
     try {
       await invalidateCategoriesLists();
-      revalidateTag("categories", "");
     } catch {}
 
     return createApiResponse({
@@ -285,12 +285,10 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
-    // Invalidate caches and revalidate tags
+    // Invalidate caches
     try {
       await invalidateCategoriesLists();
       await invalidateCategory(id);
-      revalidateTag("categories", "");
-      revalidateTag(`category_${id}`, "");
     } catch {}
 
     return createApiResponse({
@@ -372,12 +370,10 @@ export async function DELETE(req: NextRequest) {
       });
     }
 
-    // Invalidate caches and revalidate tags
+    // Invalidate caches
     try {
       await invalidateCategoriesLists();
       await invalidateCategory(id);
-      revalidateTag("categories", "");
-      revalidateTag(`category_${id}`, "");
     } catch {}
 
     return createApiResponse({

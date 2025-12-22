@@ -1,7 +1,20 @@
 import prisma from "@/lib/prisma"
-import { invalidateCacheTags, normalizeCacheTags } from "@/lib/prisma-accelerate"
+import { getCache, setCache, deleteCache, deleteByPattern } from "@/lib/redis"
+
+const TTL_SECONDS = 300 // 5 minutes
+
+const categoriesListCacheKey = (params: Record<string, any>) => {
+  const key = JSON.stringify(params)
+  return `cache:categories:list:${Buffer.from(key).toString('base64').substring(0, 32)}`
+}
+
+const categoryCacheKey = (id: string) => `cache:categories:${id}`
 
 export async function getCategoriesCached(params: Record<string, any>) {
+  const key = categoriesListCacheKey(params)
+  const cached = await getCache<any>(key)
+  if (cached) return cached
+
   // Build where clause mirroring route logic
   const where: any = {}
   if (params.parentId !== undefined) where.parentId = params.parentId
@@ -53,9 +66,8 @@ export async function getCategoriesCached(params: Record<string, any>) {
       orderBy,
       skip,
       take: limit,
-      cacheStrategy: { ttl: 300, tags: normalizeCacheTags(["categories"]) },
     }),
-    prisma.category.count({ where, cacheStrategy: { ttl: 300, tags: normalizeCacheTags(["categories"]) } }),
+    prisma.category.count({ where }),
   ])
 
   const totalPages = Math.ceil(totalCount / limit)
@@ -67,6 +79,7 @@ export async function getCategoriesCached(params: Record<string, any>) {
       image: c.image,
       description: c.description,
       parentId: c.parentId,
+      isActive: (c as any).isActive,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       _count: c._count,
@@ -79,10 +92,16 @@ export async function getCategoriesCached(params: Record<string, any>) {
       totalCount,
     },
   }
+
+  await setCache(key, response, TTL_SECONDS)
   return response
 }
 
 export async function getCategoryByIdCached(id: string) {
+  const key = categoryCacheKey(id)
+  const cached = await getCache<any>(key)
+  if (cached) return cached
+
   const category = await prisma.category.findUnique({
     where: { id },
     include: {
@@ -95,7 +114,6 @@ export async function getCategoryByIdCached(id: string) {
       parent: { select: { id: true, name: true, slug: true } },
       _count: { select: { products: { where: { isDeleted: false, deletedAt: null } }, children: true } },
     },
-    cacheStrategy: { ttl: 300, tags: normalizeCacheTags(["categories", `category_${id}`]) },
   })
 
   if (!category) return null
@@ -107,6 +125,7 @@ export async function getCategoryByIdCached(id: string) {
     image: category.image,
     description: category.description,
     parentId: category.parentId,
+    isActive: (category as any).isActive,
     createdAt: category.createdAt,
     updatedAt: category.updatedAt,
     _count: category._count,
@@ -114,12 +133,18 @@ export async function getCategoryByIdCached(id: string) {
     children: (category as any).children,
     parent: (category as any).parent,
   }
+
+  await setCache(key, result, TTL_SECONDS)
   return result
 }
 
 export async function invalidateCategoriesLists() {
-  await invalidateCacheTags(["categories"])
+  // Delete all category list caches using pattern matching
+  await deleteByPattern("cache:categories:list:*")
 }
+
 export async function invalidateCategory(id: string) {
-  await invalidateCacheTags(["categories", `category_${id}`])
+  await deleteCache(categoryCacheKey(id))
+  // Also invalidate list caches
+  await invalidateCategoriesLists()
 }
